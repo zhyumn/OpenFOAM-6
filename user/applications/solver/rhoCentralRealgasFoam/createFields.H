@@ -23,8 +23,8 @@ volVectorField U
     ),
     mesh
 );
-//volScalarField& rho = mesh.objectRegistry::lookupObjectRef<volScalarField>("rho_thermo");
-volScalarField rho
+volScalarField& rho = mesh.objectRegistry::lookupObjectRef<volScalarField>("rho");
+/*volScalarField rho
 (
     IOobject
     (
@@ -35,8 +35,8 @@ volScalarField rho
         IOobject::AUTO_WRITE
     ),
     thermo.rho()
-);
-
+);*/
+rho=thermo.rho();
 volVectorField rhoU
 (
     IOobject

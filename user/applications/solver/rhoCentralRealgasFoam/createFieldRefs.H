@@ -14,7 +14,7 @@ if (max(mu.primitiveField()) > 0.0)
 
 volScalarField& frac = mesh.objectRegistry::lookupObjectRef<volScalarField>("vaporfrac");
 volScalarField& c = mesh.objectRegistry::lookupObjectRef<volScalarField>("soundspeed");
-volScalarField& rho_thermo = mesh.objectRegistry::lookupObjectRef<volScalarField>("rho_thermo");
+//volScalarField& rho_thermo = mesh.objectRegistry::lookupObjectRef<volScalarField>("rho_thermo");
 //Info << frac[0] << endl;
 
 //FatalErrorInFunction << "break " << exit(FatalError);

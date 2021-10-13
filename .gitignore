@@ -84,3 +84,7 @@ doc/Doxygen/DTAGS
 
 # Ignore the test directory
 /tutorialsTest
+
+/user/run
+*.exe
+*.out

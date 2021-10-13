@@ -226,7 +226,7 @@ int main(int argc, char* argv[])
 
         e = rhoE / rho - 0.5 * magSqr(U);
         e.correctBoundaryConditions();
-        rho_thermo=rho;
+        //rho_thermo=rho;
         thermo.correct();
         rhoE.boundaryFieldRef() ==
             rho.boundaryField() *

@@ -1,0 +1,27 @@
+{
+    "files.associations": {
+        "*.py": "python",
+        "VLEI.H": "cpp",
+        "setRDeltaT.H": "cpp",
+        "readFluxScheme.H": "cpp",
+        "rhoCentralFoam.C": "cpp",
+        "createFields.H": "cpp",
+        "createFieldRefs.H": "cpp",
+        "fileNameI.H": "cpp",
+        "wordI.H": "cpp",
+        "GeometricField.C": "cpp",
+        "word.H": "cpp",
+        "string.H": "cpp",
+        "fileName.H": "cpp",
+        "tmpI.H": "cpp",
+        "IOobject.C": "cpp",
+        "hePsiThermo.C": "cpp",
+        "hePsiThermo.H": "cpp",
+        "psiThermo.H": "cpp",
+        "psiThermos.C": "cpp",
+        "psiThermo.C": "cpp",
+        "VLEhePsiThermo.C": "cpp",
+        "multithermoI.H": "cpp",
+        "VLEhePsiThermo.H": "cpp"
+    }
+}

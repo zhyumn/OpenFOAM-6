@@ -42,7 +42,7 @@ void Foam::VLEhePsiThermo<BasicPsiThermo, MixtureType>::calculate()
     scalarField& vaporfracCells = this->vaporfrac_.primitiveFieldRef();
     scalarField& soundspeedCells = this->soundspeed_.primitiveFieldRef();
     scalarField& entropyCells = this->entropy_.primitiveFieldRef();
-    scalarField& rhoCells = this->rho_.primitiveFieldRef();
+    const scalarField& rhoCells = this->rho_.primitiveFieldRef();
     scalar p_temp,T_temp;
 
     forAll(TCells, celli)
@@ -172,7 +172,7 @@ void Foam::VLEhePsiThermo<BasicPsiThermo, MixtureType>::calculate_init()
     scalarField& vaporfracCells = this->vaporfrac_.primitiveFieldRef();
     scalarField& soundspeedCells = this->soundspeed_.primitiveFieldRef();
     scalarField& entropyCells = this->entropy_.primitiveFieldRef();
-    scalarField& rhoCells = this->rho_.primitiveFieldRef();
+    //scalarField& rhoCells = this->rho_.primitiveFieldRef();
     scalar p_temp,T_temp;
 
     forAll(TCells, celli)
@@ -291,6 +291,7 @@ void Foam::VLEhePsiThermo<BasicPsiThermo, MixtureType>::calculate_init()
             }
         }
     }
+    //this->rho_= this->psi_* this->p_;
 }
 
 
@@ -347,7 +348,7 @@ Foam::VLEhePsiThermo<BasicPsiThermo, MixtureType>::VLEhePsiThermo
     (
         IOobject
         (
-            "rho_thermo",
+            "rho",
             mesh.time().timeName(),
             mesh,
             IOobject::NO_READ,
