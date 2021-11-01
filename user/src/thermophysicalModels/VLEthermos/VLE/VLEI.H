@@ -622,7 +622,7 @@ inline Foam::autoPtr<typename Foam::VLE<ThermoMixture>::solution> Foam::VLE<Ther
     //int iaccelation = 1;
     scalar tol_fug = 1.0e-13;  //Convergence criteria
     scalar tol_fug2 = 1.0;
-    scalar coeff_tpn = 1;
+    //scalar coeff_tpn = 1;
     scalar epsilon1 = 1.0e+10;
 
     //scalar gibbsenergy = 0.0;
@@ -1129,8 +1129,8 @@ inline tuple<bool, Foam::autoPtr<Foam::scalarList>, bool> Foam::VLE<ThermoMixtur
     scalar T   //input
     ) const {
     const scalar be_negative = -1.E-8;
-    const scalar be_pure_substance = 1. - 1.E-8;
-    const scalar be_very_large = 1.E10;
+    //const scalar be_pure_substance = 1. - 1.E-8;
+    //const scalar be_very_large = 1.E10;
 
     scalar pow_v[4] = {1.0, 1.0 / 3, -1.0, -1.0 / 3.0};
     scalar pow_l[4] = {-1.0, -1.0 / 3, 1.0, 1.0 / 3.0};
@@ -1219,7 +1219,8 @@ inline tuple<bool, Foam::autoPtr<Foam::scalarList>, bool> Foam::VLE<ThermoMixtur
             TPD_star[itrial] = 1.;
             beta = 0;
 
-            lnphi_y.reset(this->ln_fugacityCoefficient(p, T, z_y, &y_trial));
+            autoPtrReset(lnphi_y,this->ln_fugacityCoefficient(p, T, z_y, &y_trial));
+            //lnphi_y.reset(this->ln_fugacityCoefficient(p, T, z_y, &y_trial));
             for (int i = 0; i < this->X_.size(); i++) {
                 F_new[i] = alpha_new[i] / 2 * (lnphi_y()[i] + log(Y[i]) - d[i]);
                 TPD_star[itrial] += +Y[i] * (lnphi_y()[i] + log(Y[i]) - d[i] - 1);
@@ -1456,7 +1457,7 @@ inline tuple<bool, Foam::autoPtr<Foam::List<Foam::scalarList>>, bool, Foam::auto
                 }
                 break;
             }
-            if (fabs(r - 1) < 0.1 || TPD_star[itrial] > 1e40) {
+            if (fabs(r - 1) < 1e-3 || TPD_star[itrial] > 1e40) {
                 TPD[itrial] = 10.;
                 TPD_star[itrial] = 10.;
                 mask_stationary[itrial] = false;

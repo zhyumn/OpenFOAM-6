@@ -27,8 +27,8 @@ Application
 Description
 
 \*---------------------------------------------------------------------------*/
-
-#include "SUPstream.H"
+#include "ISAT.H"
+//#include "SUPstream.H"
 #include "fvCFD.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -54,10 +54,18 @@ int main(int argc, char *argv[])
         }
         SUPstream::Sync();
         Pout<<" a = "<<int_share()<<endl;
+
+        ISAT test(SUPstream::node_manager,10);
+
+        Info<<"Test! "<<test.tleaf.v<<endl;
+        Info<<"Test! "<<test.tleaf.node_->v<<endl;
+        Info<<"Test! "<<test.tleaf.node_->leaf_->v<<endl;
     }
 #include "createTime.H"
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+    
 
     Info << nl << "ExecutionTime = " << runTime.elapsedCpuTime() << " s"
          << "  ClockTime = " << runTime.elapsedClockTime() << " s"

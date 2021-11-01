@@ -1974,7 +1974,7 @@ inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::dSdxi  // internal
     scalar VV = this->W(Xinp) / this->rho(p, T, pf, Xinp);  //m3*mol-1, phase specific volume
     scalar dVVdxi = dZdxi(p, T, di, pf, Xinp) * RR * 1.0e-03 * T / p;
     scalar xxx = ((VV + cc1 * bmix) / (VV + cc2 * bmix));
-    scalar ddxi_dH, dH;
+    //scalar ddxi_dH, dH;
     scalar ddxi_dS, dS_phase;
 
     if (xxx > 0) {

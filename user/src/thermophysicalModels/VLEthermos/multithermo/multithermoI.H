@@ -277,36 +277,56 @@ inline std::tuple<Foam::scalar, Foam::scalar> Foam::species::multithermo<ThermoM
     scalar T2 = T1 + 1, p2 = p1 + 10;  //(this->*limit)(T0+1);
     scalar Ttol = T0 * tol_, ptol = p0 * tol_;
     scalar de = 0, drho = 0, dedt = 0, dedp = 0, drhodt = 0, drhodp = 0;
+    scalar de_old=1e10,drho_old=1e10;
     scalar dete;
     int iter = 0;
     scalar relax = 1;
+    //Info<<endl;
     do
     {
-        dp = max(dp, 1e-4);
-        dT = max(dT, 1e-5);
+        //Info<<T1<<","<<p1<<endl;
+        dp = max(mag(dp), 1e-4)*sign(dp);
+        dT = max(mag(dT), 1e-5)*sign(dT);
         e12 = (this->*Fe)(p1, T1 + dT);
         e21 = (this->*Fe)(p1 + dp, T1);
         rho12 = (this->*Frho)(p1, T1 + dT);
         rho21 = (this->*Frho)(p1 + dp, T1);
-
+        de_old=de;
+        drho_old=drho;
         de = (e11 - e);
         drho = (rho11 - rho);
+
+        if(mag(de)>mag(de_old)||mag(drho)>mag(drho_old))
+        {
+            relax*=0.5;
+        }
         dedt = (e12 - e11) / dT;  //(this->*dFdT)(p, Test);
         dedp = (e21 - e11) / dp;
         drhodt = (rho12 - rho11) / dT;
         drhodp = (rho21 - rho11) / dp;
 
         dete = dedt * drhodp - dedp * drhodt;
+        /*if(fabs(dete)<1e-8)
+        {
+            Info<<"dedp="<<dedp<<",drhodp="<<drhodp<<",dp="<<dp<<endl;
+            dT = -drho  / drhodt * relax;
+            dp = -de  / dedp * relax;
 
-        dT = -(drhodp * de - dedp * drho) / dete;
-        dp = -(dedt * drho - drhodt * de) / dete;
+        }
+        else{
+            */
+        dT = -(drhodp * de - dedp * drho) / dete * relax;
+        dp = -(dedt * drho - drhodt * de) / dete * relax;
         T1 = T1 + dT;
         p1 = p1 + dp;
+
+        //}
+
 
         e11 = (this->*Fe)(p1, T1);
         rho11 = (this->*Frho)(p1, T1);
 
-        if (iter++ > maxIter_)
+        if (iter++ > 100*maxIter_)
         {
             FatalErrorInFunction << setprecision(50)
                                  << "Maximum number of iterations exceeded: " << maxIter_
@@ -320,7 +340,7 @@ inline std::tuple<Foam::scalar, Foam::scalar> Foam::species::multithermo<ThermoM
                                  << abort(FatalError);
         }
 
-    } while (mag(dT) > Ttol && (mag(e11 - e) > 1e-5 || mag(rho11 - rho) > 1e-7|| mag(dT) > 1e-5|| mag(dp) > 1e-4 ));
+    } while (mag(dT) > Ttol || (mag(e11 - e) > 1e-5 || mag(rho11 - rho) > 1e-7|| mag(dT) > 1e-5|| mag(dp) > 1e-4 ));
     //call_n++;
     //inter_n+=iter;
     //if(call_n%10000==0)
@@ -579,9 +599,10 @@ inline std::tuple<Foam::scalar, Foam::scalar> Foam::species::multithermo<ThermoM
     const scalar p0,
     const scalar T0) const
 {
-    scalar a1, a2;
-    std::tie(a1, a2) = TrhoEs(e, rho, p0, T0, &multithermo<ThermoMixture, Type>::Es, &multithermo<ThermoMixture, Type>::rho);
-    return std::make_tuple(a1, a2);
+    return TrhoEs(e, rho, p0, T0, &multithermo<ThermoMixture, Type>::Es, &multithermo<ThermoMixture, Type>::rho);
+    //scalar a1, a2;
+    //std::tie(a1, a2) = TrhoEs(e, rho, p0, T0, &multithermo<ThermoMixture, Type>::Es, &multithermo<ThermoMixture, Type>::rho);
+    //return std::make_tuple(a1, a2);
 }
 
 template <class ThermoMixture, template <class> class Type>

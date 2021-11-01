@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2021 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2018 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -22,98 +22,74 @@ License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
 Class
-    Foam::autoPtrAd
+    Foam::ISATVLEhePsiThermo
 
 Description
+    Energy for a mixture based on compressibility
 
 SourceFiles
-    autoPtrAdI.H
-    autoPtrAd.C
-    autoPtrAdIO.C
+    ISATVLEhePsiThermo.C
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef autoPtrAd_H
-#define autoPtrAd_H
+#ifndef ISATVLEhePsiThermo_H
+#define ISATVLEhePsiThermo_H
 
-#include "autoPtr.H"
+#include "psiThermo.H"
+#include <tuple>
+#include "heThermo.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 namespace Foam
 {
 
-// Forward declaration of classes
-
-
-// Forward declaration of friend functions and operators
-
-
-
 /*---------------------------------------------------------------------------*\
-                         Class autoPtrAd Declaration
+                         Class ISATVLEhePsiThermo Declaration
 \*---------------------------------------------------------------------------*/
 
-template<class T>
-class autoPtrAd
+template<class BasicPsiThermo, class MixtureType>
+class ISATVLEhePsiThermo
 :
-    public autoPtr
+    public heThermo<BasicPsiThermo, MixtureType>
 {
-    // Private data
 
-
+    volScalarField vaporfrac_;
+    volScalarField soundspeed_;
+    volScalarField rho_;
 
     // Private Member Functions
 
-        //- Disallow default bitwise copy construct
+        //- Calculate the thermo variables
+        void calculate_init();
 
-
-        //- Disallow default bitwise assignment
-
+        //- Construct as copy (not implemented)
+        ISATVLEhePsiThermo(const ISATVLEhePsiThermo<BasicPsiThermo, MixtureType>&);
 
 public:
 
-    // Static data members
-
-        //- Static data someStaticData
+    //- Runtime type information
+    TypeName("ISATVLEhePsiThermo");
 
 
     // Constructors
 
-        //- Construct null
-        inline explicit autoPtrAd(T* p= nullptr):autoPtr<T>(p){};
-
-        //- Construct as copy by transferring pointer to this autoPtr and
-        //  setting the arguments pointer to nullptr
-        inline autoPtrAd(const autoPtr<T>& ap):autoPtr<T>(ap){};
-
-        //- Construct either by transferring pointer or cloning.
-        //  Should only be called with type that supports cloning
-        inline autoPtrAd(const autoPtr<T>& ap, const bool reuse):autoPtr<T>(ap,reuse){};
-
-
-    // Selectors
-
-        //- Select null constructed
-        inline void reset(const autoPtr<T>&);
+        //- Construct from mesh and phase name
+        ISATVLEhePsiThermo
+        (
+            const fvMesh&,
+            const word& phaseName
+        );
 
 
     //- Destructor
-    ~autoPtrAd();
+    virtual ~ISATVLEhePsiThermo();
 
 
-    // Member Functions
+    // Member functions
 
-    // Member Operators
-
-
-
-    // Friend Functions
-
-    // Friend Operators
-
-    // IOstream Operators
-
+        //- Update properties
+        virtual void correct();
 };
 
 
@@ -123,10 +99,9 @@ public:
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-#include "autoPtrAdI.H"
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
+#ifdef NoRepository
+    #include "ISATVLEhePsiThermo.C"
+#endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

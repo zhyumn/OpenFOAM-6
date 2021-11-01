@@ -1,4 +1,4 @@
 
 SUPstream.C
 
-LIB = $(FOAM_USER_LIBBIN)/$(FOAM_MPI)/libSUPsteam
+LIB = $(FOAM_USER_LIBBIN)/libSUPsteam

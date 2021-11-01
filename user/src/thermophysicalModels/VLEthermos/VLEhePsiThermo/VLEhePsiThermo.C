@@ -62,17 +62,18 @@ void Foam::VLEhePsiThermo<BasicPsiThermo, MixtureType>::calculate()
             pCells[celli],
             TCells[celli]
         );*/
-        std::tie(p_temp,T_temp) =mixture_.TrhoE
+        std::tie(pCells[celli],TCells[celli]) =mixture_.TrhoE
         (
             hCells[celli],
             rhoCells[celli],
             pCells[celli],
             TCells[celli]
         );
-        pCells[celli]=p_temp;
-        TCells[celli]=T_temp;
+        //pCells[celli]=p_temp;
+        //TCells[celli]=T_temp;
 
-        psiCells[celli] = mixture_.psi(pCells[celli], TCells[celli]);
+        //psiCells[celli] = mixture_.psi(pCells[celli], TCells[celli]);
+        psiCells[celli] = rhoCells[celli]/pCells[celli];
 
         muCells[celli] = mixture_.mu(pCells[celli], TCells[celli]);
         alphaCells[celli] = mixture_.alphah(pCells[celli], TCells[celli]);

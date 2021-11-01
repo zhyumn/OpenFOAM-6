@@ -1,0 +1,16 @@
+EXE_INC = \
+    -Wno-deprecated-copy \
+    -Wno-unused-variable\
+    -I$(LIB_SRC)/finiteVolume/lnInclude \
+    -I$(LIB_SRC)/thermophysicalModels/specie/lnInclude \
+    -I$(LIB_SRC)/thermophysicalModels/reactionThermo/lnInclude \
+    -I$(LIB_SRC)/thermophysicalModels/basic/lnInclude \
+    -I$(LIB_SRC)/transportModels/compressible/lnInclude \
+    -I../VLEthermos/lnInclude
+
+LIB_LIBS = \
+    -lfiniteVolume \
+    -lspecie \
+    -lreactionThermophysicalModels \
+    -lfluidThermophysicalModels \
+    -lcompressibleTransportModels

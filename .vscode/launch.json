@@ -5,13 +5,42 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Python C++ Debug",
+            "type": "pythoncpp",
+            "request": "launch",
+            "pythonLaunchName": "Python: Current File",
+            "cppConfig": "default (gdb) Attach"
+        },
+        {
+            "name": "Python: Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "(gdb) Attach",
+            "type": "cppdbg",
+            "request": "attach",
+            "program": "/home/zhy/anaconda3/bin/python", /* My virtual env */
+            "processId": "${command:pickProcess}",
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
             "name": "(gdb) rhoC 启动",
             "type": "cppdbg",
             "request": "launch",
             "program": "/home/zhy/new_drive/OpenFOAM-6/user/platforms/linux64GccDPInt32Debug/bin/rhoCentralRealgasFoam",
             "args": [],
             "stopAtEntry": false,
-            "cwd": "/home/zhy/new_drive/OpenFOAM-6/user/run/ST_highp_vle_py4_rhoCentral_test_rhoE",
+            "cwd": "/home/zhy/new_drive/OpenFOAM-6/user/run/ST_highp_vle_py4_rhoCentral_test_2_rhoE",
             "environment": [],
             "externalConsole": false,
             "MIMode": "gdb",

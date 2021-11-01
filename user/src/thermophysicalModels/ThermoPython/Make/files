@@ -1,0 +1,4 @@
+thermoInterface_wrap.C
+thermoInterface.C
+
+LIB = $(FOAM_USER_PY)/_thermo

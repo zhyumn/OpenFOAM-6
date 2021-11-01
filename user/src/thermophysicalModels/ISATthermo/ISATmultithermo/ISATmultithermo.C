@@ -2,7 +2,7 @@
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Copyright (C) 2021 OpenFOAM Foundation
+    \\  /    A nd           | Copyright (C) 2011-2018 OpenFOAM Foundation
      \\/     M anipulation  |
 -------------------------------------------------------------------------------
 License
@@ -23,57 +23,47 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include "autoPtrAd.H"
+#include "ISATmultithermo.H"
 
-// * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
+/* * * * * * * * * * * * * * * private static data * * * * * * * * * * * * * */
 
+template<class ThermoMixture, template<class> class Type>
+const Foam::scalar Foam::species::ISATmultithermo<ThermoMixture, Type>::tol_ = 1.0e-4;
 
-
-// * * * * * * * * * * * * Static Member Functions * * * * * * * * * * * * * //
+template<class ThermoMixture, template<class> class Type>
+const int Foam::species::ISATmultithermo<ThermoMixture, Type>::maxIter_ = 100;
 
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-
-
-// * * * * * * * * * * * * * * * * Selectors * * * * * * * * * * * * * * * * //
-
-
-// * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-template<class T>
-Foam::autoPtrAd<T>::~autoPtrAd()
+template<class ThermoMixture, template<class> class Type>
+Foam::species::ISATmultithermo<ThermoMixture, Type>::ISATmultithermo(const dictionary& dict,PtrList<ThermoMixture> &speciesData)
+:
+    ThermoMixture(dict,speciesData)
 {}
 
 
-// * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
+// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-// * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * * //
-
-
-// * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
-
-
-// * * * * * * * * * * * * * * Member Operators  * * * * * * * * * * * * * * //
-
-template<class T>
-inline void Foam::autoPtrAd<T>::reset(const autoPtr<T>& ap)
+template<class ThermoMixture, template<class> class Type>
+void Foam::species::ISATmultithermo<ThermoMixture, Type>::write(Ostream& os) const
 {
-    if (ptr_)
-    {
-        delete ptr_;
-    }
-
-    ptr_ = ap.ptr_;
-    ap.ptr_ = nullptr;
+    ThermoMixture::write(os);
 }
 
 
-// * * * * * * * * * * * * * * Friend Functions  * * * * * * * * * * * * * * //
+// * * * * * * * * * * * * * * * Ostream Operator  * * * * * * * * * * * * * //
 
-
-// * * * * * * * * * * * * * * Friend Operators * * * * * * * * * * * * * * //
+template<class ThermoMixture, template<class> class Type>
+Foam::Ostream& Foam::species::operator<<
+(
+    Ostream& os, const ISATmultithermo<ThermoMixture, Type>& st
+)
+{
+    st.write(os);
+    return os;
+}
 
 
 // ************************************************************************* //
