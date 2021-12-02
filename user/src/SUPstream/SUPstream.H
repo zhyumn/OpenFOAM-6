@@ -73,18 +73,18 @@ namespace Foam
         //- Disallow default bitwise assignment
         void operator=(const SUPstream&);
 
-       public:
+    public:
         // Public classes
 
         class mpi_manager
         {
-           public:
+        public:
             MPI_Comm comm;
             int size, rank;
         };
         class mpi_node_manager : public mpi_manager
         {
-           public:
+        public:
             mpi_node_manager(MPI_Comm allcomm)
             {
                 int rank_t = 0;
@@ -108,7 +108,7 @@ namespace Foam
         {
             int sync_, sync_r_;
 
-           public:
+        public:
             mpi_manager& manager;
             mpi_sync(mpi_manager& manager_in)
                 : sync_(0), sync_r_(0), manager(manager_in) {}
@@ -126,7 +126,7 @@ namespace Foam
         {
             std::atomic_flag& flag;
 
-           public:
+        public:
             my_mutex(std::atomic_flag* ptr, mpi_sync& sync_in)
                 : flag(*ptr)
             {
@@ -142,12 +142,13 @@ namespace Foam
             void unlock() { flag.clear(std::memory_order_release); }
         };
 
+
         class my_room
         {
             std::atomic_flag& flag;
             std::atomic<int>& p_in_room;
 
-           public:
+        public:
             my_room(std::atomic_flag* ptr, std::atomic<int>* ptr2, mpi_sync& sync_in)
                 : flag(*ptr), p_in_room(*ptr2)
             {
@@ -194,7 +195,7 @@ namespace Foam
             mpi_manager& manager;
             int size;
 
-           public:
+        public:
             shared_data(mpi_manager& manager_in, int size_in = 1)
                 : manager(manager_in), size(size_in)
             {
@@ -217,7 +218,7 @@ namespace Foam
             shared_data<std::atomic_flag> flag_shared;
             my_mutex mutex_;
 
-           public:
+        public:
             mpi_mutex(mpi_manager& manager_in, mpi_sync& sync_in)
                 : flag_shared(manager_in), mutex_(flag_shared.ptr(), sync_in) {}
             void lock() { mutex_.lock(); }
@@ -229,7 +230,7 @@ namespace Foam
             shared_data<std::atomic_flag> flag_shared;
             shared_data<std::atomic<int>> a_int_shared;
 
-           public:
+        public:
             my_room room_;
             mpi_room(mpi_manager& manager_in, mpi_sync& sync_in)
                 : flag_shared(manager_in), a_int_shared(manager_in), room_(flag_shared.ptr(), a_int_shared.ptr(), sync_in) {}
@@ -241,7 +242,7 @@ namespace Foam
             void require_empty_room() { room_.require_empty_room(); }
         };
 
-       public:
+    public:
         // Static data members
 
         //- Static data staticData

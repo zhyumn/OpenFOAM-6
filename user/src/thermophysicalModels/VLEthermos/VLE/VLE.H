@@ -130,6 +130,19 @@ namespace Foam {
         inline scalar drhodT(scalar p, scalar T, solution& sol) const;
         inline scalar drhodP(scalar p, scalar T, solution& sol) const;
         inline scalar drhodXi(scalar p, scalar T, label di, solution& sol) const;
+
+        inline scalar dEdT(scalar p, scalar T, solution& sol) const;
+        inline scalar dEdP(scalar p, scalar T, solution& sol) const;
+        inline scalar dEdXi(scalar p, scalar T,label di, solution& sol) const;
+
+        inline scalar dTdE_rhoX(scalar p, scalar T, solution& sol) const;
+        inline scalar dTdrho_EX(scalar p, scalar T, solution& sol) const;
+        inline scalar dPdE_rhoX(scalar p, scalar T, solution& sol) const;
+        inline scalar dPdrho_EX(scalar p, scalar T, solution& sol) const;
+
+        inline scalar dTdXi_Erho(scalar p, scalar T, label di, solution& sol) const;
+        inline scalar dPdXi_Erho(scalar p, scalar T, label di, solution& sol) const;
+
         //- Return enthalpy departure [J/kg]
         inline scalar H(const scalar p, const scalar T) const;
 
@@ -246,6 +259,8 @@ namespace Foam {
         inline autoPtr<scalarList> drhoPdXHP_HsP(scalar p, scalar T, solution& sol) const;
         inline autoPtr<scalarRectangularMatrix> dTrhoPdXHP_HsP(scalar p, scalar T, solution& sol) const;
         inline autoPtr<scalarRectangularMatrix> dTrhoPvfdXHP_HsP(scalar p, scalar T, solution& sol) const;
+        inline autoPtr<scalarRectangularMatrix> dTPvfdXErho(scalar p, scalar T, solution& sol) const;
+
         inline scalar dvfdH_HsP(scalar p, scalar T, solution& sol) const;
         inline scalar dvfdP_HsP(scalar p, scalar T, solution& sol) const;
         inline scalar dvfdXi_HsP(scalar p, scalar T, label di, solution& sol) const;

@@ -51,6 +51,25 @@
                     "ignoreFailures": true
                 }
             ]
+        },
+        {
+            "name": "(gdb) reactingFoam 启动",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "/home/zhy/new_drive/OpenFOAM-6/platforms/linux64GccDPInt32Debug/bin/reactingFoam",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "/home/zhy/new_drive/OpenFOAM-6/user/run/counterFlowFlame2D_GRI_TDAC",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "为 gdb 启用整齐打印",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
         }
     ]
 }

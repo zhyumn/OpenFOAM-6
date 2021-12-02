@@ -198,7 +198,7 @@ void Foam::ISATVLEhePsiThermo<BasicPsiThermo, MixtureType>::correct()
     // force the saving of the old-time values
     this->psi_.oldTime();
 
-    calculate();
+    calculate_init();
 
     if (debug)
     {

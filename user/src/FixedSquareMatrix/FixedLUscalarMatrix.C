@@ -23,11 +23,11 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include "ISAT.H"
+#include "FixedLUscalarMatrix.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
-//const dataType Foam::ISAT::staticData();
+//const dataType Foam::FixedLUscalarMatrix::staticData();
 
 
 // * * * * * * * * * * * * * Static Member Functions * * * * * * * * * * * * //
@@ -40,83 +40,55 @@ License
 
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
-
-//Foam::ISAT::ISAT()
-//:
-    //baseClassName(),
-    //data_()
-//{}
-
-Foam::ISAT::ISAT(SUPstream::mpi_manager& manager_in,label nmem)
-:nmem_leaf_(nmem),nmem_node_(nmem),leafmem(manager_in,nmem_leaf_),
-emptylist_leaf(manager_in,nmem_leaf_),nodemem(manager_in,nmem_node_),
-emptylist_node(manager_in,nmem_node_),pv_(manager_in),
-size_leaf(pv_().size_leaf),head_leaf(pv_().head_leaf),
-tail_leaf(pv_().tail_leaf),temp_tail_leaf(pv_().temp_tail_leaf),
-size_node(pv_().size_node),heaf_node(pv_().heaf_node),
-tail_node(pv_().tail_node),temp_tail_node(pv_().temp_tail_node)
-{
-    for(label i=0;i<nmem_leaf_;i++)
-    {
-        emptylist_leaf[i]=i;
-    }
-    for(label i=0;i<nmem_node_;i++)
-    {
-        emptylist_node[i]=i;
-    }
-    size_leaf=0;
-    head_leaf=0;
-    tail_leaf=nmem_leaf_-1;
-    temp_tail_leaf=nmem_leaf_-1;
-
-    size_node=0;
-    heaf_node=0;
-    tail_node=nmem_node_-1;
-    temp_tail_node=nmem_node_-1;
-
-
-    tleaf.node_=&tnode;
-    tleaf.v=1;
-    tnode.leaf_=&tleaf;
-    tnode.v=2; 
-
-}
 /*
-Foam::ISAT::ISAT(const dataType& data)
+Foam::FixedLUscalarMatrix::FixedLUscalarMatrix()
+:
+    baseClassName(),
+    data_()
+{}
+
+
+Foam::FixedLUscalarMatrix::FixedLUscalarMatrix(const dataType& data)
 :
     baseClassName(),
     data_(data)
 {}
 
 
-Foam::ISAT::ISAT(const ISAT&)
+Foam::FixedLUscalarMatrix::FixedLUscalarMatrix(const FixedLUscalarMatrix&)
 :
     baseClassName(),
     data_()
 {}
 */
+template<unsigned Size>
+Foam::FixedLUscalarMatrix<Size>::FixedLUscalarMatrix(const FixedSquareMatrix<scalar, Size>& matrix)
+    :
+    FixedSquareMatrix<scalar, Size>(matrix)
+{
 
+}
 // * * * * * * * * * * * * * * * * Selectors * * * * * * * * * * * * * * * * //
 /*
-Foam::autoPtr<Foam::ISAT>
-Foam::ISAT::New()
+Foam::autoPtr<Foam::FixedLUscalarMatrix>
+Foam::FixedLUscalarMatrix::New()
 {
-    return autoPtr<ISAT>(new ISAT);
+    return autoPtr<FixedLUscalarMatrix>(new FixedLUscalarMatrix);
 }
 */
 
 // * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-
-Foam::ISAT::~ISAT()
+/*
+Foam::FixedLUscalarMatrix::~FixedLUscalarMatrix()
 {}
-
+*/
 
 // * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
 
 
 // * * * * * * * * * * * * * * Member Operators  * * * * * * * * * * * * * * //
 /*
-void Foam::ISAT::operator=(const ISAT& rhs)
+void Foam::FixedLUscalarMatrix::operator=(const FixedLUscalarMatrix& rhs)
 {
     // Check for assignment to self
     if (this == &rhs)

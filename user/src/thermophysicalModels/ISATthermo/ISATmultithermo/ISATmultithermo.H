@@ -382,12 +382,12 @@ namespace Foam
         struct thermofunction_TPvf
         {
             Type* p;
-            thermofunction_Tpsivf(Type* pin) :p(pin) {}
+            thermofunction_TPvf(Type* pin) :p(pin) {}
             void value(const scalarList& in, scalarList& out, scalar T0,scalar P0) const
             {
                 scalar E = in[in.size() - 2];
                 scalar rho = in[in.size() - 1];
-                scalar P,T
+                scalar P,T;
                 std::tie(P,T)=p->TrhoEs(E, rho, P0, T0, &Type::Es, &Type::rho);
                 //scalar T = p->T(H, P, T0, &Type::Hs, &Type::Cp, &Type::limit);
                 //scalarList temp(p->X_.size());
@@ -405,17 +405,19 @@ namespace Foam
                 out[2] = sol().vaporfra;
             }
 
-            void  derive(const scalarList& in, scalarRectangularMatrix& out, scalar T0)
+            void  derive(const scalarList& in, scalarRectangularMatrix& out, scalar T0,scalar P0)
             {
                 scalar E = in[in.size() - 2];
                 scalar rho = in[in.size() - 1];
                 //Todo finish these
-                scalar H = in[in.size() - 2];
-                scalar P = in[in.size() - 1];
-                scalar T = p->T(H, P, T0, &Type::Hs, &Type::Cp, &Type::limit);
-
+                //scalar H = in[in.size() - 2];
+                //scalar P = in[in.size() - 1];
+                //scalar T = p->T(H, P, T0, &Type::Hs, &Type::Cp, &Type::limit);
+                scalar P,T;
+                std::tie(P,T)=p->TrhoEs(E, rho, P0, T0, &Type::Es, &Type::rho);
                 p->setX(in);
                 autoPtr<typename Type::solution> sol(p->TPn_flash(P, T));//sol(p->TPn_flash_New_TPD(P, T));//sol(p->TPn_flash(P, T));
+                //Todo finish these
                 autoPtr<scalarRectangularMatrix> grad(p->dTrhoPvfdXHP_HsP(P, T, sol()));
                 out = grad();
             }

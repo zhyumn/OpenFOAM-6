@@ -442,7 +442,8 @@ template<class FuncType>
 void Foam::ISATmanager<FuncType>::showPreformance() const
 {
     Info << treename_ << ", ISAT performance: nCall=" << nCall_ << ", notCall=" << notCall << ", nRetrieved=" << nRetrieved_ << ", nGrowth=" << nGrowth_ << ", nAdd=" << nAdd_ << endl;
-    Info <<"NtimeSteps:"<<timeSteps_<<",Treedepth:"<< tableTree_.depth()<<",Mindepth:"<< ceil(log2(tableTree_.size()))<<endl;
+    //Info <<"tree size = "<< tableTree_.size()<< endl;
+    Info <<"NtimeSteps:"<<timeSteps_<<",Treedepth:"<< tableTree_.depth()<<",Mindepth:"<< ceil(log2(tableTree_.size()+1))<<endl;
 
 }
 

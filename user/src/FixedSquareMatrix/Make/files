@@ -1,0 +1,4 @@
+FixedSquareMatrix.C
+FixedLUscalarMatrix.C
+
+LIB = $(FOAM_USER_LIBBIN)/libFixedSquareMatrix
