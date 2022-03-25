@@ -196,7 +196,7 @@ namespace Foam
                 }
                 temp[n_sp - 1] = p->X_[n_sp - 1];
                 p->X_[n_sp - 1] = 1 - sum;
-                autoPtr<typename Type::solution> sol(p->TPn_flash(in[in.size() - 2], in[in.size() - 1]));
+                autoPtr<typename Type::solution> sol(p->TPN(in[in.size() - 2], in[in.size() - 1]));
                 out[0] = (p->*pfunc)(in[in.size() - 2], in[in.size() - 1], sol);
                 //Info << out << endl;
                 for (int i = 0;i < n_sp;i++)
@@ -250,7 +250,7 @@ namespace Foam
                 }
                 */
                 p->setX(in);
-                autoPtr<typename Type::solution> sol(p->TPn_flash(P, T));
+                autoPtr<typename Type::solution> sol(p->TPN(P, T));
 
                 out[0] = (p->Type::thermoVLE::psi)(P, T, sol);
             }
@@ -270,7 +270,7 @@ namespace Foam
                 }
                 */
                 p->setX(in);
-                autoPtr<typename Type::solution> sol(p->TPn_flash(P, T));
+                autoPtr<typename Type::solution> sol(p->TPN(P, T));
                 autoPtr<scalarList> grad(p->drhoPdXHP_HsP(P, T, sol()));
                 for (int i = 0;i < grad->size();i++)
                 {
@@ -322,7 +322,7 @@ namespace Foam
                 }
                 */
                 p->setX(in);
-                autoPtr<typename Type::solution> sol(p->TPn_flash(P, T));
+                autoPtr<typename Type::solution> sol(p->TPN(P, T));
                 out[0] = T;
                 out[1] = (p->Type::thermoVLE::psi)(P, T, sol);
             }
@@ -334,7 +334,7 @@ namespace Foam
                 scalar T = p->T(H, P, T0, &Type::Hs, &Type::Cp, &Type::limit);
 
                 p->setX(in);
-                autoPtr<typename Type::solution> sol(p->TPn_flash(P, T));
+                autoPtr<typename Type::solution> sol(p->TPN(P, T));
                 autoPtr<scalarRectangularMatrix> grad(p->dTrhoPdXHP_HsP(P, T, sol()));
                 out = grad();
             }
@@ -359,7 +359,7 @@ namespace Foam
                 }
                 */
                 p->setX(in);
-                autoPtr<typename Type::solution> sol(p->TPn_flash(P, T));
+                autoPtr<typename Type::solution> sol(p->TPN(P, T));
                 out[0] = T;
                 out[1] = (p->Type::thermoVLE::psi)(P, T, sol);
                 out[2] = sol().vaporfra;
@@ -372,7 +372,7 @@ namespace Foam
                 scalar T = p->T(H, P, T0, &Type::Hs, &Type::Cp, &Type::limit);
 
                 p->setX(in);
-                autoPtr<typename Type::solution> sol(p->TPn_flash(P, T));//sol(p->TPn_flash_New_TPD(P, T));//sol(p->TPn_flash(P, T));
+                autoPtr<typename Type::solution> sol(p->TPN(P, T));//sol(p->TPn_flash_New_TPD(P, T));//sol(p->TPn_flash(P, T));
                 autoPtr<scalarRectangularMatrix> grad(p->dTrhoPvfdXHP_HsP(P, T, sol()));
                 out = grad();
             }
@@ -390,7 +390,46 @@ namespace Foam
                 scalar T, P;
                 p->setX(in);
                 std::tie(P, T) = p->TrhoE(E, rho, P0, T0);
-                autoPtr<typename Type::solution> sol(p->TPn_flash(P, T));
+                autoPtr<typename Type::solution> sol(p->TPN(P, T));
+/*
+                scalarList test1(2), test2(2);
+                scalar e1, e2, rho1, rho2, p1, p2, T1, T2;
+                e1 = -115670.06779247121;
+                rho1 = 209.08049449382986;
+                test1[0] = 3.2509615069070284e-05;
+                test1[1] = 0.99996749038493093;
+                p->setX(test1);
+                std::tie(p1, T1) = p->TrhoE(e1, rho1, P0, T0);
+
+                e2 = -345151.48554157966;
+                rho2 = 674.32780349253721;
+
+                test2[0] = 0.99969244178928895;
+                test2[1] = 0.0003075582107111563;
+
+
+                p->setX(test2);
+                std::tie(p2, T2) = p->TrhoE(e2, rho2, P0, T0);
+
+                scalar rhomix, emix, al = 0.99, bt = 1 - al, pmix, Tmix;
+                scalarList testmix(2);
+                rhomix = al * rho1 + bt * rho2;
+                emix = (al * rho1 * e1 + bt * rho2 * e2) / rhomix;
+                testmix[0] = (al * rho1 * 0.0001 / 86.1754 + bt * rho2 * 0.9999 / 86.1754) / (al * rho1 * 0.0001 / 86.1754 + bt * rho2 * 0.9999 / 86.1754 + al * rho1 * 0.9999 / 28.0134 + bt * rho2 * 0.0001 / 28.0134);
+                testmix[1] = 1 - testmix[0];
+                p->setX(testmix);
+                std::tie(pmix, Tmix) = p->TrhoE(emix, rhomix, P0, T0);
+                FatalErrorInFunction
+                    << "T1: " << T1
+                    << "\nT2: " << T2
+                    << "\np1: " << p1
+                    << "\np2: " << p2
+                    << "\nTmix: " << Tmix
+                    << "\npmix: " << pmix
+                    << exit(FatalError);
+                autoPtr<typename Type::solution> sol1(p->TPN(P, T));
+                scalar cc = p->c(P, T, sol1());
+                */
                 /*
                                 autoPtr<typename Type::solution> sol1(p->TPn_flash(P, T));
                                 autoPtr<scalarRectangularMatrix> grad(p->dTPvfdXErho_constC(P, T, sol1()));
@@ -429,7 +468,7 @@ namespace Foam
                 std::tie(P, T) = p->TrhoE(E, rho, P0, T0);
 
                 p->setX(in);
-                autoPtr<typename Type::solution> sol(p->TPn_flash(P, T));//sol(p->TPn_flash_New_TPD(P, T));//sol(p->TPn_flash(P, T));
+                autoPtr<typename Type::solution> sol(p->TPN(P, T));//sol(p->TPn_flash_New_TPD(P, T));//sol(p->TPn_flash(P, T));
                 autoPtr<scalarRectangularMatrix> grad(p->dTPvfdXErho_constC(P, T, sol()));
                 //autoPtr<scalarRectangularMatrix> grad(p->dTPvfdXErho(P, T, sol()));
                 out = grad();
@@ -695,7 +734,7 @@ namespace Foam
                 }
                 temp[n_sp - 1] = p->X_[n_sp - 1];
                 p->X_[n_sp - 1] = 1 - sum;
-                autoPtr<typename Type::solution> sol(p->TPn_flash(in[in.size() - 2], in[in.size() - 1]));
+                autoPtr<typename Type::solution> sol(p->TPN(in[in.size() - 2], in[in.size() - 1]));
                 out[0] = (p->*ppsi)(in[in.size() - 2], in[in.size() - 1], sol);
                 out[1] = (p->*pvf)(in[in.size() - 2], in[in.size() - 1], sol);
                 //Info << out << endl;
