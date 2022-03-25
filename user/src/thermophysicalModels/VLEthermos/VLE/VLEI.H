@@ -848,7 +848,7 @@ inline Foam::autoPtr<typename Foam::VLE<ThermoMixture>::solution> Foam::VLE<Ther
     scalar T,  //input
     bool stable,
     bool isVapor,
-    Foam::scalarList& K_init) const {
+    Foam::scalarList& K_init) const  {
     autoPtr<solution> pS(new solution());
     //if(this->changed==0&&temp_p==p&&temp_T==T)
     //return pS;
@@ -1404,7 +1404,8 @@ inline tuple<bool, Foam::autoPtr<Foam::List<Foam::scalarList>>, bool, Foam::auto
             F_old[i] = alpha_old[i] / 2 * (lnphi_y()[i] + log(Y[i]) - d[i]);
             alpha_new[i] = 2 * exp(-0.5 * (lnphi_y()[i] - d[i]));
         }
-        for (int iter = 0; iter < iter_max; iter++) {
+        int iter;
+        for (iter = 0; iter < iter_max; iter++) {
             sum = 0;
             for (int i = 0; i < this->X_.size(); i++) {
                 Y[i] = 0.25 * alpha_new[i] * alpha_new[i];
@@ -1494,6 +1495,34 @@ inline tuple<bool, Foam::autoPtr<Foam::List<Foam::scalarList>>, bool, Foam::auto
                 }
                 break;
             }
+        }
+        if(iter>=iter_max)
+        {
+            sum = 0;
+                for (int i = 0; i < this->X_.size(); i++) {
+                    sum += Y[i];
+                }
+                for (int i = 0; i < this->X_.size(); i++) {
+                    y_sp[itrial][i] = Y[i] / sum;
+                }
+                TPD[itrial] = -log(sum);
+                TPD_star[itrial] = 1. - sum;
+                mask_stationary[itrial] = true;
+                if (TPD_star[itrial] < be_negative) {
+                    stable = false;
+
+                    scalar z2 = this->Z_gibbs(p, T, &y_sp[itrial]);
+                    if (z < z2)
+                        for (int i = 0; i < this->X_.size(); i++) {
+                            //K_init_min[i] = Y_init[itrial][i] / this->X_[i];
+                            K_init[itrial][i] = y_sp[itrial][i] / this->X_[i];
+                        }
+                    else
+                        for (int i = 0; i < this->X_.size(); i++) {
+                            //K_init_min[i] = Y_init[itrial][i] / this->X_[i];
+                            K_init[itrial][i] = this->X_[i] / y_sp[itrial][i];
+                        }
+                }
         }
     }
     return make_tuple(stable, p_K_init, isVapor, p_TPD_star);
