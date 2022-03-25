@@ -212,6 +212,7 @@ namespace Foam
             Datatype& operator()() { return *table; }
             Datatype& operator[](int n) { return table[n]; }
             Datatype* ptr() { return table; }
+            ~shared_data(){MPI_Win_free(&wintable);}
         };
         class mpi_mutex
         {

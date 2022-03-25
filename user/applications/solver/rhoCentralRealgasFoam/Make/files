@@ -1,3 +1,4 @@
-rhoCentralFoam.C
+rhoCentralRealgasFoam.C
 
-EXE = $(FOAM_USER_APPBIN)/rhoCentralRealgasFoam
+EXE = $(FOAM_USER_APPBIN)/rhoCentralRealgasFoam_dev
+

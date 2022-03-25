@@ -49,10 +49,10 @@ inline Foam::scalar Foam::species::multithermo<ThermoMixture, Type>::T(
     scalar f,
     scalar p,
     scalar T0,
-    scalar (multithermo<ThermoMixture, Type>::*F)(const scalar, const scalar) const,
-    scalar (multithermo<ThermoMixture, Type>::*dFdT)(const scalar, const scalar)
-        const,
-    scalar (multithermo<ThermoMixture, Type>::*limit)(const scalar) const) const
+    scalar(multithermo<ThermoMixture, Type>::* F)(const scalar, const scalar) const,
+    scalar(multithermo<ThermoMixture, Type>::* dFdT)(const scalar, const scalar)
+    const,
+    scalar(multithermo<ThermoMixture, Type>::* limit)(const scalar) const) const
 {
     if (T0 < 0)
     {
@@ -94,24 +94,24 @@ inline Foam::scalar Foam::species::multithermo<ThermoMixture, Type>::T(
         if (T2 == 0)
         {
             FatalErrorInFunction << setprecision(50)
-                                 << "Maximum number of iterations exceeded: " << maxIter_
-                                 << " f: " << f
-                                 << " p: " << p
-                                 << " T0: " << T0
-                                 << "  Tg: " << T2
-                                 << " X: " << this->X_
-                                 << abort(FatalError);
+                << "Maximum number of iterations exceeded: " << maxIter_
+                << " f: " << f
+                << " p: " << p
+                << " T0: " << T0
+                << "  Tg: " << T2
+                << " X: " << this->X_
+                << abort(FatalError);
         }
         if (iter++ > maxIter_)
         {
             FatalErrorInFunction << setprecision(50)
-                                 << "Maximum number of iterations exceeded: " << maxIter_
-                                 << " f: " << f
-                                 << " p: " << p
-                                 << " T0: " << T0
-                                 << "  Tg: " << T2
-                                 << " X: " << this->X_
-                                 << abort(FatalError);
+                << "Maximum number of iterations exceeded: " << maxIter_
+                << " f: " << f
+                << " p: " << p
+                << " T0: " << T0
+                << "  Tg: " << T2
+                << " X: " << this->X_
+                << abort(FatalError);
         }
 
     } while (mag(T2 - T1) > Ttol && mag(f - F2) > 0.0001);
@@ -121,15 +121,15 @@ inline Foam::scalar Foam::species::multithermo<ThermoMixture, Type>::T(
     //Info<<"-------------------call N="<<call_n<<",average iter="<<inter_n*1.0/call_n<<endl;
     return T2;
 
-    /*IQI wrong 
+    /*IQI wrong
    if (T0 < 0)
     {
         FatalErrorInFunction
             << "Negative initial temperature T0: " << T0
             << abort(FatalError);
     }
-    
-    static int call_n=0; 
+
+    static int call_n=0;
     static int inter_n=0;
     scalar T1 = T0;
     scalar T2 = T0+10;
@@ -296,15 +296,14 @@ inline std::tuple<Foam::scalar, Foam::scalar> Foam::species::multithermo<ThermoM
         de = (e11 - e);
         drho = (rho11 - rho);
 
-        if(mag(de)>mag(de_old)||mag(drho)>mag(drho_old))
+        /*if(mag(de)>mag(de_old)||mag(drho)>mag(drho_old))
         {
             relax*=0.5;
-        }
+        }*/
         dedt = (e12 - e11) / dT;  //(this->*dFdT)(p, Test);
         dedp = (e21 - e11) / dp;
         drhodt = (rho12 - rho11) / dT;
         drhodp = (rho21 - rho11) / dp;
-
         dete = dedt * drhodp - dedp * drhodt;
         /*if(fabs(dete)<1e-8)
         {

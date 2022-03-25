@@ -374,6 +374,20 @@ double solver_new::Hs()
     thermo->setX(comp_of);
     return thermo->Hs(P, T);
 }
+
+double solver_new::Es()
+{
+    /*
+    Foam::scalarList comp_of(comp.size(), Foam::Zero);
+    for (unsigned int i = 0;i < comp.size();i++)
+    {
+        comp_of[i] = comp[i];
+    }
+    thermo->setX(comp_of);
+    return thermo->Es(P, T);
+    */
+    return Hs() - P / rho();
+}
 double solver_new::Ha_singlePhase(int flag, std::vector<double>& in)
 {
     Foam::scalarList comp_of(comp.size(), Foam::Zero);
@@ -522,7 +536,19 @@ void solver_new::ddxi_Ln_fugacityCoefficient(int di, int flag)
         ret[i] = ddT_Ln_fugcoef()[i];
     }
 }
-
+void solver_new::setY()
+{
+    Foam::scalarList comp_of(comp.size(), Foam::Zero);
+    for (unsigned int i = 0;i < comp.size();i++)
+    {
+        comp_of[i] = comp[i];
+    }
+    thermo->setY(comp_of);
+    for (unsigned int i = 0;i < comp.size();i++)
+    {
+        comp[i] = thermo->X_[i];
+    }
+}
 void solver_new::dvidT()
 {
     Foam::scalarList comp_liq_of(comp.size(), Foam::Zero);
@@ -744,6 +770,133 @@ double  solver_new::dTdP_HP()
     Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
     return thermo->dTdP_HP(P, T, so);
 }
+double  solver_new::dEdT()
+{
+    Foam::scalarList comp_of(comp.size(), Foam::Zero);
+    autoPtr<scalarList> solu;
+
+    for (unsigned int i = 0;i < comp.size();i++)
+    {
+        comp_of[i] = comp[i];
+    }
+    thermo->setX(comp_of);
+    Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
+    return thermo->dEdT(P, T, so);
+}
+
+double  solver_new::dEdP()
+{
+    Foam::scalarList comp_of(comp.size(), Foam::Zero);
+    autoPtr<scalarList> solu;
+
+    for (unsigned int i = 0;i < comp.size();i++)
+    {
+        comp_of[i] = comp[i];
+    }
+    thermo->setX(comp_of);
+    Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
+    return thermo->dEdP(P, T, so);
+}
+
+double  solver_new::dEdXi(int di)
+{
+    Foam::scalarList comp_of(comp.size(), Foam::Zero);
+    autoPtr<scalarList> solu;
+
+    for (unsigned int i = 0;i < comp.size();i++)
+    {
+        comp_of[i] = comp[i];
+    }
+    thermo->setX(comp_of);
+    Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
+    return thermo->dEdXi(P, T, di, so);
+}
+
+
+
+double  solver_new::dTdE_rhoX()
+{
+    Foam::scalarList comp_of(comp.size(), Foam::Zero);
+    autoPtr<scalarList> solu;
+
+    for (unsigned int i = 0;i < comp.size();i++)
+    {
+        comp_of[i] = comp[i];
+    }
+    thermo->setX(comp_of);
+    Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
+    return thermo->dTdE_rhoX(P, T, so);
+}
+
+double  solver_new::dTdrho_EX()
+{
+    Foam::scalarList comp_of(comp.size(), Foam::Zero);
+    autoPtr<scalarList> solu;
+
+    for (unsigned int i = 0;i < comp.size();i++)
+    {
+        comp_of[i] = comp[i];
+    }
+    thermo->setX(comp_of);
+    Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
+    return thermo->dTdrho_EX(P, T, so);
+}
+
+double  solver_new::dPdE_rhoX()
+{
+    Foam::scalarList comp_of(comp.size(), Foam::Zero);
+    autoPtr<scalarList> solu;
+
+    for (unsigned int i = 0;i < comp.size();i++)
+    {
+        comp_of[i] = comp[i];
+    }
+    thermo->setX(comp_of);
+    Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
+    return thermo->dPdE_rhoX(P, T, so);
+}
+
+double  solver_new::dPdrho_EX()
+{
+    Foam::scalarList comp_of(comp.size(), Foam::Zero);
+    autoPtr<scalarList> solu;
+
+    for (unsigned int i = 0;i < comp.size();i++)
+    {
+        comp_of[i] = comp[i];
+    }
+    thermo->setX(comp_of);
+    Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
+    return thermo->dPdrho_EX(P, T, so);
+}
+
+double  solver_new::dvfdE_rhoX()
+{
+    Foam::scalarList comp_of(comp.size(), Foam::Zero);
+    autoPtr<scalarList> solu;
+
+    for (unsigned int i = 0;i < comp.size();i++)
+    {
+        comp_of[i] = comp[i];
+    }
+    thermo->setX(comp_of);
+    Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
+    return thermo->dvfdE_rhoX(P, T, so);
+}
+
+double  solver_new::dvfdrho_EX()
+{
+    Foam::scalarList comp_of(comp.size(), Foam::Zero);
+    autoPtr<scalarList> solu;
+
+    for (unsigned int i = 0;i < comp.size();i++)
+    {
+        comp_of[i] = comp[i];
+    }
+    thermo->setX(comp_of);
+    Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
+    return thermo->dvfdrho_EX(P, T, so);
+}
 
 
 double  solver_new::c()
@@ -785,7 +938,48 @@ double  solver_new::dTdXi_HP(int di)
     thermo->setX(comp_of);
     Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
     return thermo->dTdXi_HP(P, T, di, so);
+}
 
+double  solver_new::dTdXi_Erho(int di)
+{
+    Foam::scalarList comp_of(comp.size(), Foam::Zero);
+    autoPtr<scalarList> solu;
+
+    for (unsigned int i = 0;i < comp.size();i++)
+    {
+        comp_of[i] = comp[i];
+    }
+    thermo->setX(comp_of);
+    Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
+    return thermo->dTdXi_Erho(P, T, di, so);
+}
+
+double  solver_new::dPdXi_Erho(int di)
+{
+    Foam::scalarList comp_of(comp.size(), Foam::Zero);
+    autoPtr<scalarList> solu;
+
+    for (unsigned int i = 0;i < comp.size();i++)
+    {
+        comp_of[i] = comp[i];
+    }
+    thermo->setX(comp_of);
+    Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
+    return thermo->dPdXi_Erho(P, T, di, so);
+}
+
+double  solver_new::dvfdXi_Erho(int di)
+{
+    Foam::scalarList comp_of(comp.size(), Foam::Zero);
+    autoPtr<scalarList> solu;
+
+    for (unsigned int i = 0;i < comp.size();i++)
+    {
+        comp_of[i] = comp[i];
+    }
+    thermo->setX(comp_of);
+    Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
+    return thermo->dvfdXi_Erho(P, T, di, so);
 }
 
 double  solver_new::rho()
@@ -858,7 +1052,6 @@ double  solver_new::Z()
     return thermo->Z(P, T, so);
 
 }
-
 double  solver_new::drhodT()
 {
     Foam::scalarList comp_of(comp.size(), Foam::Zero);

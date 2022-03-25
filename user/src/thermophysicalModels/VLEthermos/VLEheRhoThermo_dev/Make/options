@@ -1,0 +1,26 @@
+EXE_INC = \
+    -I../multithermo \
+    -I../janafAd \
+    -I../VLE \
+    -I../PengRobinsonMixture \
+    -I../PengRobinson \
+    -I../chungMixture_dev \
+    -I../chung_dev \
+    -I../multispecie \
+    -I../nLreactingMixture \
+    -I../nonlinearMixture \
+    -I../ \
+    -Wno-deprecated-copy \
+    -I$(LIB_SRC)/finiteVolume/lnInclude \
+    -I$(LIB_SRC)/thermophysicalModels/specie/lnInclude \
+    -I$(LIB_SRC)/thermophysicalModels/reactionThermo/lnInclude \
+    -I$(LIB_SRC)/thermophysicalModels/basic/lnInclude \
+    -I$(LIB_SRC)/transportModels/compressible/lnInclude \
+
+
+EXE_LIBS = \
+    -lfiniteVolume \
+    -lspecie \
+    -lreactionThermophysicalModels \
+    -lfluidThermophysicalModels \
+    -lcompressibleTransportModels

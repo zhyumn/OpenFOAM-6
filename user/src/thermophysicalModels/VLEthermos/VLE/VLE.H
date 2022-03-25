@@ -133,7 +133,7 @@ namespace Foam {
 
         inline scalar dEdT(scalar p, scalar T, solution& sol) const;
         inline scalar dEdP(scalar p, scalar T, solution& sol) const;
-        inline scalar dEdXi(scalar p, scalar T,label di, solution& sol) const;
+        inline scalar dEdXi(scalar p, scalar T, label di, solution& sol) const;
 
         inline scalar dTdE_rhoX(scalar p, scalar T, solution& sol) const;
         inline scalar dTdrho_EX(scalar p, scalar T, solution& sol) const;
@@ -143,6 +143,9 @@ namespace Foam {
         inline scalar dTdXi_Erho(scalar p, scalar T, label di, solution& sol) const;
         inline scalar dPdXi_Erho(scalar p, scalar T, label di, solution& sol) const;
 
+        inline scalar dvfdE_rhoX(scalar p, scalar T, solution& sol) const;
+        inline scalar dvfdrho_EX(scalar p, scalar T, solution& sol) const;
+        inline scalar dvfdXi_Erho(scalar p, scalar T, label di, solution& sol) const;
         //- Return enthalpy departure [J/kg]
         inline scalar H(const scalar p, const scalar T) const;
 
@@ -169,18 +172,26 @@ namespace Foam {
         inline scalar Z(scalar p, scalar T) const;
         inline scalar Z(scalar p, scalar T, solution& sol) const;
 
+        inline scalar kappa_dev(scalar p, scalar T) const;
+        inline scalar mu_dev(scalar p, scalar T) const;
+        inline scalar alphah_dev(scalar p, scalar T) const;
+        //inline scalar Dimix_dev(scalar p, scalar T,label di) const;
+
         inline scalar dZdT(scalar p, scalar T, solution& sol) const;
         inline scalar dZdP(scalar p, scalar T, solution& sol) const;
         inline scalar dZdXi(scalar p, scalar T, label di, solution& sol) const;
 
         //- Return (Cp - Cv) [J/(kg K]
         inline scalar CpMCv(scalar p, scalar T) const;
+        inline scalar CpMCv(scalar p, scalar T, solution& sol) const;
 
         inline scalar A(scalar p, scalar T) const;
         //inline scalar B(scalar p, scalar T) const;
         inline scalar Ha(scalar p, scalar T) const;
+        inline scalar Ha(scalar p, scalar T, solution& sol) const;
         inline scalar Hc() const;
         inline scalar Hs(scalar p, scalar T) const;
+        inline scalar Hs(scalar p, scalar T, solution& sol) const;
         inline scalar G(scalar p, scalar T) const;
         inline scalar dGdT(scalar p, scalar T) const;
         inline scalar dCpdT(scalar p, scalar T) const;
@@ -260,6 +271,13 @@ namespace Foam {
         inline autoPtr<scalarRectangularMatrix> dTrhoPdXHP_HsP(scalar p, scalar T, solution& sol) const;
         inline autoPtr<scalarRectangularMatrix> dTrhoPvfdXHP_HsP(scalar p, scalar T, solution& sol) const;
         inline autoPtr<scalarRectangularMatrix> dTPvfdXErho(scalar p, scalar T, solution& sol) const;
+        inline autoPtr<scalarRectangularMatrix> dTPvfdXErho_constC(scalar p, scalar T, solution& sol) const;
+        inline autoPtr<scalarRectangularMatrix> dTPvfdXErho_simp(scalar p, scalar T, solution& sol) const;
+
+        inline autoPtr<scalarRectangularMatrix> dErhovfcdXTP_simp(scalar p, scalar T, solution& sol) const;
+
+        inline tuple<scalar, scalar, scalar, scalar> dTPdErho(scalar p, scalar T, solution& sol) const;
+
 
         inline scalar dvfdH_HsP(scalar p, scalar T, solution& sol) const;
         inline scalar dvfdP_HsP(scalar p, scalar T, solution& sol) const;
@@ -270,6 +288,8 @@ namespace Foam {
         inline scalar kappaS(scalar p, scalar T, solution& sol) const;
         inline scalar c(scalar p, scalar T, solution& sol) const;
         inline scalar c(scalar p, scalar T) const;
+
+
         //mutable solution temp_sol;
         //mutable scalar temp_p,temp_T;
         /* friend VLE operator==<ThermoMixture>(
@@ -295,9 +315,9 @@ namespace Foam {
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
     template<class T>
-    void autoPtrReset( autoPtr<T>& ap,const autoPtr<T>& bp)
+    void autoPtrReset(autoPtr<T>& ap, const autoPtr<T>& bp)
     {
-    
+
         ap.reset(const_cast<autoPtr<T>&>(bp).ptr());
         const_cast<autoPtr<T>&>(bp).reset();
         //pa.reset(pb.operator->());

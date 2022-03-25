@@ -28,25 +28,26 @@ License
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 template<class FuncType>
-Foam::ISATmanager<FuncType>::ISATmanager(label in_n, label out_n, FuncType& func, const word& name_in,const dictionary& ISATDict)
-:ISATDict_(ISATDict.subDict(name_in)),
-tableTree_(in_n, out_n,readLabel(ISATDict_.lookup("maxNLeafs")),readLabel(ISATDict_.lookup("NtimeTag"))), 
-pfunc(&func), 
-epsilon_(1e-3), 
-relepsilon_(0.0), 
-scaleFactor_(out_n, out_n), 
-scaleIn_(in_n, in_n), 
-toleranceOut_(out_n, out_n), 
-initToleranceIn_(in_n, in_n), 
-init_elp_(in_n, in_n), 
-timeSteps_(0),
-checkInterval_(readLabel(ISATDict_.lookup("checkInterval"))),
-maxDepthFactor_(readScalar(ISATDict_.lookup("maxDepthFactor"))),
-nRetrieved_(0), 
-nGrowth_(0), 
-nAdd_(0), 
-nCall_(0), 
-treename_(name_in)
+Foam::ISATmanager<FuncType>::ISATmanager(label in_n, label out_n, FuncType& func, const word& name_in, const dictionary& ISATDict)
+    :ISATDict_(ISATDict.subDict(name_in)),
+    tableTree_(in_n, out_n, readLabel(ISATDict_.lookup("maxNLeafs")), readLabel(ISATDict_.lookup("NtimeTag"))),
+    pfunc(&func),
+    epsilon_(1e-3),
+    relepsilon_(0.0),
+    scaleFactor_(out_n, out_n),
+    scaleIn_(in_n, in_n),
+    toleranceOut_(out_n, out_n),
+    initToleranceIn_(in_n, in_n),
+    init_elp_(in_n, in_n),
+    timeSteps_(0),
+    checkInterval_(readLabel(ISATDict_.lookup("checkInterval"))),
+    maxDepthFactor_(readScalar(ISATDict_.lookup("maxDepthFactor"))),
+    maxLeafsize_(ISATDict_.lookup("maxLeafsize")),
+    nRetrieved_(0),
+    nGrowth_(0),
+    nAdd_(0),
+    nCall_(0),
+    treename_(name_in)
 {
     for (int i = 0;i < out_n;i++)
         for (int j = 0;j < out_n;j++)
@@ -64,9 +65,9 @@ treename_(name_in)
     for (int i = 0;i < out_n;i++)
     {
         scaleFactor_[i][i] = 1.0;
-    }    
+    }
     for (int i = 0;i < in_n;i++)
-    scaleIn_[i][i] = 1.0;
+        scaleIn_[i][i] = 1.0;
     scalarList toleranceOut_temp(ISATDict_.lookup("toleranceOut"));
     scalarList initToleranceIn_temp(ISATDict_.lookup("initToleranceIn"));
     scalarList scaleIn_temp(ISATDict_.lookup("scaleIn"));
@@ -209,11 +210,16 @@ void Foam::ISATmanager<FuncType>::call
             pfunc->value(leafvalue + dvalue, out, arg...);
             scalarList out2(out.size());
             scalarList others = leafvalue - dvalue;
-            bool flag_others = true;
+            bool flag_others = pfunc->valid_in(others);
+            for (int i = 0;i < others.size();i++)
+            {
+                flag_others = flag_others && mag(dvalue[i]) <= maxLeafsize_[i];
+            }
+            /*
             for (int i = 0;i < others.size();i++)
             {
                 flag_others = flag_others && others[i] >= 0;
-            }
+            }*/
             scalar sumother = 0;
             for (int i = 0;i < others.size() - 2;i++)
             {
@@ -281,7 +287,7 @@ bool Foam::ISATmanager<FuncType>::retrieve
         // lastSearch keeps track of the chemPoint we obtain by the regular
         // binary tree search
         //lastSearch_ = phi0;
-        if (plf->inEOA(value,scaleIn_))
+        if (plf->inEOA(value, scaleIn_))
         {
             retrieved = true;
         }
@@ -403,7 +409,7 @@ bool Foam::ISATmanager<FuncType>::grow
     //if (distance(ret1, data1) <= epsilon_ && distance(ret2, data2) <= epsilon_)
     if (normalized_distance(ret1, data1) <= 1.0 && normalized_distance(ret2, data2) <= 1.0)
     {
-        plf->grow(plf->value() + dvalue_m,scaleIn_);
+        plf->grow(plf->value() + dvalue_m, scaleIn_);
         tableTree_.timeTagList().renew(plf->pTimeTagList());
         nGrowth_++;
         return true;
@@ -443,7 +449,7 @@ void Foam::ISATmanager<FuncType>::showPreformance() const
 {
     Info << treename_ << ", ISAT performance: nCall=" << nCall_ << ", notCall=" << notCall << ", nRetrieved=" << nRetrieved_ << ", nGrowth=" << nGrowth_ << ", nAdd=" << nAdd_ << endl;
     //Info <<"tree size = "<< tableTree_.size()<< endl;
-    Info <<"NtimeSteps:"<<timeSteps_<<",Treedepth:"<< tableTree_.depth()<<",Mindepth:"<< ceil(log2(tableTree_.size()+1))<<endl;
+    Info << "NtimeSteps:" << timeSteps_ << ",Treedepth:" << tableTree_.depth() << ",Mindepth:" << ceil(log2(tableTree_.size() + 1)) << endl;
 
 }
 

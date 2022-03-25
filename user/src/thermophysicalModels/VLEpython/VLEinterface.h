@@ -137,6 +137,7 @@ struct solver_new
     double B();
     double dBdT();
     double Ha();
+    double Es();
     double Hs();
     double Ha_singlePhase(int, std::vector<double>&);
     double dHadT_singlePhase(int, std::vector<double>&);
@@ -157,10 +158,28 @@ struct solver_new
     void dvidP();
     void dvidXi(int);
     void  fugacityCoefficient(int, std::vector<double>&);
-
+    void  setY();
     double dTdP_HP();
     double dTdH_HP();
     double dTdXi_HP(int);
+
+    double dTdE_rhoX();
+    double dTdrho_EX();
+    double dPdE_rhoX();
+    double dPdrho_EX();
+    double dvfdE_rhoX();
+    double dvfdrho_EX();
+    double dTdXi_Erho(int);
+    double dPdXi_Erho(int);
+    double dvfdXi_Erho(int);
+
+    double dEdT();
+    double dEdP();
+    double dEdXi(int);
+
+    //double drhodT();
+    //double drhodP();
+    //double drhodXi(int);
     //bool twophase(double rho, double lt, double rt);
     std::vector<double> equalconstant;
     std::vector<double> comp_liq;

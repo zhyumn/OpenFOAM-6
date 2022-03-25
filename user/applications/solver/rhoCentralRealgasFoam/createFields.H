@@ -2,11 +2,11 @@
 
 Info<< "Reading thermophysical properties\n" << endl;
 
-autoPtr<psiThermo> pThermo
+autoPtr<rhoThermo> pThermo
 (
-    psiThermo::New(mesh)
+    rhoThermo::New(mesh)
 );
-psiThermo& thermo = pThermo();
+rhoThermo& thermo = pThermo();
 
 volScalarField& e = thermo.he();
 
@@ -23,7 +23,7 @@ volVectorField U
     ),
     mesh
 );
-volScalarField& rho = mesh.objectRegistry::lookupObjectRef<volScalarField>("rho");
+volScalarField& rho = mesh.objectRegistry::lookupObjectRef<volScalarField>("thermo:rho");
 /*volScalarField rho
 (
     IOobject
@@ -36,7 +36,7 @@ volScalarField& rho = mesh.objectRegistry::lookupObjectRef<volScalarField>("rho"
     ),
     thermo.rho()
 );*/
-rho=thermo.rho();
+//rho=thermo.rho();
 volVectorField rhoU
 (
     IOobject

@@ -27,9 +27,14 @@ License
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
-Foam::scalar Foam::SUPstream::staticData=0;
+Foam::scalar Foam::SUPstream::staticData = 0;
 Foam::SUPstream::mpi_node_manager Foam::SUPstream::node_manager;
 Foam::SUPstream::mpi_sync Foam::SUPstream::Sync(Foam::SUPstream::node_manager);
+namespace Foam
+{
+    //const dataType Foam::ISAT::staticData();
+    MPI_Shared::Slab* pslab = NULL;
+}
 // * * * * * * * * * * * * * Static Member Functions * * * * * * * * * * * * //
 
 

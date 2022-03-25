@@ -83,7 +83,7 @@ class chungTransport
 {
     // Private data
     public:
-        //- Constant dynamic viscosity [Pa.s]
+        //- Dipole moment (?old [Pa.s])
         scalar mu_;
 
         //- Reciprocal Prandtl Number []

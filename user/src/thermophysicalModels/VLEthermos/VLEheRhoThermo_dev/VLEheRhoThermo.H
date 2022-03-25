@@ -1,0 +1,120 @@
+/*---------------------------------------------------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Copyright (C) 2011-2018 OpenFOAM Foundation
+     \\/     M anipulation  |
+-------------------------------------------------------------------------------
+License
+    This file is part of OpenFOAM.
+
+    OpenFOAM is free software: you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    OpenFOAM is distributed in the hope that it will be useful, but WITHOUT
+    ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+    FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+    for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
+
+Class
+    Foam::VLEheRhoThermo
+
+Description
+    Energy for a mixture based on compressibility
+
+SourceFiles
+    VLEheRhoThermo.C
+
+\*---------------------------------------------------------------------------*/
+
+#ifndef VLEheRhoThermo_H
+#define VLEheRhoThermo_H
+
+#include "psiThermo.H"
+#include "heThermo.H"
+#include <tuple>
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+namespace Foam
+{
+
+    /*---------------------------------------------------------------------------*\
+                             Class VLEheRhoThermo Declaration
+    \*---------------------------------------------------------------------------*/
+
+    template<class BasicPsiThermo, class MixtureType>
+    class VLEheRhoThermo
+        :
+        public heThermo<BasicPsiThermo, MixtureType>
+    {
+
+        volScalarField vaporfrac_;
+        volScalarField soundspeed_;
+        volScalarField entropy_;
+
+
+        volScalarField kappa_;
+        //volScalarField rho_;
+
+        //- Store list of mass diffusion coefficients
+        PtrList<volScalarField> Dimix_; //
+
+        PtrList<volScalarField> heList_;
+        PtrList<volScalarField> WList_;
+
+        // Private Member Functions
+
+            //- Calculate the thermo variables
+        void calculate();
+        void calculate_init();
+
+        //- Construct as copy (not implemented)
+        VLEheRhoThermo(const VLEheRhoThermo<BasicPsiThermo, MixtureType>&);
+
+    public:
+
+        //- Runtime type information
+        TypeName("VLEheRhoThermo");
+
+
+        // Constructors
+
+            //- Construct from mesh and phase name
+        VLEheRhoThermo
+        (
+            const fvMesh&,
+            const word& phaseName
+        );
+
+
+        //- Destructor
+        virtual ~VLEheRhoThermo();
+
+
+        // Member functions
+
+            //- Update properties
+        virtual void correct();
+    };
+
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+} // End namespace Foam
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+#ifdef NoRepository
+#include "VLEheRhoThermo.C"
+#endif
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+#endif
+
+// ************************************************************************* //
