@@ -35,7 +35,8 @@ License
 #include "string.H"
 
 //#define TPN TPn_flash
-#define TPN TPn_flash_New_TPD
+//#define TPN TPn_flash_New_TPD
+#define TPN TPn_flash_New_TPD_Tudisco
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
@@ -61,7 +62,12 @@ inline Foam::VLE<ThermoMixture>::VLE(
     PtrList<SingleThermoType>& speciesData,
     const speciesTable& specieNames,
     const dictionary& thermoDict)
-    : ThermoMixture(name, speciesData, specieNames, thermoDict) {
+    : ThermoMixture(name, speciesData, specieNames, thermoDict),
+    inputK(thermoDict.lookupOrDefault<bool>("inputK", false)),
+    Kinit(thermoDict.lookup("Kinit"))
+{
+
+    //FatalErrorInFunction << "!!!\n" <<inputK<<"\n"<< K_init<< exit(FatalError);
 }
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
@@ -848,7 +854,7 @@ inline Foam::autoPtr<typename Foam::VLE<ThermoMixture>::solution> Foam::VLE<Ther
     scalar T,  //input
     bool stable,
     bool isVapor,
-    Foam::scalarList& K_init) const  {
+    Foam::scalarList& K_init) const {
     autoPtr<solution> pS(new solution());
     //if(this->changed==0&&temp_p==p&&temp_T==T)
     //return pS;
@@ -1066,6 +1072,391 @@ inline Foam::autoPtr<typename Foam::VLE<ThermoMixture>::solution> Foam::VLE<Ther
     return pS;
 }
 
+template <class ThermoMixture>
+inline Foam::autoPtr<typename Foam::VLE<ThermoMixture>::solution> Foam::VLE<ThermoMixture>::TPn_flash_Matheis
+(
+    scalar p,  //input
+    scalar T,  //input
+    bool stable,
+    bool isVapor,
+    Foam::scalarList& K_init,
+    bool& success
+) const
+{
+    const int itermax_outer = 1000;
+    const int itermax_inner = 100;
+
+
+    const double tol_inner = 1e-7;
+    const double tol_outer = 1e-7;
+    success = false;
+
+    autoPtr<solution> pS(new solution());
+    solution& Sol = *pS;
+    Sol.X_liq.reset(new scalarList(this->N_));
+    Sol.X_gas.reset(new scalarList(this->N_));
+
+    if (stable != true)
+    {
+        Sol.equalconstant.reset(new scalarList(this->N_));
+        forAll(this->X_, i)
+        {
+            Sol.equalconstant()[i] = K_init[i];
+        }
+    }
+    else
+    {
+        if (isVapor == true) {
+            Sol.vaporfra = 1.0;
+        }
+        else {
+            Sol.vaporfra = 0.0;
+        }
+        Sol.equalconstant.reset(new scalarList(this->N_));
+        success = true;
+        return pS;
+    }
+    scalarList& K = Sol.equalconstant();
+    scalar& vf = Sol.vaporfra;
+
+
+    autoPtr<scalarList> Ln_fugcoef_liq, Ln_fugcoef_gas;
+    scalarList F(this->N_);
+
+    int iter_outer = 0;
+    double eps_outer = 0;
+    while (iter_outer <= itermax_outer)
+    {
+        scalar sum1 = 0, sum2 = 0;
+        for (int i = 0;i < this->N_;i++)
+        {
+            sum1 += this->X_[i] * K[i];
+            sum2 += this->X_[i] / K[i];
+        }
+        if (iter_outer == 0 && (sum1 < 1 || sum2 < 1))
+        {
+            K[0] = 1 / this->X_[0];
+            K[1] = this->X_[1];
+            continue;
+        }
+        if (sum1 >= 1.0 && sum2 >= 1)
+        {
+            double eps_inner = 1.0;
+            int iter_inner = 1;
+            double vf_min = 0, vf_max = 1;
+
+            for (int i = 0;i < this->N_;i++)
+            {
+                if (K[i] > 1)
+                    vf_min = max(0.0, (this->X_[i] * K[i] - 1) / (K[i] - 1));
+                else
+                    vf_max = min(1.0, (1 - this->X_[i]) / (1 - K[i]));
+            }
+            vf = 0.5 * (vf_min + vf_max);
+
+            double RR = 0, dRR = 0, dvf = 0, vf_n = 0;
+            while (eps_inner >= tol_inner && iter_inner <= itermax_inner)
+            {
+                RR = 0;
+                dRR = 0;
+                for (int i = 0;i < this->N_;i++)
+                {
+                    RR += this->X_[i] * (K[i] - 1) / (1 + vf * (K[i] - 1));
+                    dRR -= this->X_[i] * (K[i] - 1) * (K[i] - 1) / ((1 + vf * (K[i] - 1)) * (1 + vf * (K[i] - 1)));
+                }
+                if (RR > 0)
+                    vf_min = vf;
+                else
+                    vf_max = vf;
+
+                dvf = -RR / dRR;
+                vf_n = vf + dvf;
+                eps_inner = fabs((vf_n - vf) / vf);
+
+                if (vf_n > vf_min && vf_n < vf_max)
+                    vf = vf_n;
+                else
+                    vf = 0.5 * (vf_min + vf_max);
+
+                iter_inner++;
+            }
+
+            for (int i = 0;i < this->N_;i++)
+            {
+                Sol.X_liq()[i] = this->X_[i] / (1 + vf * (K[i] - 1));
+                Sol.X_gas()[i] = K[i] * Sol.X_liq()[i];
+            }
+        }
+        else if (sum2 < 1)
+        {
+            vf = 1;
+            double sum_ = 0;
+            for (int i = 0;i < this->N_;i++)
+            {
+                //K[i] = sqr(K[i]);
+                Sol.X_liq()[i] = this->X_[i] / K[i];
+                Sol.X_gas()[i] = this->X_[i];
+                sum_ += Sol.X_liq()[i];
+            }
+            for (int i = 0;i < this->N_;i++)
+            {
+                Sol.X_liq()[i] /= sum_;
+            }
+            break;
+        }
+        else if (sum1 <= 1)
+        {
+            vf = 0;
+            double sum_ = 0;
+            for (int i = 0;i < this->N_;i++)
+            {
+                //K[i] = sqr(K[i]);
+                Sol.X_liq()[i] = this->X_[i];
+                Sol.X_gas()[i] = this->X_[i] * K[i];
+                sum_ += Sol.X_gas()[i];
+            }
+            for (int i = 0;i < this->N_;i++)
+            {
+                Sol.X_gas()[i] /= sum_;
+            }
+            break;
+        }
+        else
+            FatalErrorInFunction << "TPn_flash_Matheis" << exit(FatalError);
+
+        Ln_fugcoef_liq.reset(this->Ln_fugacityCoefficient(p, T, 0, &(Sol.X_liq())).ptr()); //todo optimize 
+        Ln_fugcoef_gas.reset(this->Ln_fugacityCoefficient(p, T, 1, &(Sol.X_gas())).ptr());
+
+        eps_outer = 0;
+        for (int i = 0;i < this->N_;i++)
+        {
+            F[i] = Ln_fugcoef_liq()[i] - Ln_fugcoef_gas()[i] - log(K[i]);
+            eps_outer += F[i] * F[i];
+        }
+        eps_outer = sqrt(eps_outer);
+
+        if (eps_outer < tol_outer)
+        {
+            success = true;
+            break;
+        }
+        else
+        {
+            for (int i = 0;i < this->N_;i++)
+            {
+                //K[i] = exp(Ln_fugcoef_liq()[i] - Ln_fugcoef_gas()[i]);
+                K[i] *= exp(F[i] * 0.5);
+            }
+        }
+        iter_outer++;
+    }
+    return pS;
+    /*
+    autoPtr<solution> pS(new solution());
+    //if(this->changed==0&&temp_p==p&&temp_T==T)
+    //return pS;
+    solution& Sol = *pS;
+    const int maxiter = 1000;
+    int ierr = 0;
+    //int iaccelation = 1;
+    scalar tol_fug = 1.0e-13;  //Convergence criteria
+    scalar tol_fug2 = 1.0;
+    //scalar coeff_tpn = 1;
+    scalar epsilon1 = 1.0e+10;
+
+    //scalar gibbsenergy = 0.0;
+    autoPtr<scalarList> fugcoef_liq, fugcoef_gas;               //, fugcoef_mix[num_sp] = {0.0};
+    scalarList X_liq0(this->N_, Zero), X_gas0(this->N_, Zero);  //, fugcoef_mix[num_sp] = {0.0};
+    scalarList temp(this->N_, Zero);
+    int newN = 0;
+    labelList mapi(this->N_);
+    forAll(this->X_, i) {
+        if (this->X_[i] > 1e-10) {
+            mapi[newN++] = i;
+        }
+    }
+    if (newN == 0) {
+        FatalErrorInFunction << "newN=0" << exit(FatalError);
+    }
+
+    Sol.X_liq.reset(new scalarList(this->N_));
+    Sol.X_gas.reset(new scalarList(this->N_));
+    forAll(this->X_, i) {
+        Sol.X_liq()[i] = this->X_[i];  //use this in PT_x flash, cancle this in hn flash
+        Sol.X_gas()[i] = this->X_[i];  //use this in PT_x flash, cancle this in hn flash
+        X_liq0[i] = Sol.X_liq()[i];
+        X_gas0[i] = Sol.X_gas()[i];
+    }
+
+    if (stable != true) {
+        Sol.equalconstant.reset(new scalarList(this->N_));
+        forAll(this->X_, i) {
+            Sol.equalconstant()[i] = K_init[i];
+        }
+    }
+    else {
+        if (isVapor == true) {
+            Sol.vaporfra = 1.0;
+        }
+        else {
+            Sol.vaporfra = 0.0;
+        }
+        Sol.equalconstant.reset(new scalarList(this->N_));
+        return pS;
+    }
+
+    fugcoef_liq.reset(this->fugacityCoefficient(p, T, 0).ptr());
+    fugcoef_gas.reset(this->fugacityCoefficient(p, T, 1).ptr());
+
+    if (newN == 1) {
+        //Info << "gas:" << fugcoef_gas()[0] << " liq:" << fugcoef_liq()[0] << endl;
+        if (fugcoef_gas()[mapi[0]] > fugcoef_liq()[mapi[0]])
+            Sol.vaporfra = 0;
+        else
+            Sol.vaporfra = 1;
+        Sol.equalconstant()[mapi[0]] = 1;
+        return pS;
+    }
+    scalarList re_iter1(this->N_);
+    forAll(re_iter1, i)
+        re_iter1[i] = 1;
+    //scalar gibbs_iter = gibbsenergy;
+    //scalar vaporfra_iter1 = 0.0;
+    //scalar vaporfra_iter0 = 0.0;
+
+    for (label iter = 0; iter < maxiter; iter++) {
+        //vaporfra_iter0 = Sol.vaporfra;
+        ierr = this->solve_vaporf(p, T, Sol);
+        //Info << "vaporfra= " << Sol.vaporfra << endl;
+        // only for Hn flash at high temperature and pressure conditions
+
+        if (ierr == 4 || ierr == 3) {
+            //FatalErrorInFunction << "VLE "
+                                 //<< "p=" << p << " T=" << T << " X=" << this->X_ << exit(FatalError);
+            forAll(this->X_, i) {
+                Sol.X_liq()[i] = X_liq0[i];
+                Sol.X_gas()[i] = X_gas0[i];
+            }
+            if (Sol.vaporfra > 1.0) {
+                Sol.vaporfra = 0.9999999;
+            }
+            else if (Sol.vaporfra < 0.0) {
+                Sol.vaporfra = 1.0e-07;
+            }
+            break;
+        }
+
+        if ((ierr == 10) && iter > 2) {
+            FatalErrorInFunction << "VLE!! "
+                << "p=" << p << " T=" << T << " X=" << this->X_ << exit(FatalError);
+            //this->TPD(p, T, comp, comp_liq, comp_gas, tpdvalue);
+
+            fugcoef_liq.reset(this->fugacityCoefficient(p, T, 0, &(Sol.X_liq())).ptr());
+            fugcoef_gas.reset(this->fugacityCoefficient(p, T, 1, &(Sol.X_gas())).ptr());
+
+            forAll(this->X_, i) {
+                Sol.equalconstant()[i] = fugcoef_liq()[i] / fugcoef_gas()[i];
+            }
+            ierr = this->solve_vaporf(p, T, Sol);
+
+            // Here, for tp diagram, please reconsider it
+            forAll(this->X_, i) {
+                Sol.X_liq()[i] = X_liq0[i];
+                Sol.X_gas()[i] = X_gas0[i];
+            }
+
+            if (Sol.vaporfra > 1.0) {
+                Sol.vaporfra = 0.9999999;
+            }
+            if (Sol.vaporfra < 0.0) {
+                Sol.vaporfra = 1.0e-07;
+            }
+            break;
+        }
+
+        fugcoef_liq.reset(this->fugacityCoefficient(p, T, 0, &(Sol.X_liq())).ptr());
+        fugcoef_gas.reset(this->fugacityCoefficient(p, T, 1, &(Sol.X_gas())).ptr());
+
+        scalar errr = 0.0;
+        scalarList re_iter0(this->N_);
+
+        for (int i = 0; i < newN; i++) {
+            re_iter0[mapi[i]] = re_iter1[mapi[i]];
+            fugcoef_gas()[mapi[i]] *= Sol.X_gas()[mapi[i]] * p;
+            fugcoef_liq()[mapi[i]] *= Sol.X_liq()[mapi[i]] * p;
+            errr = errr + sqr(fugcoef_liq()[mapi[i]] / fugcoef_gas()[mapi[i]] - 1.0);
+            //save_k[i]=Sol.equalconstant()[i];
+            temp[i] = Sol.equalconstant()[mapi[i]];
+            //Sol.equalconstant()[mapi[i]] *= (fugcoef_liq()[mapi[i]] / fugcoef_gas()[mapi[i]]) * coeff_tpn;
+            //Sol.equalconstant()[mapi[i]] *=pow( (fugcoef_liq()[mapi[i]] / fugcoef_gas()[mapi[i]]) ,0.1);
+            re_iter1[mapi[i]] = fugcoef_liq()[mapi[i]] / fugcoef_gas()[mapi[i]];
+        }
+        double powi = 2.0;
+        for (ierr = this->solve_vaporf(p, T, Sol); Sol.vaporfra > 1.0; ierr = this->solve_vaporf(p, T, Sol)) {
+            for (int i = 0; i < newN; i++) {
+                Sol.equalconstant()[mapi[i]] = temp[i] / (fugcoef_liq()[mapi[i]] / fugcoef_gas()[mapi[i]]);
+                temp[i] /= (fugcoef_liq()[mapi[i]] / fugcoef_gas()[mapi[i]]);
+            }
+        }
+        do {
+            ;
+            powi /= 2.0;
+            for (int i = 0; i < newN; i++) {
+                Sol.equalconstant()[mapi[i]] = temp[i] * pow((fugcoef_liq()[mapi[i]] / fugcoef_gas()[mapi[i]]), powi);
+            }
+            ierr = this->solve_vaporf(p, T, Sol);
+        } while (Sol.vaporfra > 1.0);
+
+        epsilon1 = errr;
+
+        scalar epsilon2 = 1.0e+10;
+        if (errr >= 1.0e+05 && iter > 10) {
+            fugcoef_liq.reset(this->fugacityCoefficient(p, T, 0, &(Sol.X_liq())).ptr());
+            fugcoef_gas.reset(this->fugacityCoefficient(p, T, 1, &(Sol.X_gas())).ptr());
+
+            for (int i = 0; i < newN; i++) {
+                Sol.equalconstant()[mapi[i]] = fugcoef_liq()[mapi[i]] / fugcoef_gas()[mapi[i]];
+            }
+
+            ierr = this->solve_vaporf(p, T, Sol);
+            scalar errr2 = 0.0;
+
+
+            for (int i = 0; i < newN; i++) {
+                re_iter0[mapi[i]] = re_iter1[mapi[i]];
+                fugcoef_gas()[mapi[i]] *= Sol.X_gas()[mapi[i]] * p;
+                fugcoef_liq()[mapi[i]] *= Sol.X_liq()[mapi[i]] * p;
+                errr2 = errr2 + sqr(fugcoef_liq()[mapi[i]] / fugcoef_gas()[mapi[i]] - 1.0);
+                Sol.equalconstant()[mapi[i]] *= (fugcoef_liq()[mapi[i]] / fugcoef_gas()[mapi[i]]);
+                re_iter1[mapi[i]] = fugcoef_liq()[mapi[i]] / fugcoef_gas()[mapi[i]];
+            }
+            epsilon2 = errr2;
+        }
+
+        if (epsilon1 < tol_fug || epsilon2 < tol_fug2) {
+            if (Sol.vaporfra > 0.99999999) {
+                Sol.vaporfra = 0.99999999;
+                forAll(this->X_, i) {
+                    Sol.X_liq()[i] = X_liq0[i];
+                    Sol.X_gas()[i] = X_gas0[i];
+                }
+            }
+            else if (Sol.vaporfra < 1.0e-010)  //!!!!&& flag_tp > 0
+            {
+                Sol.vaporfra = 1.0e-010;
+                forAll(this->X_, i) {
+                    Sol.X_liq()[i] = X_liq0[i];
+                    Sol.X_gas()[i] = X_gas0[i];
+                }
+            }
+            break;
+        }
+    }
+
+    return pS;
+    */
+}
+
 //check fugacity equation
 template <class ThermoMixture>
 inline void Foam::VLE<ThermoMixture>::TPn_validation(
@@ -1094,7 +1485,103 @@ inline void Foam::VLE<ThermoMixture>::TPn_validation(
 
     Info << "z_new=" << newX << endl;
 }
+// used different TPD result as input for TPn_flash
+template <class ThermoMixture>
+inline Foam::autoPtr<typename Foam::VLE<ThermoMixture>::solution> Foam::VLE<ThermoMixture>::TPn_flash_New_TPD_Tudisco  // PY:with a course initialization
+(
+    scalar p,  //input
+    scalar T   //input
+) const {
+    if (noVLE)
+    {
+        autoPtr<solution> pS(new solution());
+        solution& Sol = *pS;
+        Sol.X_liq.reset(new scalarList(this->N_));
+        Sol.X_gas.reset(new scalarList(this->N_));
+        forAll(this->X_, i) {
+            Sol.X_liq()[i] = this->X_[i];  //use this in PT_x flash, cancle this in hn flash
+            Sol.X_gas()[i] = this->X_[i];  //use this in PT_x flash, cancle this in hn flash
+        }
+        Sol.vaporfra = 0.9999999;
+        Sol.equalconstant.reset(new scalarList(this->N_));
+        return pS;
+    }
 
+    bool success = false;
+    bool stable, isVapor;
+    scalar gmin = DBL_MAX;
+    const scalar delta = 1e-13;
+    const scalar be_negative = -1.E-9;
+    autoPtr<List<scalarList>> p_K_init;
+    autoPtr<solution> sol_min;
+    autoPtr<scalarList> p_TPD_star;
+    scalarList K_init(this->X_.size());
+    if (inputK == false)
+        for (int i = 0; i < this->X_.size(); i++) {
+
+            K_init[i] = (*this)[i].Pc_ / p * exp(5.373 * (1.0 + (*this)[i].omega_) * (1.0 - (*this)[i].Tc_ / T));
+        }
+    else
+    {
+        for (int i = 0; i < this->X_.size(); i++) {
+            K_init[i] = Kinit[i];
+        }
+
+    }
+    autoPtr<solution> sol = TPn_flash_Matheis(p, T, stable, isVapor, K_init, success);
+    /*
+    if(sol().vaporfra<0.99&&sol().vaporfra>0.01)
+    {
+        //Info<<sol().vaporfra<<endl;
+        //FatalErrorInFunction << "K=!! "<< exit(FatalError);
+        FatalErrorInFunction << "K= "
+                << sol().equalconstant()  << " \n vf=" << sol().vaporfra << exit(FatalError);
+    }
+    */
+    return sol;
+    if (success)
+    {
+        return sol;
+    }
+
+    tie(stable, p_K_init, isVapor, p_TPD_star) = solveTPD_BFGS_v2(p, T);
+    labelList order;
+    sortedOrder(p_TPD_star(), order);
+    if (p_TPD_star()[order[0]] < be_negative)
+    {
+        autoPtr<solution> sol2 = TPn_flash_Matheis(p, T, stable, isVapor, p_K_init()[0], success);
+        return sol2;
+        if (success)
+        {
+            return sol2;
+        }
+    }
+    else
+    {
+        return sol;
+    }
+
+    for (int i = 0; i < p_TPD_star->size(); i++) {
+        //Info << p_TPD_star()[order[i]] << " trying2:" << i << endl;
+        if (i == 0 || (p_TPD_star()[order[i]] < be_negative && fabs(p_TPD_star()[order[i]] - p_TPD_star()[order[i - 1]]) > delta)) {
+            //Info << "tryed2:" << i << endl;
+            //Info << p_TPD_star()[order[i]] << "," << p_TPD_star()[order[i]] - p_TPD_star()[order[i == 0 ? i : i - 1]] << endl;
+            autoPtr<solution> sol = TPn_flash_Matheis(p, T, stable, isVapor, p_K_init()[order[i]], success);
+            scalar ggas = this->G_Mole(p, T, &(sol().X_gas()));
+            scalar gliq = this->G_Mole(p, T, &(sol().X_liq()));
+            scalar g = sol().vaporfra * ggas + (1 - sol().vaporfra) * gliq;
+            //Info << sol().vaporfra << " g:" << g << endl;
+            //Info << ggas << "," << gliq << "," << sol().vaporfra << "," << sol().vaporfra * ggas + (1 - sol().vaporfra) * gliq << endl;
+            if (g < gmin) {
+                gmin = g;
+                autoPtrReset(sol_min, sol);
+                //sol_min.reset(sol);
+            }
+        }
+    }
+
+    return sol_min;
+}
 // used different TPD result as input for TPn_flash
 template <class ThermoMixture>
 inline Foam::autoPtr<typename Foam::VLE<ThermoMixture>::solution> Foam::VLE<ThermoMixture>::TPn_flash_New_TPD  // PY:with a course initialization
@@ -1102,10 +1589,26 @@ inline Foam::autoPtr<typename Foam::VLE<ThermoMixture>::solution> Foam::VLE<Ther
     scalar p,  //input
     scalar T   //input
 ) const {
+    if (noVLE)
+    {
+        autoPtr<solution> pS(new solution());
+        solution& Sol = *pS;
+        Sol.X_liq.reset(new scalarList(this->N_));
+        Sol.X_gas.reset(new scalarList(this->N_));
+        forAll(this->X_, i) {
+            Sol.X_liq()[i] = this->X_[i];  //use this in PT_x flash, cancle this in hn flash
+            Sol.X_gas()[i] = this->X_[i];  //use this in PT_x flash, cancle this in hn flash
+        }
+        Sol.vaporfra = 0.9999999;
+        Sol.equalconstant.reset(new scalarList(this->N_));
+        return pS;
+    }
+
+
     bool stable, isVapor;
     scalar gmin = DBL_MAX;
-    const scalar delta = 1e-8;
-    const scalar be_negative = -1.E-8;
+    const scalar delta = 1e-13;
+    const scalar be_negative = 0;//-1.E-8;
     autoPtr<List<scalarList>> p_K_init;
     autoPtr<solution> sol_min;
     autoPtr<scalarList> p_TPD_star;
@@ -1131,13 +1634,10 @@ inline Foam::autoPtr<typename Foam::VLE<ThermoMixture>::solution> Foam::VLE<Ther
             }
         }
     }
-
-
     //FatalErrorInFunction
     //    << "DEBUG1: frac=" << sol_min().vaporfra
     //    << exit(FatalError);
     return sol_min;
-
 }
 // return one min k_init
 template <class ThermoMixture>
@@ -1319,7 +1819,7 @@ inline tuple<bool, Foam::autoPtr<Foam::List<Foam::scalarList>>, bool, Foam::auto
     scalar p,  //input
     scalar T   //input
 ) const {
-    const scalar be_negative = -1.E-8;
+    const scalar be_negative = -1.E-9;
     //const scalar be_pure_substance = 1. - 1.E-8;
     //const scalar be_very_large = 1.E10;
 
@@ -1328,6 +1828,13 @@ inline tuple<bool, Foam::autoPtr<Foam::List<Foam::scalarList>>, bool, Foam::auto
 
     bool stable = true;
     bool isVapor;
+    int n_sp = 0;
+    for (int i = 0;i < this->X_.size();i++)
+    {
+        if (this->X_[i] > 0)
+            n_sp++;
+    }
+
     //scalar TPDmin = 10.0;
     int n = this->X_.size();
     int ntrial = 4 + n;
@@ -1336,12 +1843,22 @@ inline tuple<bool, Foam::autoPtr<Foam::List<Foam::scalarList>>, bool, Foam::auto
     for (int i = 0; i < ntrial; i++) {
         K_init[i].resize(this->X_.size());
     }
+    autoPtr<scalarList> p_TPD_star(new scalarList(ntrial));
+    scalarList& TPD_star = p_TPD_star();
+    if (n_sp == 1)
+    {
+        stable = true;
+        for (int i = 0; i < this->X_.size(); i++)
+        {
+            TPD_star[i] = 10;
+        }
+        return make_tuple(stable, p_K_init, isVapor, p_TPD_star);
+    }
     scalar tol = 1.E-9;
     int iter_max = 1000;
     scalarList y_sp[ntrial];
     scalar z = this->Z_gibbs(p, T, &this->X_);
-    autoPtr<scalarList> p_TPD_star(new scalarList(ntrial));
-    scalarList& TPD_star = p_TPD_star();
+
     scalarList TPD(ntrial), mask_stationary(ntrial);
     autoPtr<scalarList> lnphi(this->ln_fugacityCoefficient(p, T, z, &this->X_));
     scalarList d(this->X_.size()), K(this->X_.size());
@@ -1376,9 +1893,9 @@ inline tuple<bool, Foam::autoPtr<Foam::List<Foam::scalarList>>, bool, Foam::auto
 
     for (int i = 0; i < this->X_.size(); i++) {
         for (int j = 0; j < this->X_.size(); j++) {
-            Y_init[4 + i][j] = 0.001 / (n - 1);
+            Y_init[4 + i][j] = 0.1 / (n - 1);
         }
-        Y_init[4 + i][i] = 0.990;
+        Y_init[4 + i][i] = 0.90;
     }
     scalar sum = 0, z_y, beta;
     scalarList Y(this->X_.size()), y_trial(this->X_.size());
@@ -1496,33 +2013,33 @@ inline tuple<bool, Foam::autoPtr<Foam::List<Foam::scalarList>>, bool, Foam::auto
                 break;
             }
         }
-        if(iter>=iter_max)
+        if (iter >= iter_max)
         {
             sum = 0;
-                for (int i = 0; i < this->X_.size(); i++) {
-                    sum += Y[i];
-                }
-                for (int i = 0; i < this->X_.size(); i++) {
-                    y_sp[itrial][i] = Y[i] / sum;
-                }
-                TPD[itrial] = -log(sum);
-                TPD_star[itrial] = 1. - sum;
-                mask_stationary[itrial] = true;
-                if (TPD_star[itrial] < be_negative) {
-                    stable = false;
+            for (int i = 0; i < this->X_.size(); i++) {
+                sum += Y[i];
+            }
+            for (int i = 0; i < this->X_.size(); i++) {
+                y_sp[itrial][i] = Y[i] / sum;
+            }
+            TPD[itrial] = -log(sum);
+            TPD_star[itrial] = 1. - sum;
+            mask_stationary[itrial] = true;
+            if (TPD_star[itrial] < be_negative) {
+                stable = false;
 
-                    scalar z2 = this->Z_gibbs(p, T, &y_sp[itrial]);
-                    if (z < z2)
-                        for (int i = 0; i < this->X_.size(); i++) {
-                            //K_init_min[i] = Y_init[itrial][i] / this->X_[i];
-                            K_init[itrial][i] = y_sp[itrial][i] / this->X_[i];
-                        }
-                    else
-                        for (int i = 0; i < this->X_.size(); i++) {
-                            //K_init_min[i] = Y_init[itrial][i] / this->X_[i];
-                            K_init[itrial][i] = this->X_[i] / y_sp[itrial][i];
-                        }
-                }
+                scalar z2 = this->Z_gibbs(p, T, &y_sp[itrial]);
+                if (z < z2)
+                    for (int i = 0; i < this->X_.size(); i++) {
+                        //K_init_min[i] = Y_init[itrial][i] / this->X_[i];
+                        K_init[itrial][i] = y_sp[itrial][i] / this->X_[i];
+                    }
+                else
+                    for (int i = 0; i < this->X_.size(); i++) {
+                        //K_init_min[i] = Y_init[itrial][i] / this->X_[i];
+                        K_init[itrial][i] = this->X_[i] / y_sp[itrial][i];
+                    }
+            }
         }
     }
     return make_tuple(stable, p_K_init, isVapor, p_TPD_star);
@@ -1877,6 +2394,7 @@ inline Foam::scalar Foam::VLE<ThermoMixture>::Cp(scalar p, scalar T) const {
 }
 template <class ThermoMixture>
 inline Foam::scalar Foam::VLE<ThermoMixture>::Cp(scalar p, scalar T, solution& sol) const {
+
     scalar mw_gas = this->W(&(sol.X_gas()));  //kg/mol
     scalar dmw_gasdT = this->dWdT_gas(p, T, sol);
     scalar mw_mixture = this->W();
@@ -1899,6 +2417,102 @@ inline Foam::scalar Foam::VLE<ThermoMixture>::Cp(scalar p, scalar T, solution& s
     }
     return this->ThermoMixture::Ha(p, T, 1, &(sol.X_gas())) * dygasdT + dHadT_gas * ygas - this->ThermoMixture::Ha(p, T, 0, &(sol.X_liq())) * dygasdT + dHadT_liq * (1.0 - ygas);
 }
+
+
+template <class ThermoMixture>
+inline Foam::scalar Foam::VLE<ThermoMixture>::Cv_VLE(scalar p, scalar T, solution& sol) const {
+
+    scalar mw_gas = this->W(&(sol.X_gas()));  //kg/mol
+
+    scalar dWdT = 0;
+    const VLE<ThermoMixture>& This = *this;
+    scalarList& dXdT = *(new scalarList(this->X_.size()));
+    autoPtr<scalarList> dvidt;
+    dvidt.reset((this->dvidT(p, T, sol)).ptr());
+    scalar vf = sol.vaporfra;
+    if (vf <= 0.0) {
+        for (int i = 0; i < this->X_.size(); i++) {
+            dXdT[i] = 0;
+        }
+    }
+    else {
+        for (int i = 0; i < this->X_.size(); i++) {
+            dXdT[i] = 0;
+            for (int j = 0; j < this->X_.size(); j++) {
+                if (i == j)
+                    dXdT[i] -= 1.0 / vf * (sol.X_gas()[i] - 1) * dvidt()[j];
+                else
+                    dXdT[i] -= 1.0 / vf * sol.X_gas()[i] * dvidt()[j];
+            }
+        }
+    }
+    for (int i = 0; i < this->X_.size(); i++) {
+        dWdT += dXdT[i] * This[i].W() * 1.0e-03;
+    }
+    scalar dmw_gasdT = dWdT;
+
+    scalar mw_mixture = this->W();
+    scalar ygas = sol.vaporfra * mw_gas / mw_mixture;
+
+    scalar dvfdT = 0;
+    for (int i = 0; i < this->X_.size(); i++) {
+        dvfdT += dvidt()[i];
+    }
+    scalar dygasdT = (dvfdT * mw_gas + sol.vaporfra * dmw_gasdT) / mw_mixture;
+    scalar dHadT_gas = this->dHadT(p, T, 1, &(sol.X_gas()));
+    autoPtr<scalarList> dXdt_gas(this->dXdT_gas(p, T, sol));
+    for (int i = 0; i < this->X_.size(); i++) {
+        dHadT_gas += this->dHadxi(p, T, i, 1, &(sol.X_gas())) * dXdt_gas()[i];
+    }
+    scalar dHadT_liq = this->dHadT(p, T, 0, &(sol.X_liq()));
+    autoPtr<scalarList> dXdt_liq(this->dXdT_liq(p, T, sol));
+    for (int i = 0; i < this->X_.size(); i++) {
+        dHadT_liq += this->dHadxi(p, T, i, 0, &(sol.X_liq())) * dXdt_liq()[i];
+    }
+    scalar Cp_ret = this->ThermoMixture::Ha(p, T, 1, &(sol.X_gas())) * dygasdT + dHadT_gas * ygas - this->ThermoMixture::Ha(p, T, 0, &(sol.X_liq())) * dygasdT + dHadT_liq * (1.0 - ygas);
+    //scalar Cp_ret= 0;
+
+
+    autoPtr<scalarList> dXdT_G_(this->dXdT_gas(p, T, sol));
+    autoPtr<scalarList> dXdT_L_(this->dXdT_liq(p, T, sol));
+    scalar dvfdT_ = dvfdT;
+    scalar vf_ = sol.vaporfra;
+    scalar Z_G_ = this->ThermoMixture::Z(p, T, 1, &(sol.X_gas()));
+    scalar Z_L_ = this->ThermoMixture::Z(p, T, 0, &(sol.X_liq()));
+    scalar dZdT_G_ = this->ThermoMixture::dZdT(p, T, 1, &(sol.X_gas()));
+    scalar dZdT_L_ = this->ThermoMixture::dZdT(p, T, 0, &(sol.X_liq()));
+    for (int i = 0; i < this->X_.size(); i++) {
+        dZdT_G_ +=
+            this->ThermoMixture::dZdxi(p, T, i, 1, &(sol.X_gas())) * dXdT_G_()[i];
+        dZdT_L_ +=
+            this->ThermoMixture::dZdxi(p, T, i, 0, &(sol.X_liq())) * dXdT_L_()[i];
+    }
+
+
+    scalar Z_M_ = Z(p, T, sol);
+    scalar rho_ = p * mw_mixture / (Z_M_ * RR * 1.0e-03 * T);
+    scalar dZdP_M_ = dZdP(p, T, sol);
+
+    scalar drhodP_M_ = mw_mixture / (Z_M_ * RR * 1.0e-03 * T) - p * mw_mixture / (Z_M_ * Z_M_ * RR * 1.0e-03 * T) * dZdP_M_;
+    scalar drhodP_ = drhodP_M_;
+    scalar kappaT_ = drhodP_ / rho_;
+    scalar dZdT_M_ = dvfdT_ * (Z_G_ - Z_L_) + vf_ * dZdT_G_ + (1 - vf_) * dZdT_L_;
+    scalar drhodT_M_ = -p * mw_mixture / (Z_M_ * Z_M_ * RR * 1.0e-03 * T * T) * (dZdT_M_ * T + Z_M_);
+    scalar drhodT_ = drhodT_M_;
+    scalar alphaP_ = -drhodT_ / rho_;
+    scalar CpMCv_ret = T * mw_mixture * alphaP_ * alphaP_ / (rho_ * kappaT_);
+    //scalar CpMCv_ret=0;
+    return Cp_ret - CpMCv_ret;
+
+}
+template <class ThermoMixture>
+inline Foam::scalar Foam::VLE<ThermoMixture>::Cv_gas(scalar p, scalar T, solution& sol) const {
+
+
+    return this->ThermoMixture::Cp(p, T, 1) - this->ThermoMixture::CpMCv(p, T, 1); ;
+
+}
+
 // Cp_Hs=dHsdT system (T,P,X)
 template <class ThermoMixture>
 inline Foam::scalar Foam::VLE<ThermoMixture>::Cp_Hs(scalar p, scalar T, solution& sol) const {
@@ -2813,6 +3427,742 @@ inline Foam::autoPtr<scalarRectangularMatrix> Foam::VLE<ThermoMixture>::dTrhoPvf
 }
 
 template <class ThermoMixture>
+inline Foam::autoPtr<scalarRectangularMatrix> Foam::VLE<ThermoMixture>::dTrhoPvfcdXHP_HsP(scalar p, scalar T, solution& sol) const {
+    int nsp = this->X_.size();
+    scalar temp;
+    scalarRectangularMatrix& grad = *(new scalarRectangularMatrix(nsp + 2, 4));
+    //scalarList& grad = *(new scalarList(nsp + 2));
+    const VLE<ThermoMixture>& This = *this;
+    scalar vf = sol.vaporfra;
+    scalarList& X_gas = sol.X_gas();
+    scalarList& X_liq = sol.X_liq();
+    scalar rho_value = rho(p, T, sol);
+
+    autoPtr<scalarList> dvidP_value(this->dvidP(p, T, sol));
+    autoPtr<scalarList> dvidT_value(this->dvidT(p, T, sol));
+    List<autoPtr<scalarList>> dvidXi_value(nsp);
+    for (int i = 0; i < nsp; i++) {
+        dvidXi_value[i] = this->dvidXi(p, T, i, sol);
+    }
+    scalar dvfdP_value = 0, dvfdT_value = 0;
+    scalarList dvfdXi_value(nsp);
+    scalarList dHsdxi_gas_value(nsp), dHsdxi_liq_value(nsp);
+    for (int i = 0; i < nsp; i++) {
+        dvfdT_value += dvidT_value()[i];
+        dvfdP_value += dvidP_value()[i];
+        dvfdXi_value[i] = -vf;
+        for (int j = 0; j < nsp; j++) {
+            dvfdXi_value[i] += dvidXi_value[i]()[j];
+        }
+        dHsdxi_gas_value[i] = this->dHsdxi(p, T, i, 1, &X_gas);
+        dHsdxi_liq_value[i] = this->dHsdxi(p, T, i, 0, &X_liq);
+    }
+
+    scalar dHsdT_gas = this->ThermoMixture::dHsdT(p, T, 1, &X_gas);
+    scalar dHsdT_liq = this->ThermoMixture::dHsdT(p, T, 0, &X_liq);
+    scalar dHsdP_gas = this->ThermoMixture::dHsdP(p, T, 1, &X_gas);
+    scalar dHsdP_liq = this->ThermoMixture::dHsdP(p, T, 0, &X_liq);
+    scalarList dHsdXi_gas(nsp);
+    scalarList dHsdXi_liq(nsp);
+
+    //autoPtr<scalarList> dXdT_gas_value(this->dXdT_gas(p, T, sol));
+    scalarList dXdT_gas_value(nsp);
+    //autoPtr<scalarList> dXdT_liq_value(this->dXdT_liq(p, T, sol));
+    scalarList dXdT_liq_value(nsp);
+    //autoPtr<scalarList> dXdP_gas_value(this->dXdP_gas(p, T, sol));
+    scalarList dXdP_gas_value(nsp);
+    //autoPtr<scalarList> dXdP_liq_value(this->dXdP_liq(p, T, sol));
+    scalarList dXdP_liq_value(nsp);
+    if (vf <= 1e-6)
+    {
+        for (int i = 0; i < nsp; i++) {
+            dXdT_gas_value[i] = 0;
+            dXdT_liq_value[i] = -(dvidT_value()[i] - X_liq[i] * dvfdT_value) / (1 - vf);
+            dXdP_gas_value[i] = 0;
+            dXdP_liq_value[i] = -(dvidP_value()[i] - X_liq[i] * dvfdP_value) / (1 - vf);
+        }
+    }
+    else if (vf >= 1 - 1e-6)
+    {
+        for (int i = 0; i < nsp; i++) {
+            dXdT_gas_value[i] = (dvidT_value()[i] - X_gas[i] * dvfdT_value) / vf;
+            dXdT_liq_value[i] = 0;
+            dXdP_gas_value[i] = (dvidP_value()[i] - X_gas[i] * dvfdP_value) / vf;
+            dXdP_liq_value[i] = 0;
+        }
+    }
+    else
+    {
+        for (int i = 0; i < nsp; i++) {
+            dXdT_gas_value[i] = (dvidT_value()[i] - X_gas[i] * dvfdT_value) / vf;
+            dXdT_liq_value[i] = -(dvidT_value()[i] - X_liq[i] * dvfdT_value) / (1 - vf);
+            dXdP_gas_value[i] = (dvidP_value()[i] - X_gas[i] * dvfdP_value) / vf;
+            dXdP_liq_value[i] = -(dvidP_value()[i] - X_liq[i] * dvfdP_value) / (1 - vf);
+        }
+    }
+    //List<autoPtr<scalarList>> dXdXi_gas_value(nsp);
+    //List<autoPtr<scalarList>> dXdXi_liq_value(nsp);
+    List<scalarList> dXdXi_gas_value(nsp);
+    List<scalarList> dXdXi_liq_value(nsp);
+    /*
+    for (int i = 0;i < nsp;i++)
+    {
+        dXdXi_gas_value[i] = this->dXdXi_gas(p, T, i, sol);
+        dXdXi_liq_value[i] = this->dXdXi_liq(p, T, i, sol);
+    }*/
+    if (vf <= 1e-6)
+    {
+        for (int i = 0; i < nsp; i++) {
+            dXdXi_gas_value[i].resize(nsp);
+            dXdXi_liq_value[i].resize(nsp);
+            for (int j = 0; j < nsp; j++) {
+                dXdXi_gas_value[i][j] = 0;
+                if (i == j) {
+                    dXdXi_liq_value[i][j] = 1 / (1 - vf) * (1 - dvidXi_value[i]()[j]) - X_liq[j] / (1 - vf) * (1 - dvfdXi_value[i] - vf);
+                }
+                else {
+                    dXdXi_liq_value[i][j] = 1 / (1 - vf) * (-dvidXi_value[i]()[j]) - X_liq[j] / (1 - vf) * (1 - dvfdXi_value[i] - vf);
+                }
+            }
+        }
+
+    }
+    else if (vf >= 1 - 1e-6)
+    {
+        for (int i = 0; i < nsp; i++) {
+            dXdXi_gas_value[i].resize(nsp);
+            dXdXi_liq_value[i].resize(nsp);
+            for (int j = 0; j < nsp; j++) {
+                dXdXi_gas_value[i][j] = (dvidXi_value[i]()[j] - X_gas[j] * (dvfdXi_value[i] + vf)) / vf;
+                dXdXi_liq_value[i][j] = 0;
+            }
+        }
+
+    }
+    else
+    {
+        for (int i = 0; i < nsp; i++) {
+            dXdXi_gas_value[i].resize(nsp);
+            dXdXi_liq_value[i].resize(nsp);
+            for (int j = 0; j < nsp; j++) {
+                dXdXi_gas_value[i][j] = (dvidXi_value[i]()[j] - X_gas[j] * (dvfdXi_value[i] + vf)) / vf;
+                if (i == j) {
+                    dXdXi_liq_value[i][j] = 1 / (1 - vf) * (1 - dvidXi_value[i]()[j]) - X_liq[j] / (1 - vf) * (1 - dvfdXi_value[i] - vf);
+                }
+                else {
+                    dXdXi_liq_value[i][j] = 1 / (1 - vf) * (-dvidXi_value[i]()[j]) - X_liq[j] / (1 - vf) * (1 - dvfdXi_value[i] - vf);
+                }
+            }
+        }
+    }
+    //Info << "!!!!!!=" << setprecision(20) << (dvidXi_value[0]()[0] - X_gas[0] * (dvfdXi_value[0] + vf)) / vf << endl;
+    //Info << "!!!!!!=" << setprecision(15) << -((X_gas[0] - 1) * dvidXi_value[0]()[0] + X_gas[0] * dvidXi_value[0]()[1]) / vf << endl;
+    for (int i = 0; i < nsp; i++) {
+        dHsdT_gas += dHsdxi_gas_value[i] * dXdT_gas_value[i];
+        dHsdT_liq += dHsdxi_liq_value[i] * dXdT_liq_value[i];
+        dHsdP_gas += dHsdxi_gas_value[i] * dXdP_gas_value[i];
+        dHsdP_liq += dHsdxi_liq_value[i] * dXdP_liq_value[i];
+        dHsdXi_gas[i] = 0;
+        dHsdXi_liq[i] = 0;
+        for (int j = 0; j < nsp; j++) {
+            dHsdXi_gas[i] += dHsdxi_gas_value[j] * dXdXi_gas_value[i][j];
+            dHsdXi_liq[i] += dHsdxi_liq_value[j] * dXdXi_liq_value[i][j];
+        }
+    }
+
+    scalar mw_gas = this->W(&X_gas);  //kg/mol
+    scalar mw_mixture = this->W();
+    scalar ygas = vf * mw_gas / mw_mixture;
+    //scalar dmw_gasdT = this->dWdT_gas(p, T, sol);
+    scalar dmw_gasdT = 0;
+    //scalar dmw_gasdP = this->dWdP_gas(p, T, sol);
+    scalar dmw_gasdP = 0;
+    for (int i = 0; i < nsp; i++) {
+        dmw_gasdT += dXdT_gas_value[i] * This[i].W() * 1.0e-03;
+        dmw_gasdP += dXdP_gas_value[i] * This[i].W() * 1.0e-03;
+    }
+    scalarList dmw_gasdXi(nsp);
+    for (int i = 0; i < nsp; i++) {
+        dmw_gasdXi[i] = 0;
+        for (int j = 0; j < nsp; j++) {
+            dmw_gasdXi[i] += dXdXi_gas_value[i][j] * This[j].W() * 1.0e-03;
+        }
+        //dmw_gasdXi[i] = this->dWdXi_gas(p, T, i, sol);
+    }
+    scalar dygasdT = (dvfdT_value * mw_gas + vf * dmw_gasdT) / mw_mixture;
+    scalar dygasdP = (dvfdP_value * mw_gas + vf * dmw_gasdP) / mw_mixture;
+    scalarList dygasdXi(nsp);
+    for (int i = 0; i < nsp; i++) {
+        dygasdXi[i] = ((dvfdXi_value[i] + vf) * mw_gas + vf * dmw_gasdXi[i]) / mw_mixture - ygas / mw_mixture * This[i].W() * 1.0e-03;
+    }
+
+    scalar Hs_gas = this->ThermoMixture::Hs(p, T, 1, &X_gas);
+    scalar Hs_liq = this->ThermoMixture::Hs(p, T, 0, &X_liq);
+    scalar Cp_Hs_value = Hs_gas * dygasdT + dHsdT_gas * ygas - Hs_liq * dygasdT + dHsdT_liq * (1.0 - ygas);
+    scalar dHsdP_value = Hs_gas * dygasdP + dHsdP_gas * ygas - Hs_liq * dygasdP + dHsdP_liq * (1.0 - ygas);
+    scalarList dHsdXi_value(nsp);
+    for (int i = 0; i < nsp; i++) {
+        dHsdXi_value[i] = Hs_gas * dygasdXi[i] + dHsdXi_gas[i] * ygas - Hs_liq * dygasdXi[i] + dHsdXi_liq[i] * (1.0 - ygas);
+    }
+
+    //Info << "aa=" << dHsdxi_gas_value[0] << "," << dHsdXi(p, T, 0, sol) << endl;
+
+    scalar ZMixture = Z(p, T, sol);
+    scalar ZGas = this->ThermoMixture::Z(p, T, 1, &X_gas);
+    scalar ZLiq = this->ThermoMixture::Z(p, T, 0, &X_liq);
+    scalar dZgasdT = this->ThermoMixture::dZdT(p, T, 1, &X_gas);
+    scalar dZliqdT = this->ThermoMixture::dZdT(p, T, 0, &X_liq);
+    scalar dZgasdP = this->ThermoMixture::dZdP(p, T, 1, &X_gas);
+    scalar dZliqdP = this->ThermoMixture::dZdP(p, T, 0, &X_liq);
+    scalarList dZgasdXi(nsp), dZliqdXi(nsp);
+    scalarList dZdxi_gas_value(nsp), dZdxi_liq_value(nsp);
+    for (int i = 0; i < nsp; i++) {
+        dZdxi_gas_value[i] = this->ThermoMixture::dZdxi(p, T, i, 1, &X_gas);
+        dZdxi_liq_value[i] = this->ThermoMixture::dZdxi(p, T, i, 0, &X_liq);
+    }
+    for (int i = 0; i < nsp; i++) {
+        dZgasdT += dZdxi_gas_value[i] * dXdT_gas_value[i];
+        dZliqdT += dZdxi_liq_value[i] * dXdT_liq_value[i];
+        dZgasdP += dZdxi_gas_value[i] * dXdP_gas_value[i];
+        dZliqdP += dZdxi_liq_value[i] * dXdP_liq_value[i];
+        dZgasdXi[i] = 0;
+        dZliqdXi[i] = 0;
+        for (int j = 0; j < nsp; j++) {
+            dZgasdXi[i] += dZdxi_gas_value[j] * dXdXi_gas_value[i][j];
+            dZliqdXi[i] += dZdxi_liq_value[j] * dXdXi_liq_value[i][j];
+        }
+    }
+    temp = (vf * ZGas + (1 - vf) * ZLiq);
+    //scalar dZMixturedT = (dvfdT_value * ZGas * ZGas + vf * 2 * ZGas * dZgasdT + 2 * (1 - vf) * ZLiq * dZliqdT - dvfdT_value * ZLiq * ZLiq) / temp - (vf * ZGas * ZGas + (1 - vf) * ZLiq * ZLiq) / (temp * temp) * (dvfdT_value * ZGas + vf * dZgasdT + (1 - vf) * dZliqdT - dvfdT_value * ZLiq);
+    scalar dZMixturedT = dvfdT_value * (ZGas - ZLiq) + vf * dZgasdT + (1 - vf) * dZliqdT;
+    //scalar dZMixturedP = (dvfdP_value * ZGas * ZGas + vf * 2 * ZGas * dZgasdP + 2 * (1 - vf) * ZLiq * dZliqdP - dvfdP_value * ZLiq * ZLiq) / temp - (vf * ZGas * ZGas + (1 - vf) * ZLiq * ZLiq) / (temp * temp) * (dvfdP_value * ZGas + vf * dZgasdP + (1 - vf) * dZliqdP - dvfdP_value * ZLiq);
+    scalar dZMixturedP = dvfdP_value * (ZGas - ZLiq) + vf * dZgasdP + (1 - vf) * dZliqdP;
+    scalarList dZMixturedXi(nsp);
+
+    for (int i = 0; i < nsp; i++) {
+        dZMixturedXi[i] = (dvfdXi_value[i] * ZGas * ZGas + vf * 2 * ZGas * dZgasdXi[i] + 2 * (1 - vf) * ZLiq * dZliqdXi[i] - dvfdXi_value[i] * ZLiq * ZLiq) / temp - (vf * ZGas * ZGas + (1 - vf) * ZLiq * ZLiq) / (temp * temp) * (dvfdXi_value[i] * ZGas + vf * dZgasdXi[i] + (1 - vf) * dZliqdXi[i] - dvfdXi_value[i] * ZLiq);
+    }
+
+    //Info << "!!!!!!=" << setprecision(20) << dXdXi_gas_value[0][1] << endl;
+
+    //scalar dZMixturedT = dZdT(p, T, sol);
+    //scalar dZMixturedP = dZdP(p, T, sol);
+    //scalarList dZMixturedXi(nsp);
+    /*for (int i = 0;i < nsp;i++)
+    {
+        dZMixturedXi[i] = dZdXi(p, T, i, sol);
+    }
+    */
+    scalar drhodT_value = -p * mw_mixture / (ZMixture * ZMixture * RR * 1.0e-03 * T * T) * (dZMixturedT * T + ZMixture);
+    scalar drhodP_value = mw_mixture / (ZMixture * RR * 1.0e-03 * T) - p * mw_mixture / (ZMixture * ZMixture * RR * 1.0e-03 * T) * dZMixturedP;
+    scalarList drhodXi_value(nsp);
+    for (int i = 0; i < nsp; i++) {
+        drhodXi_value[i] = p * (This[i].W() * 1.0e-03 - mw_mixture) / (ZMixture * RR * 1.0e-03 * T) - p * mw_mixture / (ZMixture * ZMixture * RR * 1.0e-03 * T) * dZMixturedXi[i];
+        //dHsdXi_value[i] = dHsdXi(p, T, i, sol);
+    }  //this->dWdXi(i)
+
+    //scalar drhodT_value = drhodT(p, T, sol);
+    //scalar drhodP_value = drhodP(p, T, sol);
+    // scalar Cp_Hs_value = Cp_Hs(p, T, sol);
+    //scalar dHsdP_value = dHsdP(p, T, sol);
+    //scalarList drhodXi_value(nsp);
+    //scalarList dHsdXi_value(nsp);
+    /*
+    for (int i = 0;i < nsp;i++)
+    {
+        drhodXi_value[i] = drhodXi(p, T, i, sol);
+        dHsdXi_value[i] = dHsdXi(p, T, i, sol);
+    }*/
+
+    for (int i = 0; i < nsp; i++) {
+        grad[i][0] = -dHsdXi_value[i] / Cp_Hs_value;
+        grad[i][1] = (-drhodT_value * dHsdXi_value[i] / Cp_Hs_value + drhodXi_value[i]) / p;
+        grad[i][2] = -dvfdT_value * dHsdXi_value[i] / Cp_Hs_value + dvfdXi_value[i];
+        grad[i][3] = 0;
+    }
+    grad[nsp][0] = 1 / Cp_Hs_value;
+    grad[nsp][1] = (drhodT_value / Cp_Hs_value) / p;
+    grad[nsp][2] = dvfdT_value / Cp_Hs_value;
+    grad[nsp][3] = 0;
+    grad[nsp + 1][0] = -dHsdP_value / Cp_Hs_value;
+    grad[nsp + 1][1] = (-drhodT_value * dHsdP_value / Cp_Hs_value + drhodP_value) / p - rho_value / (p * p);
+    grad[nsp + 1][2] = -dvfdT_value * dHsdP_value / Cp_Hs_value + dvfdP_value;
+    grad[nsp + 1][3] = 0;
+    return autoPtr<scalarRectangularMatrix>(&grad);
+}
+
+template <class ThermoMixture>
+inline Foam::autoPtr<scalarRectangularMatrix> Foam::VLE<ThermoMixture>::dTrhoPvfcsoldXHP_HsP(scalar p, scalar T, solution& sol) const {
+    int nsp = this->X_.size();
+    scalar temp;
+    scalarRectangularMatrix& grad = *(new scalarRectangularMatrix(nsp + 2, 4 + 2 * nsp));
+
+    const VLE<ThermoMixture>& This = *this;
+    scalar vf = sol.vaporfra;
+    scalarList& X_gas = sol.X_gas();
+    scalarList& X_liq = sol.X_liq();
+    scalar rho_value = rho(p, T, sol);
+
+    autoPtr<scalarList> dvidP_value(this->dvidP(p, T, sol));
+    autoPtr<scalarList> dvidT_value(this->dvidT(p, T, sol));
+    List<autoPtr<scalarList>> dvidXi_value(nsp);
+    for (int i = 0; i < nsp; i++) {
+        dvidXi_value[i] = this->dvidXi(p, T, i, sol);
+    }
+    scalar dvfdP_value = 0, dvfdT_value = 0;
+    scalarList dvfdXi_value(nsp);
+    scalarList dHsdxi_gas_value(nsp), dHsdxi_liq_value(nsp);
+    for (int i = 0; i < nsp; i++) {
+        dvfdT_value += dvidT_value()[i];
+        dvfdP_value += dvidP_value()[i];
+        dvfdXi_value[i] = -vf;
+        for (int j = 0; j < nsp; j++) {
+            dvfdXi_value[i] += dvidXi_value[i]()[j];
+        }
+        dHsdxi_gas_value[i] = this->dHsdxi(p, T, i, 1, &X_gas);
+        dHsdxi_liq_value[i] = this->dHsdxi(p, T, i, 0, &X_liq);
+    }
+
+    scalar dHsdT_gas = this->ThermoMixture::dHsdT(p, T, 1, &X_gas);
+    scalar dHsdT_liq = this->ThermoMixture::dHsdT(p, T, 0, &X_liq);
+    scalar dHsdP_gas = this->ThermoMixture::dHsdP(p, T, 1, &X_gas);
+    scalar dHsdP_liq = this->ThermoMixture::dHsdP(p, T, 0, &X_liq);
+    scalarList dHsdXi_gas(nsp);
+    scalarList dHsdXi_liq(nsp);
+
+    scalarList dXdT_gas_value(nsp);
+    scalarList dXdT_liq_value(nsp);
+    scalarList dXdP_gas_value(nsp);
+    scalarList dXdP_liq_value(nsp);
+    if (vf <= 1e-6)
+    {
+        for (int i = 0; i < nsp; i++) {
+            dXdT_gas_value[i] = 0;
+            dXdT_liq_value[i] = -(dvidT_value()[i] - X_liq[i] * dvfdT_value) / (1 - vf);
+            dXdP_gas_value[i] = 0;
+            dXdP_liq_value[i] = -(dvidP_value()[i] - X_liq[i] * dvfdP_value) / (1 - vf);
+        }
+    }
+    else if (vf >= 1 - 1e-6)
+    {
+        for (int i = 0; i < nsp; i++) {
+            dXdT_gas_value[i] = (dvidT_value()[i] - X_gas[i] * dvfdT_value) / vf;
+            dXdT_liq_value[i] = 0;
+            dXdP_gas_value[i] = (dvidP_value()[i] - X_gas[i] * dvfdP_value) / vf;
+            dXdP_liq_value[i] = 0;
+        }
+    }
+    else
+    {
+        for (int i = 0; i < nsp; i++) {
+            dXdT_gas_value[i] = (dvidT_value()[i] - X_gas[i] * dvfdT_value) / vf;
+            dXdT_liq_value[i] = -(dvidT_value()[i] - X_liq[i] * dvfdT_value) / (1 - vf);
+            dXdP_gas_value[i] = (dvidP_value()[i] - X_gas[i] * dvfdP_value) / vf;
+            dXdP_liq_value[i] = -(dvidP_value()[i] - X_liq[i] * dvfdP_value) / (1 - vf);
+        }
+    }
+
+    List<scalarList> dXdXi_gas_value(nsp);
+    List<scalarList> dXdXi_liq_value(nsp);
+
+    if (vf <= 1e-6)
+    {
+        for (int i = 0; i < nsp; i++) {
+            dXdXi_gas_value[i].resize(nsp);
+            dXdXi_liq_value[i].resize(nsp);
+            for (int j = 0; j < nsp; j++) {
+                dXdXi_gas_value[i][j] = 0;
+                if (i == j) {
+                    dXdXi_liq_value[i][j] = 1 / (1 - vf) * (1 - dvidXi_value[i]()[j]) - X_liq[j] / (1 - vf) * (1 - dvfdXi_value[i] - vf);
+                }
+                else {
+                    dXdXi_liq_value[i][j] = 1 / (1 - vf) * (-dvidXi_value[i]()[j]) - X_liq[j] / (1 - vf) * (1 - dvfdXi_value[i] - vf);
+                }
+            }
+        }
+
+    }
+    else if (vf >= 1 - 1e-6)
+    {
+        for (int i = 0; i < nsp; i++) {
+            dXdXi_gas_value[i].resize(nsp);
+            dXdXi_liq_value[i].resize(nsp);
+            for (int j = 0; j < nsp; j++) {
+                dXdXi_gas_value[i][j] = (dvidXi_value[i]()[j] - X_gas[j] * (dvfdXi_value[i] + vf)) / vf;
+                dXdXi_liq_value[i][j] = 0;
+            }
+        }
+
+    }
+    else
+    {
+        for (int i = 0; i < nsp; i++) {
+            dXdXi_gas_value[i].resize(nsp);
+            dXdXi_liq_value[i].resize(nsp);
+            for (int j = 0; j < nsp; j++) {
+                dXdXi_gas_value[i][j] = (dvidXi_value[i]()[j] - X_gas[j] * (dvfdXi_value[i] + vf)) / vf;
+                if (i == j) {
+                    dXdXi_liq_value[i][j] = 1 / (1 - vf) * (1 - dvidXi_value[i]()[j]) - X_liq[j] / (1 - vf) * (1 - dvfdXi_value[i] - vf);
+                }
+                else {
+                    dXdXi_liq_value[i][j] = 1 / (1 - vf) * (-dvidXi_value[i]()[j]) - X_liq[j] / (1 - vf) * (1 - dvfdXi_value[i] - vf);
+                }
+            }
+        }
+    }
+
+    for (int i = 0; i < nsp; i++) {
+        dHsdT_gas += dHsdxi_gas_value[i] * dXdT_gas_value[i];
+        dHsdT_liq += dHsdxi_liq_value[i] * dXdT_liq_value[i];
+        dHsdP_gas += dHsdxi_gas_value[i] * dXdP_gas_value[i];
+        dHsdP_liq += dHsdxi_liq_value[i] * dXdP_liq_value[i];
+        dHsdXi_gas[i] = 0;
+        dHsdXi_liq[i] = 0;
+        for (int j = 0; j < nsp; j++) {
+            dHsdXi_gas[i] += dHsdxi_gas_value[j] * dXdXi_gas_value[i][j];
+            dHsdXi_liq[i] += dHsdxi_liq_value[j] * dXdXi_liq_value[i][j];
+        }
+    }
+
+    scalar mw_gas = this->W(&X_gas);  //kg/mol
+    scalar mw_mixture = this->W();
+    scalar ygas = vf * mw_gas / mw_mixture;
+    scalar dmw_gasdT = 0;
+    scalar dmw_gasdP = 0;
+    for (int i = 0; i < nsp; i++) {
+        dmw_gasdT += dXdT_gas_value[i] * This[i].W() * 1.0e-03;
+        dmw_gasdP += dXdP_gas_value[i] * This[i].W() * 1.0e-03;
+    }
+    scalarList dmw_gasdXi(nsp);
+    for (int i = 0; i < nsp; i++) {
+        dmw_gasdXi[i] = 0;
+        for (int j = 0; j < nsp; j++) {
+            dmw_gasdXi[i] += dXdXi_gas_value[i][j] * This[j].W() * 1.0e-03;
+        }
+    }
+    scalar dygasdT = (dvfdT_value * mw_gas + vf * dmw_gasdT) / mw_mixture;
+    scalar dygasdP = (dvfdP_value * mw_gas + vf * dmw_gasdP) / mw_mixture;
+    scalarList dygasdXi(nsp);
+    for (int i = 0; i < nsp; i++) {
+        dygasdXi[i] = ((dvfdXi_value[i] + vf) * mw_gas + vf * dmw_gasdXi[i]) / mw_mixture - ygas / mw_mixture * This[i].W() * 1.0e-03;
+    }
+
+    scalar Hs_gas = this->ThermoMixture::Hs(p, T, 1, &X_gas);
+    scalar Hs_liq = this->ThermoMixture::Hs(p, T, 0, &X_liq);
+    scalar Cp_Hs_value = Hs_gas * dygasdT + dHsdT_gas * ygas - Hs_liq * dygasdT + dHsdT_liq * (1.0 - ygas);
+    scalar dHsdP_value = Hs_gas * dygasdP + dHsdP_gas * ygas - Hs_liq * dygasdP + dHsdP_liq * (1.0 - ygas);
+    scalarList dHsdXi_value(nsp);
+    for (int i = 0; i < nsp; i++) {
+        dHsdXi_value[i] = Hs_gas * dygasdXi[i] + dHsdXi_gas[i] * ygas - Hs_liq * dygasdXi[i] + dHsdXi_liq[i] * (1.0 - ygas);
+    }
+
+    scalar ZMixture = Z(p, T, sol);
+    scalar ZGas = this->ThermoMixture::Z(p, T, 1, &X_gas);
+    scalar ZLiq = this->ThermoMixture::Z(p, T, 0, &X_liq);
+    scalar dZgasdT = this->ThermoMixture::dZdT(p, T, 1, &X_gas);
+    scalar dZliqdT = this->ThermoMixture::dZdT(p, T, 0, &X_liq);
+    scalar dZgasdP = this->ThermoMixture::dZdP(p, T, 1, &X_gas);
+    scalar dZliqdP = this->ThermoMixture::dZdP(p, T, 0, &X_liq);
+    scalarList dZgasdXi(nsp), dZliqdXi(nsp);
+    scalarList dZdxi_gas_value(nsp), dZdxi_liq_value(nsp);
+    for (int i = 0; i < nsp; i++) {
+        dZdxi_gas_value[i] = this->ThermoMixture::dZdxi(p, T, i, 1, &X_gas);
+        dZdxi_liq_value[i] = this->ThermoMixture::dZdxi(p, T, i, 0, &X_liq);
+    }
+    for (int i = 0; i < nsp; i++) {
+        dZgasdT += dZdxi_gas_value[i] * dXdT_gas_value[i];
+        dZliqdT += dZdxi_liq_value[i] * dXdT_liq_value[i];
+        dZgasdP += dZdxi_gas_value[i] * dXdP_gas_value[i];
+        dZliqdP += dZdxi_liq_value[i] * dXdP_liq_value[i];
+        dZgasdXi[i] = 0;
+        dZliqdXi[i] = 0;
+        for (int j = 0; j < nsp; j++) {
+            dZgasdXi[i] += dZdxi_gas_value[j] * dXdXi_gas_value[i][j];
+            dZliqdXi[i] += dZdxi_liq_value[j] * dXdXi_liq_value[i][j];
+        }
+    }
+    temp = (vf * ZGas + (1 - vf) * ZLiq);
+    scalar dZMixturedT = dvfdT_value * (ZGas - ZLiq) + vf * dZgasdT + (1 - vf) * dZliqdT;
+    scalar dZMixturedP = dvfdP_value * (ZGas - ZLiq) + vf * dZgasdP + (1 - vf) * dZliqdP;
+    scalarList dZMixturedXi(nsp);
+
+    for (int i = 0; i < nsp; i++) {
+        dZMixturedXi[i] = (dvfdXi_value[i] * ZGas * ZGas + vf * 2 * ZGas * dZgasdXi[i] + 2 * (1 - vf) * ZLiq * dZliqdXi[i] - dvfdXi_value[i] * ZLiq * ZLiq) / temp - (vf * ZGas * ZGas + (1 - vf) * ZLiq * ZLiq) / (temp * temp) * (dvfdXi_value[i] * ZGas + vf * dZgasdXi[i] + (1 - vf) * dZliqdXi[i] - dvfdXi_value[i] * ZLiq);
+    }
+
+    scalar drhodT_value = -p * mw_mixture / (ZMixture * ZMixture * RR * 1.0e-03 * T * T) * (dZMixturedT * T + ZMixture);
+    scalar drhodP_value = mw_mixture / (ZMixture * RR * 1.0e-03 * T) - p * mw_mixture / (ZMixture * ZMixture * RR * 1.0e-03 * T) * dZMixturedP;
+    scalarList drhodXi_value(nsp);
+    for (int i = 0; i < nsp; i++) {
+        drhodXi_value[i] = p * (This[i].W() * 1.0e-03 - mw_mixture) / (ZMixture * RR * 1.0e-03 * T) - p * mw_mixture / (ZMixture * ZMixture * RR * 1.0e-03 * T) * dZMixturedXi[i];
+
+    }
+
+
+
+    for (int i = 0; i < nsp; i++) {
+        grad[i][0] = -dHsdXi_value[i] / Cp_Hs_value;
+        grad[i][1] = (-drhodT_value * dHsdXi_value[i] / Cp_Hs_value + drhodXi_value[i]) / p;
+        grad[i][2] = -dvfdT_value * dHsdXi_value[i] / Cp_Hs_value + dvfdXi_value[i];
+        grad[i][3] = 0;
+        for (int j = 0; j < nsp; j++)
+        {
+            grad[i][4 + j] = -dXdT_gas_value[i] * dHsdXi_value[i] / Cp_Hs_value + dXdXi_gas_value[i][j];
+            grad[i][4 + nsp + j] = -dXdT_liq_value[i] * dHsdXi_value[i] / Cp_Hs_value + dXdXi_liq_value[i][j];
+        }
+    }
+    grad[nsp][0] = 1 / Cp_Hs_value;
+    grad[nsp][1] = (drhodT_value / Cp_Hs_value) / p;
+    grad[nsp][2] = dvfdT_value / Cp_Hs_value;
+    grad[nsp][3] = 0;
+    for (int j = 0; j < nsp; j++)
+    {
+
+        grad[nsp][4 + j] = dXdT_gas_value[j] / Cp_Hs_value;
+        grad[nsp][4 + nsp + j] = dXdT_liq_value[j] / Cp_Hs_value;
+    }
+    grad[nsp + 1][0] = -dHsdP_value / Cp_Hs_value;
+    grad[nsp + 1][1] = (-drhodT_value * dHsdP_value / Cp_Hs_value + drhodP_value) / p - rho_value / (p * p);
+    grad[nsp + 1][2] = -dvfdT_value * dHsdP_value / Cp_Hs_value + dvfdP_value;
+    grad[nsp + 1][3] = 0;
+    for (int j = 0; j < nsp; j++)
+    {
+        grad[nsp + 1][4 + j] = -dXdT_gas_value[j] * dHsdP_value / Cp_Hs_value + dXdP_gas_value[j];
+        grad[nsp + 1][4 + nsp + j] = -dXdT_liq_value[j] * dHsdP_value / Cp_Hs_value + dXdP_liq_value[j];
+    }
+    return autoPtr<scalarRectangularMatrix>(&grad);
+}
+
+
+template <class ThermoMixture>
+inline Foam::autoPtr<scalarRectangularMatrix> Foam::VLE<ThermoMixture>::dTHvfcdXrhoP(scalar p, scalar T, solution& sol) const {
+    int nsp = this->X_.size();
+    scalar temp;
+    scalarRectangularMatrix& grad = *(new scalarRectangularMatrix(nsp + 2, 4));
+
+    const VLE<ThermoMixture>& This = *this;
+    scalar vf = sol.vaporfra;
+    scalarList& X_gas = sol.X_gas();
+    scalarList& X_liq = sol.X_liq();
+    scalar rho_value = rho(p, T, sol);
+
+    autoPtr<scalarList> dvidP_value(this->dvidP(p, T, sol));
+    autoPtr<scalarList> dvidT_value(this->dvidT(p, T, sol));
+    List<autoPtr<scalarList>> dvidXi_value(nsp);
+    for (int i = 0; i < nsp; i++) {
+        dvidXi_value[i] = this->dvidXi(p, T, i, sol);
+    }
+    scalar dvfdP_value = 0, dvfdT_value = 0;
+    scalarList dvfdXi_value(nsp);
+    scalarList dHsdxi_gas_value(nsp), dHsdxi_liq_value(nsp);
+    for (int i = 0; i < nsp; i++) {
+        dvfdT_value += dvidT_value()[i];
+        dvfdP_value += dvidP_value()[i];
+        dvfdXi_value[i] = -vf;
+        for (int j = 0; j < nsp; j++) {
+            dvfdXi_value[i] += dvidXi_value[i]()[j];
+        }
+        dHsdxi_gas_value[i] = this->dHsdxi(p, T, i, 1, &X_gas);
+        dHsdxi_liq_value[i] = this->dHsdxi(p, T, i, 0, &X_liq);
+    }
+
+    scalar dHsdT_gas = this->ThermoMixture::dHsdT(p, T, 1, &X_gas);
+    scalar dHsdT_liq = this->ThermoMixture::dHsdT(p, T, 0, &X_liq);
+    scalar dHsdP_gas = this->ThermoMixture::dHsdP(p, T, 1, &X_gas);
+    scalar dHsdP_liq = this->ThermoMixture::dHsdP(p, T, 0, &X_liq);
+    scalarList dHsdXi_gas(nsp);
+    scalarList dHsdXi_liq(nsp);
+
+    scalarList dXdT_gas_value(nsp);
+    scalarList dXdT_liq_value(nsp);
+    scalarList dXdP_gas_value(nsp);
+    scalarList dXdP_liq_value(nsp);
+    if (vf <= 1e-6)
+    {
+        for (int i = 0; i < nsp; i++) {
+            dXdT_gas_value[i] = 0;
+            dXdT_liq_value[i] = -(dvidT_value()[i] - X_liq[i] * dvfdT_value) / (1 - vf);
+            dXdP_gas_value[i] = 0;
+            dXdP_liq_value[i] = -(dvidP_value()[i] - X_liq[i] * dvfdP_value) / (1 - vf);
+        }
+    }
+    else if (vf >= 1 - 1e-6)
+    {
+        for (int i = 0; i < nsp; i++) {
+            dXdT_gas_value[i] = (dvidT_value()[i] - X_gas[i] * dvfdT_value) / vf;
+            dXdT_liq_value[i] = 0;
+            dXdP_gas_value[i] = (dvidP_value()[i] - X_gas[i] * dvfdP_value) / vf;
+            dXdP_liq_value[i] = 0;
+        }
+    }
+    else
+    {
+        for (int i = 0; i < nsp; i++) {
+            dXdT_gas_value[i] = (dvidT_value()[i] - X_gas[i] * dvfdT_value) / vf;
+            dXdT_liq_value[i] = -(dvidT_value()[i] - X_liq[i] * dvfdT_value) / (1 - vf);
+            dXdP_gas_value[i] = (dvidP_value()[i] - X_gas[i] * dvfdP_value) / vf;
+            dXdP_liq_value[i] = -(dvidP_value()[i] - X_liq[i] * dvfdP_value) / (1 - vf);
+        }
+    }
+
+    List<scalarList> dXdXi_gas_value(nsp);
+    List<scalarList> dXdXi_liq_value(nsp);
+
+    if (vf <= 1e-6)
+    {
+        for (int i = 0; i < nsp; i++) {
+            dXdXi_gas_value[i].resize(nsp);
+            dXdXi_liq_value[i].resize(nsp);
+            for (int j = 0; j < nsp; j++) {
+                dXdXi_gas_value[i][j] = 0;
+                if (i == j) {
+                    dXdXi_liq_value[i][j] = 1 / (1 - vf) * (1 - dvidXi_value[i]()[j]) - X_liq[j] / (1 - vf) * (1 - dvfdXi_value[i] - vf);
+                }
+                else {
+                    dXdXi_liq_value[i][j] = 1 / (1 - vf) * (-dvidXi_value[i]()[j]) - X_liq[j] / (1 - vf) * (1 - dvfdXi_value[i] - vf);
+                }
+            }
+        }
+
+    }
+    else if (vf >= 1 - 1e-6)
+    {
+        for (int i = 0; i < nsp; i++) {
+            dXdXi_gas_value[i].resize(nsp);
+            dXdXi_liq_value[i].resize(nsp);
+            for (int j = 0; j < nsp; j++) {
+                dXdXi_gas_value[i][j] = (dvidXi_value[i]()[j] - X_gas[j] * (dvfdXi_value[i] + vf)) / vf;
+                dXdXi_liq_value[i][j] = 0;
+            }
+        }
+
+    }
+    else
+    {
+        for (int i = 0; i < nsp; i++) {
+            dXdXi_gas_value[i].resize(nsp);
+            dXdXi_liq_value[i].resize(nsp);
+            for (int j = 0; j < nsp; j++) {
+                dXdXi_gas_value[i][j] = (dvidXi_value[i]()[j] - X_gas[j] * (dvfdXi_value[i] + vf)) / vf;
+                if (i == j) {
+                    dXdXi_liq_value[i][j] = 1 / (1 - vf) * (1 - dvidXi_value[i]()[j]) - X_liq[j] / (1 - vf) * (1 - dvfdXi_value[i] - vf);
+                }
+                else {
+                    dXdXi_liq_value[i][j] = 1 / (1 - vf) * (-dvidXi_value[i]()[j]) - X_liq[j] / (1 - vf) * (1 - dvfdXi_value[i] - vf);
+                }
+            }
+        }
+    }
+
+    for (int i = 0; i < nsp; i++) {
+        dHsdT_gas += dHsdxi_gas_value[i] * dXdT_gas_value[i];
+        dHsdT_liq += dHsdxi_liq_value[i] * dXdT_liq_value[i];
+        dHsdP_gas += dHsdxi_gas_value[i] * dXdP_gas_value[i];
+        dHsdP_liq += dHsdxi_liq_value[i] * dXdP_liq_value[i];
+        dHsdXi_gas[i] = 0;
+        dHsdXi_liq[i] = 0;
+        for (int j = 0; j < nsp; j++) {
+            dHsdXi_gas[i] += dHsdxi_gas_value[j] * dXdXi_gas_value[i][j];
+            dHsdXi_liq[i] += dHsdxi_liq_value[j] * dXdXi_liq_value[i][j];
+        }
+    }
+
+    scalar mw_gas = this->W(&X_gas);  //kg/mol
+    scalar mw_mixture = this->W();
+    scalar ygas = vf * mw_gas / mw_mixture;
+    scalar dmw_gasdT = 0;
+    scalar dmw_gasdP = 0;
+    for (int i = 0; i < nsp; i++) {
+        dmw_gasdT += dXdT_gas_value[i] * This[i].W() * 1.0e-03;
+        dmw_gasdP += dXdP_gas_value[i] * This[i].W() * 1.0e-03;
+    }
+    scalarList dmw_gasdXi(nsp);
+    for (int i = 0; i < nsp; i++) {
+        dmw_gasdXi[i] = 0;
+        for (int j = 0; j < nsp; j++) {
+            dmw_gasdXi[i] += dXdXi_gas_value[i][j] * This[j].W() * 1.0e-03;
+        }
+    }
+    scalar dygasdT = (dvfdT_value * mw_gas + vf * dmw_gasdT) / mw_mixture;
+    scalar dygasdP = (dvfdP_value * mw_gas + vf * dmw_gasdP) / mw_mixture;
+    scalarList dygasdXi(nsp);
+    for (int i = 0; i < nsp; i++) {
+        dygasdXi[i] = ((dvfdXi_value[i] + vf) * mw_gas + vf * dmw_gasdXi[i]) / mw_mixture - ygas / mw_mixture * This[i].W() * 1.0e-03;
+    }
+
+    scalar Hs_gas = this->ThermoMixture::Hs(p, T, 1, &X_gas);
+    scalar Hs_liq = this->ThermoMixture::Hs(p, T, 0, &X_liq);
+    scalar Cp_Hs_value = Hs_gas * dygasdT + dHsdT_gas * ygas - Hs_liq * dygasdT + dHsdT_liq * (1.0 - ygas);
+    scalar dHsdP_value = Hs_gas * dygasdP + dHsdP_gas * ygas - Hs_liq * dygasdP + dHsdP_liq * (1.0 - ygas);
+    scalarList dHsdXi_value(nsp);
+    for (int i = 0; i < nsp; i++) {
+        dHsdXi_value[i] = Hs_gas * dygasdXi[i] + dHsdXi_gas[i] * ygas - Hs_liq * dygasdXi[i] + dHsdXi_liq[i] * (1.0 - ygas);
+    }
+
+    scalar ZMixture = Z(p, T, sol);
+    scalar ZGas = this->ThermoMixture::Z(p, T, 1, &X_gas);
+    scalar ZLiq = this->ThermoMixture::Z(p, T, 0, &X_liq);
+    scalar dZgasdT = this->ThermoMixture::dZdT(p, T, 1, &X_gas);
+    scalar dZliqdT = this->ThermoMixture::dZdT(p, T, 0, &X_liq);
+    scalar dZgasdP = this->ThermoMixture::dZdP(p, T, 1, &X_gas);
+    scalar dZliqdP = this->ThermoMixture::dZdP(p, T, 0, &X_liq);
+    scalarList dZgasdXi(nsp), dZliqdXi(nsp);
+    scalarList dZdxi_gas_value(nsp), dZdxi_liq_value(nsp);
+    for (int i = 0; i < nsp; i++) {
+        dZdxi_gas_value[i] = this->ThermoMixture::dZdxi(p, T, i, 1, &X_gas);
+        dZdxi_liq_value[i] = this->ThermoMixture::dZdxi(p, T, i, 0, &X_liq);
+    }
+    for (int i = 0; i < nsp; i++) {
+        dZgasdT += dZdxi_gas_value[i] * dXdT_gas_value[i];
+        dZliqdT += dZdxi_liq_value[i] * dXdT_liq_value[i];
+        dZgasdP += dZdxi_gas_value[i] * dXdP_gas_value[i];
+        dZliqdP += dZdxi_liq_value[i] * dXdP_liq_value[i];
+        dZgasdXi[i] = 0;
+        dZliqdXi[i] = 0;
+        for (int j = 0; j < nsp; j++) {
+            dZgasdXi[i] += dZdxi_gas_value[j] * dXdXi_gas_value[i][j];
+            dZliqdXi[i] += dZdxi_liq_value[j] * dXdXi_liq_value[i][j];
+        }
+    }
+    temp = (vf * ZGas + (1 - vf) * ZLiq);
+    scalar dZMixturedT = dvfdT_value * (ZGas - ZLiq) + vf * dZgasdT + (1 - vf) * dZliqdT;
+    scalar dZMixturedP = dvfdP_value * (ZGas - ZLiq) + vf * dZgasdP + (1 - vf) * dZliqdP;
+    scalarList dZMixturedXi(nsp);
+
+    for (int i = 0; i < nsp; i++) {
+        dZMixturedXi[i] = (dvfdXi_value[i] * ZGas * ZGas + vf * 2 * ZGas * dZgasdXi[i] + 2 * (1 - vf) * ZLiq * dZliqdXi[i] - dvfdXi_value[i] * ZLiq * ZLiq) / temp - (vf * ZGas * ZGas + (1 - vf) * ZLiq * ZLiq) / (temp * temp) * (dvfdXi_value[i] * ZGas + vf * dZgasdXi[i] + (1 - vf) * dZliqdXi[i] - dvfdXi_value[i] * ZLiq);
+    }
+
+    scalar drhodT_value = -p * mw_mixture / (ZMixture * ZMixture * RR * 1.0e-03 * T * T) * (dZMixturedT * T + ZMixture);
+    scalar drhodP_value = mw_mixture / (ZMixture * RR * 1.0e-03 * T) - p * mw_mixture / (ZMixture * ZMixture * RR * 1.0e-03 * T) * dZMixturedP;
+    scalarList drhodXi_value(nsp);
+    for (int i = 0; i < nsp; i++) {
+        drhodXi_value[i] = p * (This[i].W() * 1.0e-03 - mw_mixture) / (ZMixture * RR * 1.0e-03 * T) - p * mw_mixture / (ZMixture * ZMixture * RR * 1.0e-03 * T) * dZMixturedXi[i];
+
+    }
+
+
+
+    for (int i = 0; i < nsp; i++) {
+        grad[i][0] = -drhodXi_value[i] / drhodT_value;
+        grad[i][1] = -Cp_Hs_value * drhodXi_value[i] / drhodT_value + dHsdXi_value[i];
+        grad[i][2] = -dvfdT_value * drhodXi_value[i] / drhodT_value + dvfdXi_value[i];
+        grad[i][3] = 0;
+    }
+    grad[nsp][0] = 1 / drhodT_value;
+    grad[nsp][1] = Cp_Hs_value / drhodT_value;
+    grad[nsp][2] = dvfdT_value / drhodT_value;
+    grad[nsp][3] = 0;
+
+    grad[nsp + 1][0] = -drhodP_value / drhodT_value;
+    grad[nsp + 1][1] = -Cp_Hs_value * drhodP_value / drhodT_value + dHsdP_value;
+    grad[nsp + 1][2] = -dvfdT_value * drhodP_value / drhodT_value + dvfdP_value;
+    grad[nsp + 1][3] = 0;
+
+    return autoPtr<scalarRectangularMatrix>(&grad);
+}
+
+template <class ThermoMixture>
 inline Foam::autoPtr<scalarRectangularMatrix> Foam::VLE<ThermoMixture>::dTPvfdXErho_simp(scalar p, scalar T, solution& sol) const {
     int nsp = this->X_.size();
     scalarRectangularMatrix& grad = *(new scalarRectangularMatrix(nsp + 2, 3));
@@ -3322,6 +4672,282 @@ inline Foam::autoPtr<scalarRectangularMatrix> Foam::VLE<ThermoMixture>::dTPvfdXE
     return autoPtr<scalarRectangularMatrix>(&grad);
 }
 
+/*
+template <class ThermoMixture>
+inline Foam::autoPtr<scalarRectangularMatrix> Foam::VLE<ThermoMixture>::dTPvfsoldXErho_constC(scalar p, scalar T, solution& sol) const {
+    int nsp = this->X_.size();
+    scalarRectangularMatrix& grad = *(new scalarRectangularMatrix(nsp + 2, 4+2*nsp));
+    const VLE<ThermoMixture>& This = *this;
+    scalar temp;
+    scalar vf = sol.vaporfra;
+    scalarList& X_gas = sol.X_gas();
+    scalarList& X_liq = sol.X_liq();
+    scalar rho_value = rho(p, T, sol);
+
+    autoPtr<scalarList> dvidP_value(this->dvidP(p, T, sol));
+    autoPtr<scalarList> dvidT_value(this->dvidT(p, T, sol));
+    List<autoPtr<scalarList>> dvidXi_value(nsp);
+    for (int i = 0; i < nsp; i++) {
+        dvidXi_value[i] = this->dvidXi(p, T, i, sol);
+    }
+    scalar dvfdP_value = 0, dvfdT_value = 0;
+    scalarList dvfdXi_value(nsp);
+    scalarList dHsdxi_gas_value(nsp), dHsdxi_liq_value(nsp);
+    for (int i = 0; i < nsp; i++) {
+        dvfdT_value += dvidT_value()[i];
+        dvfdP_value += dvidP_value()[i];
+        dvfdXi_value[i] = -vf;
+        for (int j = 0; j < nsp; j++) {
+            dvfdXi_value[i] += dvidXi_value[i]()[j];
+        }
+        dHsdxi_gas_value[i] = this->dHsdxi(p, T, i, 1, &X_gas);
+        dHsdxi_liq_value[i] = this->dHsdxi(p, T, i, 0, &X_liq);
+    }
+    scalar dHsdT_gas = this->ThermoMixture::dHsdT(p, T, 1, &X_gas);
+    scalar dHsdT_liq = this->ThermoMixture::dHsdT(p, T, 0, &X_liq);
+    scalar dHsdP_gas = this->ThermoMixture::dHsdP(p, T, 1, &X_gas);
+    scalar dHsdP_liq = this->ThermoMixture::dHsdP(p, T, 0, &X_liq);
+
+    scalarList dHsdXi_gas(nsp);
+    scalarList dHsdXi_liq(nsp);
+    //autoPtr<scalarList> dXdT_gas_value(this->dXdT_gas(p, T, sol));
+    scalarList dXdT_gas_value(nsp);
+    //autoPtr<scalarList> dXdT_liq_value(this->dXdT_liq(p, T, sol));
+    scalarList dXdT_liq_value(nsp);
+    //autoPtr<scalarList> dXdP_gas_value(this->dXdP_gas(p, T, sol));
+    scalarList dXdP_gas_value(nsp);
+    //autoPtr<scalarList> dXdP_liq_value(this->dXdP_liq(p, T, sol));
+    scalarList dXdP_liq_value(nsp);
+    if (vf <= 1e-6)
+    {
+        for (int i = 0; i < nsp; i++) {
+            dXdT_gas_value[i] = 0;
+            dXdT_liq_value[i] = -(dvidT_value()[i] - X_liq[i] * dvfdT_value) / (1 - vf);
+            dXdP_gas_value[i] = 0;
+            dXdP_liq_value[i] = -(dvidP_value()[i] - X_liq[i] * dvfdP_value) / (1 - vf);
+        }
+    }
+    else if (vf >= 1 - 1e-6)
+    {
+        for (int i = 0; i < nsp; i++) {
+            dXdT_gas_value[i] = (dvidT_value()[i] - X_gas[i] * dvfdT_value) / vf;
+            dXdT_liq_value[i] = 0;
+            dXdP_gas_value[i] = (dvidP_value()[i] - X_gas[i] * dvfdP_value) / vf;
+            dXdP_liq_value[i] = 0;
+        }
+    }
+    else
+    {
+        for (int i = 0; i < nsp; i++) {
+            dXdT_gas_value[i] = (dvidT_value()[i] - X_gas[i] * dvfdT_value) / vf;
+            dXdT_liq_value[i] = -(dvidT_value()[i] - X_liq[i] * dvfdT_value) / (1 - vf);
+            dXdP_gas_value[i] = (dvidP_value()[i] - X_gas[i] * dvfdP_value) / vf;
+            dXdP_liq_value[i] = -(dvidP_value()[i] - X_liq[i] * dvfdP_value) / (1 - vf);
+        }
+    }
+    //List<autoPtr<scalarList>> dXdXi_gas_value(nsp);
+    //List<autoPtr<scalarList>> dXdXi_liq_value(nsp);
+    List<scalarList> dXdXi_gas_value(nsp);
+    List<scalarList> dXdXi_liq_value(nsp);
+
+    if (vf <= 1e-6)
+    {
+        for (int i = 0; i < nsp; i++) {
+            dXdXi_gas_value[i].resize(nsp);
+            dXdXi_liq_value[i].resize(nsp);
+            for (int j = 0; j < nsp; j++) {
+                dXdXi_gas_value[i][j] = 0;
+                if (i == j) {
+                    dXdXi_liq_value[i][j] = 1 / (1 - vf) * (1 - dvidXi_value[i]()[j]) - X_liq[j] / (1 - vf) * (1 - dvfdXi_value[i] - vf);
+                }
+                else {
+                    dXdXi_liq_value[i][j] = 1 / (1 - vf) * (-dvidXi_value[i]()[j]) - X_liq[j] / (1 - vf) * (1 - dvfdXi_value[i] - vf);
+                }
+            }
+        }
+
+    }
+    else if (vf >= 1 - 1e-6)
+    {
+        for (int i = 0; i < nsp; i++) {
+            dXdXi_gas_value[i].resize(nsp);
+            dXdXi_liq_value[i].resize(nsp);
+            for (int j = 0; j < nsp; j++) {
+                dXdXi_gas_value[i][j] = (dvidXi_value[i]()[j] - X_gas[j] * (dvfdXi_value[i] + vf)) / vf;
+                dXdXi_liq_value[i][j] = 0;
+            }
+        }
+
+    }
+    else
+    {
+        for (int i = 0; i < nsp; i++) {
+            dXdXi_gas_value[i].resize(nsp);
+            dXdXi_liq_value[i].resize(nsp);
+            for (int j = 0; j < nsp; j++) {
+                dXdXi_gas_value[i][j] = (dvidXi_value[i]()[j] - X_gas[j] * (dvfdXi_value[i] + vf)) / vf;
+                if (i == j) {
+                    dXdXi_liq_value[i][j] = 1 / (1 - vf) * (1 - dvidXi_value[i]()[j]) - X_liq[j] / (1 - vf) * (1 - dvfdXi_value[i] - vf);
+                }
+                else {
+                    dXdXi_liq_value[i][j] = 1 / (1 - vf) * (-dvidXi_value[i]()[j]) - X_liq[j] / (1 - vf) * (1 - dvfdXi_value[i] - vf);
+                }
+            }
+        }
+    }
+    //Info << "!!!!!!=" << setprecision(20) << (dvidXi_value[0]()[0] - X_gas[0] * (dvfdXi_value[0] + vf)) / vf << endl;
+    //Info << "!!!!!!=" << setprecision(15) << -((X_gas[0] - 1) * dvidXi_value[0]()[0] + X_gas[0] * dvidXi_value[0]()[1]) / vf << endl;
+    for (int i = 0; i < nsp; i++) {
+        dHsdT_gas += dHsdxi_gas_value[i] * dXdT_gas_value[i];
+        dHsdT_liq += dHsdxi_liq_value[i] * dXdT_liq_value[i];
+        dHsdP_gas += dHsdxi_gas_value[i] * dXdP_gas_value[i];
+        dHsdP_liq += dHsdxi_liq_value[i] * dXdP_liq_value[i];
+        dHsdXi_gas[i] = 0;
+        dHsdXi_liq[i] = 0;
+        for (int j = 0; j < nsp; j++) {
+            dHsdXi_gas[i] += dHsdxi_gas_value[j] * dXdXi_gas_value[i][j];
+            dHsdXi_liq[i] += dHsdxi_liq_value[j] * dXdXi_liq_value[i][j];
+        }
+    }
+
+    scalar mw_gas = this->W(&X_gas);  //kg/mol
+    scalar mw_mixture = this->W();
+    scalar ygas = vf * mw_gas / mw_mixture;
+    //scalar dmw_gasdT = this->dWdT_gas(p, T, sol);
+    scalar dmw_gasdT = 0;
+    //scalar dmw_gasdP = this->dWdP_gas(p, T, sol);
+    scalar dmw_gasdP = 0;
+    for (int i = 0; i < nsp; i++) {
+        dmw_gasdT += dXdT_gas_value[i] * This[i].W() * 1.0e-03;
+        dmw_gasdP += dXdP_gas_value[i] * This[i].W() * 1.0e-03;
+    }
+    scalarList dmw_gasdXi(nsp);
+    for (int i = 0; i < nsp; i++) {
+        dmw_gasdXi[i] = 0;
+        for (int j = 0; j < nsp; j++) {
+            dmw_gasdXi[i] += dXdXi_gas_value[i][j] * This[j].W() * 1.0e-03;
+        }
+        //dmw_gasdXi[i] = this->dWdXi_gas(p, T, i, sol);
+    }
+    scalar dygasdT = (dvfdT_value * mw_gas + vf * dmw_gasdT) / mw_mixture;
+    scalar dygasdP = (dvfdP_value * mw_gas + vf * dmw_gasdP) / mw_mixture;
+    scalarList dygasdXi(nsp);
+    for (int i = 0; i < nsp; i++) {
+        dygasdXi[i] = ((dvfdXi_value[i] + vf) * mw_gas + vf * dmw_gasdXi[i]) / mw_mixture - ygas / mw_mixture * This[i].W() * 1.0e-03;
+    }
+
+    scalar Hs_gas = this->ThermoMixture::Hs(p, T, 1, &X_gas);
+    scalar Hs_liq = this->ThermoMixture::Hs(p, T, 0, &X_liq);
+    scalar Cp_Hs_value = Hs_gas * dygasdT + dHsdT_gas * ygas - Hs_liq * dygasdT + dHsdT_liq * (1.0 - ygas);
+    scalar dHsdP_value = Hs_gas * dygasdP + dHsdP_gas * ygas - Hs_liq * dygasdP + dHsdP_liq * (1.0 - ygas);
+    scalarList dHsdXi_value(nsp);
+    for (int i = 0; i < nsp; i++) {
+        dHsdXi_value[i] = Hs_gas * dygasdXi[i] + dHsdXi_gas[i] * ygas - Hs_liq * dygasdXi[i] + dHsdXi_liq[i] * (1.0 - ygas);
+    }
+
+    scalar ZMixture = Z(p, T, sol);
+    scalar ZGas = this->ThermoMixture::Z(p, T, 1, &X_gas);
+    scalar ZLiq = this->ThermoMixture::Z(p, T, 0, &X_liq);
+    scalar dZgasdT = this->ThermoMixture::dZdT(p, T, 1, &X_gas);
+    scalar dZliqdT = this->ThermoMixture::dZdT(p, T, 0, &X_liq);
+    scalar dZgasdP = this->ThermoMixture::dZdP(p, T, 1, &X_gas);
+    scalar dZliqdP = this->ThermoMixture::dZdP(p, T, 0, &X_liq);
+    scalarList dZgasdXi(nsp), dZliqdXi(nsp);
+    scalarList dZdxi_gas_value(nsp), dZdxi_liq_value(nsp);
+    for (int i = 0; i < nsp; i++) {
+        dZdxi_gas_value[i] = this->ThermoMixture::dZdxi(p, T, i, 1, &X_gas);
+        dZdxi_liq_value[i] = this->ThermoMixture::dZdxi(p, T, i, 0, &X_liq);
+    }
+    for (int i = 0; i < nsp; i++) {
+        dZgasdT += dZdxi_gas_value[i] * dXdT_gas_value[i];
+        dZliqdT += dZdxi_liq_value[i] * dXdT_liq_value[i];
+        dZgasdP += dZdxi_gas_value[i] * dXdP_gas_value[i];
+        dZliqdP += dZdxi_liq_value[i] * dXdP_liq_value[i];
+        dZgasdXi[i] = 0;
+        dZliqdXi[i] = 0;
+        for (int j = 0; j < nsp; j++) {
+            dZgasdXi[i] += dZdxi_gas_value[j] * dXdXi_gas_value[i][j];
+            dZliqdXi[i] += dZdxi_liq_value[j] * dXdXi_liq_value[i][j];
+        }
+    }
+    temp = (vf * ZGas + (1 - vf) * ZLiq);
+    //scalar dZMixturedT = (dvfdT_value * ZGas * ZGas + vf * 2 * ZGas * dZgasdT + 2 * (1 - vf) * ZLiq * dZliqdT - dvfdT_value * ZLiq * ZLiq) / temp - (vf * ZGas * ZGas + (1 - vf) * ZLiq * ZLiq) / (temp * temp) * (dvfdT_value * ZGas + vf * dZgasdT + (1 - vf) * dZliqdT - dvfdT_value * ZLiq);
+    scalar dZMixturedT = dvfdT_value * (ZGas - ZLiq) + vf * dZgasdT + (1 - vf) * dZliqdT;
+
+    //scalar dZMixturedP = (dvfdP_value * ZGas * ZGas + vf * 2 * ZGas * dZgasdP + 2 * (1 - vf) * ZLiq * dZliqdP - dvfdP_value * ZLiq * ZLiq) / temp - (vf * ZGas * ZGas + (1 - vf) * ZLiq * ZLiq) / (temp * temp) * (dvfdP_value * ZGas + vf * dZgasdP + (1 - vf) * dZliqdP - dvfdP_value * ZLiq);
+    scalar dZMixturedP = dvfdP_value * (ZGas - ZLiq) + vf * dZgasdP + (1 - vf) * dZliqdP;
+    scalarList dZMixturedXi(nsp);
+
+    for (int i = 0; i < nsp; i++) {
+        dZMixturedXi[i] = (dvfdXi_value[i] * ZGas * ZGas + vf * 2 * ZGas * dZgasdXi[i] + 2 * (1 - vf) * ZLiq * dZliqdXi[i] - dvfdXi_value[i] * ZLiq * ZLiq) / temp - (vf * ZGas * ZGas + (1 - vf) * ZLiq * ZLiq) / (temp * temp) * (dvfdXi_value[i] * ZGas + vf * dZgasdXi[i] + (1 - vf) * dZliqdXi[i] - dvfdXi_value[i] * ZLiq);
+    }
+
+    scalar drhodT_value = -p * mw_mixture / (ZMixture * ZMixture * RR * 1.0e-03 * T * T) * (dZMixturedT * T + ZMixture);
+    scalar drhodP_value = mw_mixture / (ZMixture * RR * 1.0e-03 * T) - p * mw_mixture / (ZMixture * ZMixture * RR * 1.0e-03 * T) * dZMixturedP;
+    scalarList drhodXi_value(nsp);
+    for (int i = 0; i < nsp; i++) {
+        drhodXi_value[i] = p * (This[i].W() * 1.0e-03 - mw_mixture) / (ZMixture * RR * 1.0e-03 * T) - p * mw_mixture / (ZMixture * ZMixture * RR * 1.0e-03 * T) * dZMixturedXi[i];
+        //dHsdXi_value[i] = dHsdXi(p, T, i, sol);
+    }  //this->dWdXi(i)
+
+    scalar dEdT_ = Cp_Hs_value + p / (rho_value * rho_value) * drhodT_value;
+    scalar dEdP_ = dHsdP_value - 1 / rho_value + p / (rho_value * rho_value) * drhodP_value;
+    scalarList dEdXi_(nsp);
+    for (int i = 0; i < nsp; i++) {
+        dEdXi_[i] = dHsdXi_value[i] + p / (rho_value * rho_value) * drhodXi_value[i];
+        //scalar drhodXi_ = drhodXi(p, T, i, sol);
+    }
+    scalar det = dEdT_ * drhodP_value - dEdP_ * drhodT_value;
+
+
+
+    for (int i = 0; i < nsp; i++) {
+        scalar dTdXi_Erho_value = -(drhodP_value * dEdXi_[i] - dEdP_ * drhodXi_value[i]) / det;
+        scalar dPdXi_Erho_value = -(-drhodT_value * dEdXi_[i] + dEdT_ * drhodXi_value[i]) / det;
+        //grad[i][0] = -(drhodP_value * dEdXi_[i] - dEdP_ * drhodXi_value[i]) / det;
+        //grad[i][1] = -(-drhodT_value * dEdXi_[i] + dEdT_ * drhodXi_value[i]) / det;
+        grad[i][0] = dTdXi_Erho_value;
+        grad[i][1] = dPdXi_Erho_value;
+        grad[i][2] = dvfdXi_value[i] + dvfdT_value * dTdXi_Erho_value + dvfdP_value * dPdXi_Erho_value;
+        grad[i][3] = 0;
+        for(int j = 0; j < nsp; j++)
+        {
+            grad[i][4+j] = dXdXi_gas_value[i][j];
+            grad[i][4+nsp+j] = dXdXi_liq_value[i][j];
+        }
+    }
+
+    scalar dTdE_rhoX_value = drhodP_value / det;
+    scalar dPdE_rhoX_value = -drhodT_value / det;
+    scalar dvfdE_rhoX_value = dvfdT_value * dTdE_rhoX_value + dvfdP_value * dPdE_rhoX_value;
+
+    scalar dTdrho_EX_value = -dEdP_ / det;
+    scalar dPdrho_EX_value = dEdT_ / det;
+    scalar dvfdrho_EX_value = dvfdT_value * dTdrho_EX_value + dvfdP_value * dPdrho_EX_value;
+
+    grad[nsp][0] = dTdE_rhoX_value;
+    grad[nsp][1] = dPdE_rhoX_value;
+    grad[nsp][2] = dvfdE_rhoX_value;
+    grad[nsp][3] = 0;
+    for(int j = 0; j < nsp; j++)
+    {
+        grad[nsp][4+j] = dXdT_gas_value[j]*dTdE_rhoX_value+dXdP_gas_value[j]*dPdE_rhoX_value;
+        grad[nsp][4+nsp+j] = dXdT_liq_value[j]*dTdE_rhoX_value+dXdP_liq_value[j]*dPdE_rhoX_value;
+    }
+    grad[nsp + 1][0] = dTdrho_EX_value;
+    grad[nsp + 1][1] = dPdrho_EX_value;
+    grad[nsp + 1][2] = dvfdrho_EX_value;
+    grad[nsp + 1][3] = 0;
+    for(int j = 0; j < nsp; j++)
+    {
+        grad[nsp+1][4+j] = dXdT_gas_value[j]*dTdrho_EX_value+dXdP_gas_value[j]*dPdrho_EX_value;
+        grad[nsp+1][4+nsp+j] = dXdT_liq_value[j]*dTdrho_EX_value+dXdP_liq_value[j]*dPdrho_EX_value;
+    }
+
+    return autoPtr<scalarRectangularMatrix>(&grad);
+}
+*/
+
 
 
 template <class ThermoMixture>
@@ -3677,14 +5303,14 @@ inline Foam::scalar Foam::VLE<ThermoMixture>::dCpdT  //todo
 template <class ThermoMixture>
 inline Foam::scalar Foam::VLE<ThermoMixture>::kappa_dev(scalar p, scalar T) const {
     autoPtr<solution> sol(TPN(p, T));
-    scalar Cv_ = this->Cp(p, T) - this->CpMCv(p, T); //J/kgK //warning 
-    scalar V_ = this->V(p, T, 1, &(sol().X_gas())) * sol().vaporfra + this->V(p, T, 0, &(sol().X_liq())) * (1 - sol().vaporfra);
+    //scalar Cv_ = this->Cp(p, T) - this->CpMCv(p, T); //J/kgK //warning 
+    //scalar V_ = this->V(p, T, 1, &(sol().X_gas())) * sol().vaporfra + this->V(p, T, 0, &(sol().X_liq())) * (1 - sol().vaporfra);
 
     //scalar mw_gas = this->W(&(sol().X_gas()));  //kg/mol
     //scalar mw_mixture = this->W();
     //scalar ygas = sol().vaporfra * mw_gas / mw_mixture;
 
-    return this->ThermoMixture::kappa_rho(p, T, rho(p, T, sol()), Cv_, V_);
+    return this->ThermoMixture::kappa_rho(p, T, rho(p, T, sol()));
 
     //return this->ThermoMixture::kappa(p, T, 1, &(sol().X_gas())) * ygas + this->ThermoMixture::kappa(p, T, 0, &(sol().X_liq())) * (1.0 - ygas);
 }

@@ -115,6 +115,7 @@ namespace Foam {
             scalar vaporfra;
             solution() : X_liq(), X_gas(), equalconstant(), vaporfra(0) {};
             solution(const solution& ref) : X_liq(ref.X_liq), X_gas(ref.X_gas), equalconstant(ref.equalconstant), vaporfra(ref.vaporfra) {};
+            void reset(const solution& ref) { X_liq = ref.X_liq; X_gas = ref.X_gas; equalconstant = ref.equalconstant; vaporfra = ref.vaporfra; }
         };
         // Fundamental properties
 
@@ -124,12 +125,21 @@ namespace Foam {
         //- Is the equation of state is isochoric i.e. rho = const
         static const bool isochoric = false;
 
+        static bool noVLE;
+        bool inputK;
+        scalarList Kinit;
+
         //- Return density [kg/m^3]
         inline scalar rho(scalar p, scalar T) const;
         inline scalar rho(scalar p, scalar T, solution& sol) const;
         inline scalar drhodT(scalar p, scalar T, solution& sol) const;
+        inline scalar drhodT(scalar p, scalar T) const;
         inline scalar drhodP(scalar p, scalar T, solution& sol) const;
         inline scalar drhodXi(scalar p, scalar T, label di, solution& sol) const;
+
+        inline scalar rho_noVLE(scalar p, scalar T, solution& sol) const;
+        inline scalar drhodT_noVLE(scalar p, scalar T, solution& sol) const;
+        inline scalar drhodP_noVLE(scalar p, scalar T, solution& sol) const;
 
         inline scalar dEdT(scalar p, scalar T, solution& sol) const;
         inline scalar dEdP(scalar p, scalar T, solution& sol) const;
@@ -184,7 +194,8 @@ namespace Foam {
         //- Return (Cp - Cv) [J/(kg K]
         inline scalar CpMCv(scalar p, scalar T) const;
         inline scalar CpMCv(scalar p, scalar T, solution& sol) const;
-
+        inline scalar Cv_VLE(scalar p, scalar T, solution& sol) const;
+        inline scalar Cv_gas(scalar p, scalar T, solution& sol) const;
         inline scalar A(scalar p, scalar T) const;
         //inline scalar B(scalar p, scalar T) const;
         inline scalar Ha(scalar p, scalar T) const;
@@ -230,6 +241,8 @@ namespace Foam {
         autoPtr<solution> TPn_flash(scalar p, scalar T) const;
         autoPtr<solution> TPn_flash_New(scalar p, scalar T) const;
         autoPtr<solution> TPn_flash_New2(scalar p, scalar T, bool stable, bool isVapor, Foam::scalarList& K_init) const;
+        autoPtr<solution> TPn_flash_Matheis(scalar p, scalar T, bool stable, bool isVapor, Foam::scalarList& K_init, bool& success) const;
+        autoPtr<solution> TPn_flash_New_TPD_Tudisco(scalar p, scalar T) const;
         autoPtr<solution> TPn_flash_New_TPD(scalar p, scalar T) const;
         inline tuple<bool, autoPtr<scalarList>, bool> solveTPD_BFGS(scalar p, scalar T) const;
         inline tuple<bool, Foam::autoPtr<List<scalarList>>, bool, autoPtr<scalarList>> solveTPD_BFGS_v2(scalar p, scalar T) const;
@@ -270,9 +283,13 @@ namespace Foam {
         inline autoPtr<scalarList> drhoPdXHP_HsP(scalar p, scalar T, solution& sol) const;
         inline autoPtr<scalarRectangularMatrix> dTrhoPdXHP_HsP(scalar p, scalar T, solution& sol) const;
         inline autoPtr<scalarRectangularMatrix> dTrhoPvfdXHP_HsP(scalar p, scalar T, solution& sol) const;
+        inline autoPtr<scalarRectangularMatrix> dTrhoPvfcdXHP_HsP(scalar p, scalar T, solution& sol) const;
+        inline autoPtr<scalarRectangularMatrix> dTrhoPvfcsoldXHP_HsP(scalar p, scalar T, solution& sol) const;
         inline autoPtr<scalarRectangularMatrix> dTPvfdXErho(scalar p, scalar T, solution& sol) const;
         inline autoPtr<scalarRectangularMatrix> dTPvfdXErho_constC(scalar p, scalar T, solution& sol) const;
+        //inline autoPtr<scalarRectangularMatrix> dTPvfsoldXErho_constC(scalar p, scalar T, solution& sol) const;
         inline autoPtr<scalarRectangularMatrix> dTPvfdXErho_simp(scalar p, scalar T, solution& sol) const;
+        inline autoPtr<scalarRectangularMatrix> dTHvfcdXrhoP(scalar p, scalar T, solution& sol)const;
 
         inline autoPtr<scalarRectangularMatrix> dErhovfcdXTP_simp(scalar p, scalar T, solution& sol) const;
 
@@ -288,6 +305,12 @@ namespace Foam {
         inline scalar kappaS(scalar p, scalar T, solution& sol) const;
         inline scalar c(scalar p, scalar T, solution& sol) const;
         inline scalar c(scalar p, scalar T) const;
+
+        inline scalar kappaT_noVLE(scalar p, scalar T, solution& sol) const;
+        inline scalar alphaP_noVLE(scalar p, scalar T, solution& sol) const;
+        inline scalar kappaS_noVLE(scalar p, scalar T, solution& sol) const;
+        inline scalar c_noVLE(scalar p, scalar T, solution& sol) const;
+        inline scalar c_noVLE(scalar p, scalar T) const;
 
 
         //mutable solution temp_sol;

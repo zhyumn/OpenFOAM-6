@@ -1,0 +1,6 @@
+
+SUPstream.C
+slab.C
+create_memory.C
+
+LIB = $(FOAM_USER_LIBBIN)/libSUPstreamDEV

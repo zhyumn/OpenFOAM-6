@@ -206,6 +206,7 @@ namespace Foam
         inline scalar W(const scalarList* Xinp = NULL) const;
 
         inline autoPtr<scalarList> fugacityCoefficient(scalar p, scalar T, const label pf = 2, const scalarList* Xinp = NULL) const;
+        inline autoPtr<scalarList> Ln_fugacityCoefficient(scalar p, scalar T, const label pf = 2, const scalarList* Xinp = NULL) const;
         inline autoPtr<scalarList>ln_fugacityCoefficient(scalar p, scalar T, scalar z, const scalarList* Xinp = NULL) const;
 
         inline autoPtr<scalarList> ddT_Ln_fugacityCoefficient(scalar p, scalar T, const label pf = 2, const scalarList* Xinp = NULL) const;

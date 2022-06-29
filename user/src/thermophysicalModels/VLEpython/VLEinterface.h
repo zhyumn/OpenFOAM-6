@@ -30,9 +30,9 @@
 #include "PengRobinson.H"
 #include "PengRobinsonMixture.H"
 #include "VLE.H"
-#include "janafThermo.H"
-#include "chungTransport.H"
-#include "chungTransportMixture.H"
+#include "janafThermoAd.H"
+#include "chungTransport_dev.H"
+#include "chungTransportMixture_dev.H"
 #include "HashPtrTable.H"
 #include "multithermo.H"
 #include "IOmanip.H"
@@ -60,34 +60,62 @@
     std::vector<double> comp_gas;
 };
 */
+typedef chungTransport<species::thermo<janafThermoAd<PengRobinson<specie>>, sensibleEnthalpy>> Stype;
 
+const int TPN_old = 0;
+const int TPN_v2 = 1;
+const int TPN_TPD = 2;
+const int TPN_TPD_Tud = 3;
 struct solver_new
 {
-    typedef chungTransport<species::thermo<janafThermo<PengRobinson<specie>>, sensibleEnthalpy>> Stype;
+    //typedef chungTransport<species::thermo<janafThermoAd<PengRobinson<specie>>, sensibleEnthalpy>> Stype;
+    private:
     typedef species::multithermo<VLE<chungTransportMixture<PengRobinsonMixture<multispecie<Stype>>>>, sensibleEnthalpy> Mtype;
     std::string path;
-
+    Mtype::solution sol;
+    bool updated;
     dictionary dict;
     speciesTable species;
+    int n_species;
+    int TPn_flag;
     dictionary thermoDict;
     dictionary thermoDictM;
     Mtype* thermo;
     PtrList<Stype> speciesData;
     double P;
     double T;
+
+    
+    void setY();
     //std::vector<double> X;
-    std::vector<std::string> m_specie;
+    //std::vector<std::string> m_specie;
     //Foam::speciesTable* s;
     //Foam::dictionary* dict;
     //void update();
     //Foam::PengRobinsonM<Foam::specie>* PR;
-    solver_new(std::string file );
-    void reset();
+    
+    public:
+    solver_new(std::string file);
+    void reset_specie(std::vector<std::string>);
     ~solver_new();
-    //void solve(bool flag);
-    double vaporfra;
-    //double density();
+
+    // settings 
+    void setT(double);
+    void setP(double);
+    void setX(std::vector<double>);
+    void setTPn_flag(int);
+
+    // output
+    double vaporfra();
     double rho();
+    double Cp();
+
+
+    private:
+    //void solve(bool flag);
+    
+    //double density();
+    
     double drhodT();
     double drhodP();
     double dSdT();
@@ -128,9 +156,11 @@ struct solver_new
     double S(int);
     double dSdP(int);
     double dSdT(int);
-    void TPn_flash();
+    void TPn_flash(int);
+    void TPn_flash_old();
     void TPn_flash_New();
     void TPn_flash_New_TPD();
+    void TPn_flash_update();
     double dZdT(int);
     double A();
     double dAdT();
@@ -143,11 +173,14 @@ struct solver_new
     double dHadT_singlePhase(int, std::vector<double>&);
     double Hideal(std::vector<double>&);
     double dHidealdT(std::vector<double>&);
-    double Cp();
+
     double dHadP();
     double dHadXi(int);
     double dHsdXi(int);
     double W();
+    double alphah_dev();
+    double mu_dev();
+    double Dimix(int);
     double W(std::vector<double>&);
     double T_HsP(double h, double p, double T0);
     void Ln_fugacityCoefficient();
@@ -158,7 +191,7 @@ struct solver_new
     void dvidP();
     void dvidXi(int);
     void  fugacityCoefficient(int, std::vector<double>&);
-    void  setY();
+
     double dTdP_HP();
     double dTdH_HP();
     double dTdXi_HP(int);

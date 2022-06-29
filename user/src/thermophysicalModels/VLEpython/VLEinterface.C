@@ -1,5 +1,6 @@
 #include "VLEinterface.h"
-
+template<>
+bool VLE<chungTransportMixture<PengRobinsonMixture<multispecie<Stype>>>>::noVLE = false;
 /*
 void solver::update()
 {
@@ -129,11 +130,14 @@ bool solver::twophase(double rho, double lt, double rt)
 
 solver_new::solver_new(std::string path_i) :path(path_i), dict(IFstream(path + "system/thermotableDict")()), thermoDict(IFstream(path + "system/thermo")()), thermoDictM(IFstream(path + "system/thermoMixture")()), thermo(nullptr)
 {
+    TPn_flag = 0;
     wordList s(dict.lookup("species"));
     species.transfer(s);
     Info << species << endl;
     HashPtrTable<Stype> speciesThermo(thermoDict);
     speciesData.resize(species.size());
+    updated = false;
+    n_species = species.size();
     forAll(species, i)
     {
         speciesData.set(
@@ -143,10 +147,11 @@ solver_new::solver_new(std::string path_i) :path(path_i), dict(IFstream(path + "
     thermo = new Mtype("test", speciesData, species, thermoDictM);
 }
 
-void solver_new::reset()
+void solver_new::reset_specie(std::vector<std::string> m_specie)
 {
     if (thermo)
         delete thermo;
+
     wordList s(dict.lookup("species"));
     s.resize(m_specie.size());
     for (int i = 0;i < m_specie.size();i++)
@@ -164,6 +169,8 @@ void solver_new::reset()
             new Stype(*speciesThermo[species[i]]));
     }
     thermo = new Mtype("test", speciesData, species, thermoDictM);
+    updated = false;
+    n_species = species.size();
 }
 /*
 void solver_new::update()
@@ -208,17 +215,41 @@ double solver_new::dZdT(int flag)
 
     return ((PengRobinsonMixture<multispecie<Stype>>*)thermo)->dZdT(P, T, flag, &comp_of);
 }
-
-void solver_new::TPn_flash()
+void solver_new::setT(double Tout)
 {
-    Foam::scalarList comp_liq_of(comp.size(), Foam::Zero);
-    Foam::scalarList comp_gas_of(comp.size(), Foam::Zero);
-    Foam::scalarList comp_of(comp.size(), Foam::Zero);
-    for (unsigned int i = 0;i < comp.size();i++)
+    T = Tout;
+    updated = false;
+}
+void solver_new::setP(double Pout)
+{
+    P = Pout;
+    updated = false;
+}
+void solver_new::setX(std::vector<double> Xout)
+{
+    Foam::scalarList comp_X_of(n_species, Foam::Zero);
+    for (unsigned int i = 0;i < n_species;i++)
     {
-        comp_of[i] = comp[i];
+        comp_X_of[i] = Xout[i];
     }
-    thermo->setX(comp_of);
+    thermo->setX(comp_X_of);
+    updated = false;
+}
+void solver_new::setTPn_flag(int flagout)
+{
+    TPn_flag = flagout;
+    updated = false;
+}
+void solver_new::TPn_flash_old()
+{
+    //Foam::scalarList comp_liq_of(comp.size(), Foam::Zero);
+    //Foam::scalarList comp_gas_of(comp.size(), Foam::Zero);
+    //Foam::scalarList comp_of(comp.size(), Foam::Zero);
+    //for (unsigned int i = 0;i < comp.size();i++)
+    //{
+    //    comp_of[i] = comp[i];
+    //}
+    //thermo->setX(comp_of);
     Mtype::solution ret(thermo->Mtype::TPn_flash(P, T)());
     comp_liq.resize(comp.size());
     comp_gas.resize(comp.size());
@@ -229,7 +260,29 @@ void solver_new::TPn_flash()
         comp_gas[i] = ret.X_gas()[i];
         equalconstant[i] = ret.equalconstant()[i];
     }
-    vaporfra = ret.vaporfra;
+    //vaporfra = ret.vaporfra;
+}
+
+void solver_new::TPn_flash_update()
+{
+    if (!updated)
+        TPn_flash(TPn_flag);
+}
+void solver_new::TPn_flash(int flag)
+{
+    if (flag == TPN_old)
+        //Mtype::solution ret(thermo->Mtype::TPn_flash(P, T)());
+        sol = thermo->Mtype::TPn_flash(P, T)();
+    else if (flag == TPN_v2)
+        sol = thermo->Mtype::TPn_flash_New(P, T)();
+    else if (flag == TPN_TPD)
+        sol = thermo->Mtype::TPn_flash_New_TPD(P, T)();
+    else if (flag == TPN_TPD_Tud)
+        sol = thermo->Mtype::TPn_flash_New_TPD_Tudisco(P, T)();
+    if (flag == TPn_flag)
+        updated = true;
+    else
+        updated = false;
 }
 
 void solver_new::TPn_flash_New_TPD()
@@ -252,7 +305,7 @@ void solver_new::TPn_flash_New_TPD()
         comp_gas[i] = ret.X_gas()[i];
         equalconstant[i] = ret.equalconstant()[i];
     }
-    vaporfra = ret.vaporfra;
+    //vaporfra = ret.vaporfra;
 }
 
 void solver_new::TPn_flash_New()
@@ -275,7 +328,7 @@ void solver_new::TPn_flash_New()
         comp_gas[i] = ret.X_gas()[i];
         equalconstant[i] = ret.equalconstant()[i];
     }
-    vaporfra = ret.vaporfra;
+    //vaporfra = ret.vaporfra;
 }
 
 double solver_new::A()
@@ -428,14 +481,8 @@ double solver_new::dHidealdT(std::vector<double>& in)
 
 double solver_new::Cp()
 {
-    Foam::scalarList comp_of(comp.size(), Foam::Zero);
-    for (unsigned int i = 0;i < comp.size();i++)
-    {
-        comp_of[i] = comp[i];
-    }
-    thermo->setX(comp_of);
-
-    return thermo->Cp(P, T);
+    TPn_flash_update();
+    return thermo->Cp(P, T, sol);
 }
 double solver_new::dHadP()
 {
@@ -982,8 +1029,17 @@ double  solver_new::dvfdXi_Erho(int di)
     return thermo->dvfdXi_Erho(P, T, di, so);
 }
 
+double  solver_new::vaporfra()
+{
+    TPn_flash_update();
+    return sol.vaporfra;
+}
+
 double  solver_new::rho()
 {
+    TPn_flash_update();
+    return thermo->rho(P, T, sol);
+    /*
     Foam::scalarList comp_of(comp.size(), Foam::Zero);
     autoPtr<scalarList> solu;
 
@@ -994,6 +1050,52 @@ double  solver_new::rho()
     thermo->setX(comp_of);
     Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
     return thermo->rho(P, T);
+    */
+
+}
+
+double  solver_new::alphah_dev()
+{
+    Foam::scalarList comp_of(comp.size(), Foam::Zero);
+    autoPtr<scalarList> solu;
+
+    for (unsigned int i = 0;i < comp.size();i++)
+    {
+        comp_of[i] = comp[i];
+    }
+    thermo->setX(comp_of);
+    //Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
+    return thermo->alphah_dev(P, T);
+
+}
+
+double  solver_new::mu_dev()
+{
+    Foam::scalarList comp_of(comp.size(), Foam::Zero);
+    autoPtr<scalarList> solu;
+
+    for (unsigned int i = 0;i < comp.size();i++)
+    {
+        comp_of[i] = comp[i];
+    }
+    thermo->setX(comp_of);
+    //Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
+    return thermo->mu_dev(P, T);
+
+}
+
+double  solver_new::Dimix(int di)
+{
+    Foam::scalarList comp_of(comp.size(), Foam::Zero);
+    autoPtr<scalarList> solu;
+
+    for (unsigned int i = 0;i < comp.size();i++)
+    {
+        comp_of[i] = comp[i];
+    }
+    thermo->setX(comp_of);
+    //Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
+    return thermo->Dimix(P, T, di);
 
 }
 

@@ -51,15 +51,23 @@ inline Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::ISATRhoMultitherm
         )()
     ),
     temp_p(pin),
-    TPvffun_XErho(temp_p ? temp_p : this),
+    TPvfcfun_XErho(temp_p ? temp_p : this),
     //HEfun(this, &ThermoMixture::HE),
     Erhovfcfun_XTP(temp_p ? temp_p : this),
+    Tpsivfcfun_XHP(temp_p ? temp_p : this),
+    //TPvfcsolfun_XErho(temp_p ? temp_p : this),
+    Tpsivfcsolfun_XHP(temp_p ? temp_p : this),
+    THvfcfun_XrhoP(temp_p ? temp_p : this),
     kappafun_XTP(temp_p ? temp_p : this, & ThermoMixture::kappa_dev),
     mufun_XTP(temp_p ? temp_p : this, & ThermoMixture::mu_dev),
     alphahfun_XTP(temp_p ? temp_p : this, & ThermoMixture::alphah_dev),
 
-    TPvftree_XErho(speciesData.size() + 2, 4, TPvffun_XErho, "TPvftree_XErho", ISATDict_),
+    TPvfctree_XErho(speciesData.size() + 2, 4, TPvfcfun_XErho, "TPvfctree_XErho", ISATDict_),
     Erhovfctree_XTP(speciesData.size() + 2, 4, Erhovfcfun_XTP, "Erhovfctree_XTP", ISATDict_),
+    Tpsivfctree_XHP(speciesData.size() + 2, 4, Tpsivfcfun_XHP, "Tpsivfctree_XHP", ISATDict_),
+    //TPvfcsoltree_XErho(speciesData.size() + 2,4+2*speciesData.sGize(),TPvfcsolfun_XErho,"TPvfcsolfun_XErho",ISATDict_),
+    Tpsivfcsoltree_XHP(speciesData.size() + 2,4+2*speciesData.size(),Tpsivfcsolfun_XHP,"Tpsivfcsoltree_XHP",ISATDict_),
+    THvfctree_XrhoP(speciesData.size() + 2,4,THvfcfun_XrhoP,"THvfctree_XrhoP",ISATDict_),
     //TPvftree_Erho(speciesData.size() + 2, 3, TPvffun_Erho, "TPvftree_Erho", ISATDict_),
     //Etree(speciesData.size() + 1, 1, HEfun, "HEtree", ISATDict_),
     kappatree_XTP(speciesData.size() + 2, 1, kappafun_XTP, "kappatree_XTP", ISATDict_),
@@ -309,7 +317,7 @@ inline std::tuple<Foam::scalar, Foam::scalar> Foam::species::ISATRhoMultithermo<
 
         //minf = t_f;
 
-        if (iter++ > 10 * maxIter_)
+        if (iter++ > 20 * maxIter_)
         {
             WarningInFunction << setprecision(50)
                 << "Maximum number of iterations exceeded: " << iter-1
@@ -416,6 +424,12 @@ inline Foam::scalar
 Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::Es_ac(const scalar p, const scalar T) const
 {
     return this->Hs(p, T) - p / this->rho(p, T);
+}
+template <class ThermoMixture, template <class> class Type>
+inline Foam::scalar
+Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::THP(const scalar H, const scalar P, const scalar T0) const
+{
+    return this->T(H, P, T0, &ISATRhoMultithermo<ThermoMixture, Type>::Hs, &ISATRhoMultithermo<ThermoMixture, Type>::Cp, &ISATRhoMultithermo<ThermoMixture, Type>::limit);
 }
 
 template <class ThermoMixture, template <class> class Type>
@@ -811,9 +825,9 @@ Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::Tpsi_HP(const scalar H, 
 
 }
 
-/*template <class ThermoMixture, template <class> class Type>
-inline std::tuple<Foam::scalar, Foam::scalar, Foam::scalar>
-Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::Tpsivf_HP(const scalar H, const scalar P, const scalar T0) const
+template <class ThermoMixture, template <class> class Type>
+inline std::tuple<Foam::scalar, Foam::scalar, Foam::scalar,Foam::scalar>
+Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::Tpsivfc_XHP(const scalar H, const scalar P, const scalar T0) const
 {
     scalarList in(this->X().size() + 2), out(3);
     for (int i = 0;i < this->X().size();i++)
@@ -825,14 +839,33 @@ Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::Tpsivf_HP(const scalar H
 
     //Info << "psi_HP" << endl;
 
-    Tpsivftree_HP.call(in, out, T0);
+    Tpsivfctree_XHP.call(in, out, T0);
     //psivftree.call(in, out);
-    return std::make_tuple(out[0], out[1], out[2]);
-}*/
+    return std::make_tuple(out[0], out[1], out[2], out[3]);
+}
+
+template <class ThermoMixture, template <class> class Type>
+inline std::tuple<Foam::scalar, Foam::scalar, Foam::scalar,Foam::scalar>
+Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::THvfc_XHP(const scalar rho, const scalar P, const scalar T0) const
+{
+    scalarList in(this->X().size() + 2), out(4);
+    for (int i = 0;i < this->X().size();i++)
+    {
+        in[i] = this->X_[i];
+    }
+    in[this->X().size()] = rho;
+    in[this->X().size() + 1] = P;
+
+    //Info << "psi_HP" << endl;
+
+    THvfctree_XrhoP.call(in, out, T0);
+    //psivftree.call(in, out);
+    return std::make_tuple(out[0], out[1], out[2], out[3]);
+}
 
 template <class ThermoMixture, template <class> class Type>
 inline std::tuple<Foam::scalar, Foam::scalar, Foam::scalar, Foam::scalar>
-Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::TPvf_Erho(const scalar E, const scalar rho, const scalar T0, const scalar P0) const
+Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::TPvfc_Erho(const scalar E, const scalar rho, const scalar T0, const scalar P0) const
 {
     scalarList in(this->X().size() + 2), out(3);
     for (int i = 0;i < this->X().size();i++)
@@ -844,17 +877,78 @@ Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::TPvf_Erho(const scalar E
 
     //Info << "psi_HP" << endl;
 
-    TPvftree_XErho.call(in, out, T0, P0);
+    TPvfctree_XErho.call(in, out, T0, P0);
     //psivftree.call(in, out);
     return std::make_tuple(out[0], out[1], out[2], out[3]);
+}
+/*
+template <class ThermoMixture, template <class> class Type>
+inline std::tuple<Foam::scalar, Foam::scalar, Foam::scalar, Foam::scalar, Foam::autoPtr<typename ThermoMixture::solution>>
+Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::TPvfcsol_Erho(const scalar E, const scalar rho, const scalar T0, const scalar P0) const
+{
+    scalarList in(this->X().size() + 2), out(3);
+    for (int i = 0;i < this->X().size();i++)
+    {
+        in[i] = this->X_[i];
+    }
+    in[this->X().size()] = E;
+    in[this->X().size() + 1] = rho;
+
+    //Info << "psi_HP" << endl;
+
+    TPvfcsoltree_XErho.call(in, out, T0, P0);
+    autoPtr<typename ThermoMixture::solution> pS(new typename thermoType::solution());
+    pS().X_liq.reset(new scalarList(this->X().size()));
+    pS().X_gas.reset(new scalarList(this->X().size()));
+    pS().vaporfra=out[2];
+    for(int i=0;i<this->X().size();i++)
+    {
+        pS().X_gas()[i]=out[4+i];
+        pS().X_liq()[i]=out[4+this->X().size()+i];
+
+    }
+    //psivftree.call(in, out);
+    return std::make_tuple(out[0], out[1], out[2], out[3],pS);
+}
+*/
+template <class ThermoMixture, template <class> class Type>
+inline std::tuple<Foam::scalar, Foam::scalar, Foam::scalar, Foam::scalar, Foam::autoPtr<typename ThermoMixture::solution>>
+Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::Tpsivfcsol_XHP(const scalar H, const scalar P, const scalar T0) const
+{
+     scalarList in(this->X().size() + 2), out(3);
+    for (int i = 0;i < this->X().size();i++)
+    {
+        in[i] = this->X_[i];
+    }
+    in[this->X().size()] = H;
+    in[this->X().size() + 1] = P;
+
+    //Info << "psi_HP" << endl;
+
+    Tpsivfcsoltree_XHP.call(in, out, T0);
+    autoPtr<typename ThermoMixture::solution> pS(new typename thermoType::solution());
+    pS().X_liq.reset(new scalarList(this->X().size()));
+    pS().X_gas.reset(new scalarList(this->X().size()));
+    pS().vaporfra=out[2];
+    for(int i=0;i<this->X().size();i++)
+    {
+        pS().X_gas()[i]=out[4+i];
+        pS().X_liq()[i]=out[4+this->X().size()+i];
+
+    }
+    //psivftree.call(in, out);
+    return std::make_tuple(out[0], out[1], out[2], out[3],pS);
 }
 
 
 template <class ThermoMixture, template <class> class Type>
 inline void Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::newTimeStep()
 {
-    TPvftree_XErho.newTimeStep();
+    TPvfctree_XErho.newTimeStep();
     Erhovfctree_XTP.newTimeStep();
+    Tpsivfctree_XHP.newTimeStep();
+    Tpsivfcsoltree_XHP.newTimeStep();
+    THvfctree_XrhoP.newTimeStep();
     kappatree_XTP.newTimeStep();
     mutree_XTP.newTimeStep();
     alphahtree_XTP.newTimeStep();

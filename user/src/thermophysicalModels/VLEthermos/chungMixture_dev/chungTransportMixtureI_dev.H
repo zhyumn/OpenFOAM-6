@@ -766,8 +766,6 @@ inline Foam::scalar Foam::chungTransportMixture<Specie>::kappa_rho(
     scalar p,
     scalar T,
     scalar rho_in,
-    scalar Cv_in,
-    scalar V_in,
     const scalarList* Xinp) const
 {
 
@@ -869,7 +867,8 @@ inline Foam::scalar Foam::chungTransportMixture<Specie>::kappa_rho(
 
     scalar mw_phase = this->W(Xinp);
     //scalar Cv_phase = this->Cp(p, T, pf, Xinp) - this->CpMCv(p, T, pf, Xinp); //J/kgK //warning 
-    scalar Cv_phase = Cv_in; //J/kgK //warning 
+    //scalar Cv_phase = Cv_in; //J/kgK //warning 
+    scalar Cv_phase = this->dHidealdT(p,T,Xinp)- RR * 1e-3;
     //scalar Cv_phase = this->Cp(p, T);
     scalar alpha = Cv_phase * mw_phase / (RR * 1.0e-03) - 1.50;
     scalar tempr = T / tempc_mix;
@@ -877,7 +876,8 @@ inline Foam::scalar Foam::chungTransportMixture<Specie>::kappa_rho(
     //compute specific volume, m3/mol
     //scalar amix_phase = this->a(p,T,Xinp), bmix_phase = this->b(p,T,Xinp), dadt_phase = this->dadt(p,T,Xinp), dadt2 = this->d2adt2(p,T,Xinp);
     //scalar sv_phase = this->V(p, T, pf, Xinp); //m3/mol
-    scalar sv_phase = V_in; //m3/mol
+    scalar rho = rho_in / this->W(Xinp);
+    //scalar sv_phase = V_in; //m3/mol
 
     //2, heat conductivity,W/m.K
     scalar beta = 0.78620 - 0.71090 * w_mix + 1.31680 * sqr(w_mix);
@@ -886,7 +886,8 @@ inline Foam::scalar Foam::chungTransportMixture<Specie>::kappa_rho(
     scalar psi = 1.0 + alpha * ((0.2150 + 0.282880 * alpha - 1.0610 * beta + 0.266650 * zeta) / (0.63660 + beta * zeta + 1.0610 * alpha * beta));
 
     scalar qq = 3.5860 * 1e-03 * sqrt(tempc_mix / mw_binary0) / pow(volu_mix, 2.0 / 3.0);
-    scalar yy = volu_mix / (6.0e+06 * sv_phase);
+    //scalar yy = volu_mix / (6.0e+06 * sv_phase);
+    scalar yy = rho * volu_mix/ 6.0e+06;
     scalar G1 = (1.0 - 0.50 * yy) / pow3(1.0 - yy);
 
     // Table 10-3
@@ -932,7 +933,7 @@ inline Foam::scalar Foam::chungTransportMixture<Specie>::kappa_rho(
     scalar eta0 = (4.0785e-5) * sqrt(mw_binary * T) * Fcm / (omegav * pow(VcM, 2.0 / 3.0)); //unit P ✓
     scalar lamda0 = 7.452 * (eta0 / mw_binary) * psi;
 
-    scalar rho = rho_in / this->W(Xinp);
+    //scalar rho = rho_in / this->W(Xinp);
 
     scalar Y = 1e-6 * rho * VcM / 6.0;
     scalar H2 = (MB[0] * (1.0 - exp(-MB[3] * Y)) / Y + MB[1] * G1 * exp(MB[4] * Y) + MB[2] * G1) /

@@ -133,12 +133,32 @@ PtrList<volScalarField> tempY(Y.size());
     // turbulence thermal diffusivity alphat
     volScalarField alphat = turbulence->alphat();
     const scalar Let(thermo.lookupOrDefault<scalar>("Let", 1.0));
-    volScalarField Dt = alphat / (rho * Let);
+    volScalarField Dt = 0 * alphat / (rho * Let);
     forAll(Y, i)
     {
         Dimix[i] = Dimix[i] + Dt;
     }
     //- Reset diffusion velocity to zero for each time step
+
+
+//-Calculate diffusion velocity of inert species
+    volVectorField YVt(0.0 * YVi[0]);
+    forAll(YVi, i)
+    {
+        //- Update diffusion velocity for all species
+        YVi[i] = (-(Dimix[i] / Wmix) * Wmix * fvc::grad(Y[i]) - (Dimix[i] / Wmix) * Y[i] * fvc::grad(Wmix));
+        if (i != inertIndex && composition.active(i))
+        {
+            YVt += YVi[i];
+        }
+    }
+    /*Info << "\n93:" << YVi[0][93]
+        << "\n94:" << YVi[0][94]
+        << "\n95:" << YVi[0][95]
+        << "\n96:" << YVi[0][96]
+        << "\n97:" << YVi[0][97] << endl;*/
+    YVi[inertIndex] = -YVt;
+
 
     //reaction->correct();
     //Qdot = reaction->Qdot();
@@ -178,17 +198,20 @@ PtrList<volScalarField> tempY(Y.size());
             Yi.max(0.0);
 
             rhoYi.boundaryFieldRef() = rho.boundaryField() * Yi.boundaryField();
-
+        if (!inviscid)
+        {
             fvScalarMatrix YiEqn
             (
                 fvm::ddt(rho, Yi) - fvc::ddt(rho, Yi)
                 + fvm::div(phi, Yi) - fvc::div(phi, Yi)
                 //- fvm::laplacian(rho * D[i], Yi)
-                - fvm::laplacian(rho * Dimix[i], Yi)
+                //+ fvc::div(rho*YVi[i])
+                
                 // - fvm::laplacian(turbulence->muEff(), Yi)
                 ==
                 //reaction->R(Yi)
-                fvc::laplacian(rho * Dimix[i] * Yi / Wmix, Wmix)
+                fvm::laplacian(rho * Dimix[i], Yi)
+                + fvc::laplacian(rho * Dimix[i] * Yi / Wmix, Wmix)
                 - sumDiffusionCorrections1
                 - sumDiffusionCorrections2
                 //+ fvOptions(rho, Yi)
@@ -203,6 +226,7 @@ PtrList<volScalarField> tempY(Y.size());
             //fvOptions.correct(Yi);
 
             Yi.correctBoundaryConditions();
+        }
             Yi.max(0.0);
             Yi.min(1.0);
 
@@ -215,16 +239,5 @@ PtrList<volScalarField> tempY(Y.size());
     // update oldY here for CoDAC
     //oldY = tempY;
 
-    //-Calculate diffusion velocity of inert species
-    volVectorField YVt(0.0 * YVi[0]);
-    forAll(YVi, i)
-    {
-        //- Update diffusion velocity for all species
-        YVi[i] = (-(Dimix[i] / Wmix) * Wmix * fvc::grad(Y[i]) - (Dimix[i] / Wmix) * Y[i] * fvc::grad(Wmix));
-        if (i != inertIndex && composition.active(i))
-        {
-            YVt += YVi[i];
-        }
-    }
-    YVi[inertIndex] = -YVt;
+
 }

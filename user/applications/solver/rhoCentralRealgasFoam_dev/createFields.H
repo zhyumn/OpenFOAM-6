@@ -8,6 +8,8 @@ autoPtr<rhoReactionThermo> pThermo
 );
 rhoReactionThermo& thermo = pThermo();
 
+volScalarField& c = mesh.objectRegistry::lookupObjectRef<volScalarField>("soundspeed");
+volScalarField& p = thermo.p();
 basicSpecieMixture& composition = thermo.composition();
 PtrList<volScalarField>& Y = composition.Y();
 
@@ -180,7 +182,8 @@ volVectorField U
     mesh
 );
 volScalarField& rho = mesh.objectRegistry::lookupObjectRef<volScalarField>("thermo:rho");
-/*volScalarField rho
+//rho.writeOpt()=IOobject::AUTO_WRITE;
+volScalarField rho_write
 (
     IOobject
     (
@@ -190,8 +193,8 @@ volScalarField& rho = mesh.objectRegistry::lookupObjectRef<volScalarField>("ther
         IOobject::NO_READ,
         IOobject::AUTO_WRITE
     ),
-    thermo.rho()
-);*/
+    rho
+);
 //rho=thermo.rho();
 volVectorField rhoU
 (
@@ -313,6 +316,60 @@ volScalarField Wmix
         IOobject::NO_WRITE
     ),
     thermo.W()
+);
+// - for Energy Equation
+volScalarField sumHeatDiffusion
+(
+    IOobject
+    (
+        "sumHeatDiffusion",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::NO_WRITE
+    ),
+    mesh,
+    dimensionedScalar("zero", dimensionSet(1, -1, -3, 0, 0), 0.)
+);
+
+volScalarField sumHeatDiffusion2
+(
+    IOobject
+    (
+        "sumHeatDiffusion2",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::NO_WRITE
+    ),
+    mesh,
+    dimensionedScalar("zero", dimensionSet(1, -1, -3, 0, 0), 0.)
+);
+
+volScalarField gammaStar
+(
+    IOobject
+    (
+        "gammaStar",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::NO_WRITE
+    ),
+    rho* c*c/p
+);
+
+volScalarField eStar
+(
+    IOobject
+    (
+        "eStar",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::NO_WRITE
+    ),
+    e-p/(rho*(gammaStar-1))
 );
 
 //#include "createFvOptions.H"

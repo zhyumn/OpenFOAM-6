@@ -75,6 +75,7 @@ namespace Foam
         scalarRectangularMatrix init_elp_;
 
         label timeSteps_;
+        bool noISAT_;
         label checkInterval_;
         scalar maxDepthFactor_;
 

@@ -828,6 +828,72 @@ inline Foam::autoPtr<scalarList> Foam::PengRobinsonMixture<ThermoMixture>::fugac
 }
 
 template <class ThermoMixture>
+inline Foam::autoPtr<scalarList> Foam::PengRobinsonMixture<ThermoMixture>::Ln_fugacityCoefficient(
+    scalar p,  //input
+    scalar T,
+    const label pf,
+    const scalarList* Xinp) const {
+    label pflag = this->phaseFlag;
+    if (pf != 2)
+        pflag = pf;
+
+    const scalarList* Xp = &this->X_;
+    if (Xinp != NULL) {
+        Xp = Xinp;
+    }
+    const scalarList& X = *Xp;
+
+    scalarList& fugcoef = *(new scalarList(this->N_));
+    scalar Amixz = this->A(p, T, Xinp);
+    scalar Bmixz = this->B(p, T, Xinp);
+    scalar Zmix = 0.0;
+    autoPtr<scalarList> pAmix2(A2(p, T, Xinp));
+    const scalarList& Amix2 = pAmix2();
+
+    const scalar small8 = 1.e-08;  //PY: need to be noticed
+
+    //this->ABZmix(p, T, comp_inp, Amixz, Bmixz, Amix2, Bz);
+
+    Zmix = this->Z(p, T, pf, Xinp);
+
+    scalar Zmix0 = this->Z(p, T, 1, Xinp);
+
+    scalar comptrifile = 0.7;
+    scalarList Xs(this->X_.size());
+
+    if (pflag == 0) {
+        while (Zmix < 0.0) {
+            //FatalErrorInFunction << "Zmix < 0.0" << exit(FatalError);
+            Xs[0] = comptrifile;
+            for (int i = 1; i < this->X_.size(); i++)
+                Xs[i] = (1.0 - comptrifile) / (Xs.size() - 1);
+            Zmix = this->Z(p, T, pflag, &Xs);
+            comptrifile = comptrifile + 0.01;
+            if (comptrifile >= 1.0) {
+                Zmix = Zmix0;
+            }
+        }
+    }
+
+    scalar cc0 = 2.0 * sqrt(2.0);
+    scalar cc1 = 1.0 + sqrt(2.0);
+    scalar cc2 = 1.0 - sqrt(2.0);
+
+    scalar zfactor00 = Zmix;
+    scalar ZMB = zfactor00 - Bmixz;
+    if (ZMB < 0.0) {
+        //FatalErrorInFunction << "ZMB < 0.0" << exit(FatalError);
+        zfactor00 = Bmixz + small8;
+        ZMB = small8;
+    }
+    forAll(X, spid) {
+        scalar b = (*this)[spid].B(p, T);
+        fugcoef[spid] = b / Bmixz * (zfactor00 - 1.0) - log(ZMB) - Amixz / (cc0 * Bmixz) * (2.0 * Amix2[spid] / Amixz - b / Bmixz) * log((zfactor00 + cc1 * Bmixz) / (zfactor00 + cc2 * Bmixz));
+    }
+    return autoPtr<scalarList>(&fugcoef);
+}
+
+template <class ThermoMixture>
 inline Foam::autoPtr<scalarList> Foam::PengRobinsonMixture<ThermoMixture>::ln_fugacityCoefficient(
     scalar p,  //input
     scalar T,

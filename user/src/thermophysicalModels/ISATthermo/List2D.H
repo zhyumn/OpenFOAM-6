@@ -45,7 +45,8 @@ public:
 
     ~List2D()
     {
-        print_simple();
+        //if (size_ > 0)
+        //    print_simple();
 
         for (int i = 0;i < NtimeSteps_;i++)
         {
@@ -121,7 +122,7 @@ public:
         for (int i = 0;i < NtimeSteps_;i++)
         {
             std::cout << i << " :";
-            j=(i + start_) % NtimeSteps_;
+            j = (i + start_) % NtimeSteps_;
             for (Node* p = &list_[j];p->next != &list_[j];p = p->next)
             {
                 std::cout << "(" << p->next->data->value()[0] << "," << p->next->data->value()[1] << ")" << "->";
@@ -130,7 +131,7 @@ public:
         }
 
     }
-    inline void print_simple()
+    inline void print_simple() const
     {
         int sum;
         int j;
@@ -139,8 +140,8 @@ public:
         {
             sum = 0;
             std::cout << i << " :";
-            j=(i + start_) % NtimeSteps_;
-            for (Node* p = &list_[j];p->next != &list_[j];p = p->next)
+            j = (i + start_) % NtimeSteps_;
+            for (const Node* p = &list_[j];p->next != &list_[j];p = p->next)
             {
                 sum++;
                 //std::cout << "("<<p->next->data->value()[0]<<","<< p->next->data->value()[1]<<")"<< "->";

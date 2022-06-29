@@ -65,6 +65,8 @@ namespace Foam
 
         PtrList<volScalarField> heList_;
         PtrList<volScalarField> WList_;
+        bool inviscid_;
+        bool noVLE_;
 
         // Private Member Functions
 

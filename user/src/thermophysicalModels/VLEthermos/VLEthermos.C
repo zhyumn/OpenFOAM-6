@@ -66,7 +66,7 @@ namespace Foam
     makeReactions(VLEChungPREThermoPhysics, VLEChungPREThermoPhysicsReaction)
     makeChemistryReader(VLEChungPREThermoPhysics);
     makeChemistryReaderType(foamChemistryReader, VLEChungPREThermoPhysics);
-    template <class Thermo>
+    
     using  Emultithermo = species::multithermo<Thermo, sensibleInternalEnergy>;
     template <class Thermo>
     using VLEthermoE = Emultithermo<VLE<chungTransportMixture<PengRobinsonMixture<multispecie<Thermo>>>>>;
@@ -82,6 +82,7 @@ namespace Foam
     );
 
 }
+
 
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //

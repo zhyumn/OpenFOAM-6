@@ -14,6 +14,7 @@ N2
         Hig2_phase      (6.95808 2.03952 1681.60 0.506863 6535.68);
         mu              0.0;
         kappa           0.0;
+        sigmvi          17.9;
     }
     thermodynamics
     {
@@ -33,23 +34,60 @@ N2
         N               2;
     }
 }
-
+C6H14
+{
+    specie
+    {
+        molWeight       86.1754;
+    }
+    equationOfState
+    {
+        Tc       	    507.6;
+        Vc              0.368;//m3/kmol
+        Pc              3.02e+06;
+        omega           0.3003; //0.0377; //0.039; 
+        Hig_phase       (3.53100528e+00 -1.23660988e-04 -5.02999433e-07 2.43530612e-09 -1.40881235e-12);
+        Hig2_phase      (6.95808 2.03952 1681.60 0.506863 6535.68);
+        mu              0.0;
+        kappa           0.0;
+        sigmvi          126.72;
+    }
+    thermodynamics
+    {
+        Tlow            100;
+        Thigh           5000;
+        Tcommon         1200;
+        highCpCoeffs    (22.804647 2.09800119e-2 -3.53074129e-6 -5.46609072e-10  1.47893745e-13 -3.07498496e4 -95.8469533);
+        lowCpCoeffs     (1.90038413 5.14640294e-2 7.91906421e-6 -3.47484905e-8 1.31381393e-11 -2.29428369e4 20.5073363); 
+    }
+    transport
+    {
+        As              1.67212e-06;
+        Ts              170.672;
+    }
+    elements
+    {
+        C              6;
+        H              14;
+    }
+}
 O2
 {
     specie
     {
-        molWeight       32.0;
+        molWeight       31.9988;
     }
     equationOfState
     {
-        Tc       	    155.0;
-        Vc              0.080;//m3/kmol
-        Pc              5.08e+06;
-        omega           0.021; //0.039; 
+        Tc       	    154.58;
+        Vc              0.07352;//m3/kmol
+        Pc              5.043e+06;
+        omega           0.022; //0.039; 
         Hig_phase       (3.78246636e+00 -2.99673416e-03 9.84730200e-06 -9.68129608e-09 3.24372836e-12);
         Hig2_phase      (6.96302 2.40013 2522.05 2.21752 1154.15);
         mu              0.0;
         kappa           0.0;
+        sigmvi          16.6;
     }
     thermodynamics
     {
@@ -86,6 +124,7 @@ C12H26
         Hig2_phase      (51.02700 143.8250 1664.760 109.4510 789.2970);
         mu              0.0;
         kappa           0.0;
+        sigmvi          0; // TEMP 
     }
     thermodynamics
     {
@@ -131,7 +170,7 @@ CO2
 {
     specie
     {
-        molWeight       44.01;
+        molWeight       44.0095;
     }
 
     thermodynamics
@@ -145,14 +184,15 @@ CO2
 
     equationOfState
     {
-        Tc       	    304.1;
-        Vc              0.0919;//m3/kmol
+        Tc       	    304.18;
+        Vc              0.0943;//m3/kmol
         Pc              7.38e+06;
-        omega           0.225; //0.039; 
+        omega           0.228; //0.039; 
         Hig_phase       (2.35677352e+00 8.98459677e-03 -7.12356269e-06 2.45919022e-09 -1.43699548e-13);
         Hig2_phase      (-7460.81 7.54056 7.51625 1442.70 5.38023 647.502);
         mu              0.0;
         kappa           0;
+        sigmvi 26.9;
     }
 }
 
@@ -161,18 +201,19 @@ CH4
 {
     specie
     {
-        molWeight       16.0;
+        molWeight       16.0425;
     }
     equationOfState
     {
-        Tc       	    191.0;
+        Tc       	    190.6;
         Vc              0.09860;//m3/kmol
-        Pc              4.6e+06;
-        omega           0.01; //0.039; 
+        Pc              4.61e+06;
+        omega           0.011; //0.039; 
         Hig_phase       (5.14911468e+00 -1.36622009e-02 4.91453921e-05 -4.84246767e-08 1.66603441e-11);
         Hig2_phase      (8.003180 19.26330 2148.790 10.44230 1017.070);
         mu              0.0;
         kappa           0.0;
+        sigmvi          24.42;
     }
     thermodynamics
     {
@@ -191,7 +232,7 @@ H2O
 {
     specie
     {
-        molWeight       18.0;
+        molWeight       18.0153;
     }
     thermodynamics
     {
@@ -204,13 +245,14 @@ H2O
     equationOfState
     {
         Tc       	    647.096;
-        Vc              0.0559;//0.003155;//m3/kmol
-        Pc              22.06e+06;
+        Vc              0.0558659;//0.003155;//m3/kmol
+        Pc              22.064e+06;
         omega           0.344; //0.039; 
         Hig_phase       ( 4.19864 -0.00203643 6.5204e-06 -5.48797e-09 1.77198e-12 -30293.7 -0.849032 );//(7.25575005e+01 -6.62445402e-01 2.56198746e-03 -4.36591923e-06 2.78178981e-09);
         Hig2_phase      (-13773.1 7.97183 6.27078 2572.63 2.0501 1156.72);
-        mu              1.8;
-        kappa           0.075908;
+        mu               1.844;
+        kappa            0.076;
+        sigmvi           12.7;
     }
 }
 
@@ -231,6 +273,7 @@ H2S
         Hig2_phase      (7.97183 6.27078 2572.63 2.0501 1156.72);
         kappa           0.9;
         mu              1.8;
+                sigmvi          0; // TEMP 
     }
     thermodynamics
     {
@@ -260,6 +303,7 @@ DME //(Dimethoxyethane)
         Hig2_phase      (6.95808 2.03952 1681.60 0.506863 6535.68);
         mu              0.0;
         kappa           0.0;
+                sigmvi          0; // TEMP 
     }
     thermodynamics
     {

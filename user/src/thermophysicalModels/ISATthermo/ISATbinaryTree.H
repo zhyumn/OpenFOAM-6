@@ -209,6 +209,11 @@ namespace Foam
         {
             return timeTagList_;
         }
+
+        inline  const List2D<ISATleaf>& timeTagList() const
+        {
+            return timeTagList_;
+        }
         void deleteSubTree(ISATNode* subTreeRoot);
 
         inline void deleteSubTree()

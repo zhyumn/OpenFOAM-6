@@ -40,6 +40,7 @@ Foam::ISATmanager<FuncType>::ISATmanager(label in_n, label out_n, FuncType& func
     initToleranceIn_(in_n, in_n),
     init_elp_(in_n, in_n),
     timeSteps_(0),
+    noISAT_(ISATDict_.lookupOrDefault<bool>("noISAT", false)),
     checkInterval_(readLabel(ISATDict_.lookup("checkInterval"))),
     maxDepthFactor_(readScalar(ISATDict_.lookup("maxDepthFactor"))),
     maxLeafsize_(ISATDict_.lookup("maxLeafsize")),
@@ -95,7 +96,8 @@ if (Tname == treename_)
 template<class FuncType>
 Foam::ISATmanager<FuncType>::~ISATmanager()
 {
-    showPreformance();
+    if (tableTree_.size() > 0)
+        showPreformance();
     //tableTree_.balance(scaleIn_);
     //showPreformance();
     //tableTree_.balance();
@@ -179,6 +181,11 @@ void Foam::ISATmanager<FuncType>::call
 )
 {
     ISATleaf* pleaf;
+    if(noISAT_)
+    {
+        pfunc->value(value, out, arg...);
+        return;
+    }
     //word Tname = "psitree";
     //int aaa;
     //if (Tname == treename_)
@@ -450,7 +457,8 @@ void Foam::ISATmanager<FuncType>::showPreformance() const
     Info << treename_ << ", ISAT performance: nCall=" << nCall_ << ", notCall=" << notCall << ", nRetrieved=" << nRetrieved_ << ", nGrowth=" << nGrowth_ << ", nAdd=" << nAdd_ << endl;
     //Info <<"tree size = "<< tableTree_.size()<< endl;
     Info << "NtimeSteps:" << timeSteps_ << ",Treedepth:" << tableTree_.depth() << ",Mindepth:" << ceil(log2(tableTree_.size() + 1)) << endl;
-
+    if (tableTree_.size() > 0)
+        tableTree_.timeTagList().print_simple();
 }
 
 /*

@@ -14,3 +14,19 @@ if (mesh.schemesDict().readIfPresent("fluxScheme", fluxScheme))
             << abort(FatalError);
     }
 }
+word divScheme("Doubleflux");
+if (mesh.schemesDict().readIfPresent("divScheme", divScheme))
+{
+    if ((divScheme == "Conservativeflux") || (divScheme == "Doubleflux"))
+    {
+        Info<< "divScheme: " << divScheme << endl;
+    }
+    else
+    {
+        FatalErrorInFunction
+            << "divScheme: " << fluxScheme
+            << " is not a valid choice. "
+            << "Options are: Conservativeflux, Doubleflux"
+            << abort(FatalError);
+    }
+}

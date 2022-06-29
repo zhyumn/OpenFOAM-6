@@ -123,7 +123,7 @@ namespace Foam
         //- Thermal conductivity [W/mK]
         inline scalar kappa(const scalar p, const scalar T, const label pf = 2, const scalarList* Xinp = NULL) const;
 
-        inline scalar kappa_rho(const scalar p, const scalar T, scalar rho, scalar  Cv_in, scalar V_, const scalarList* Xinp = NULL) const;
+        inline scalar kappa_rho(const scalar p, const scalar T, scalar rho,  const scalarList* Xinp = NULL) const;
 
         //- Thermal diffusivity of enthalpy [kg/ms]
         inline scalar alphah(const scalar p, const scalar T) const;
