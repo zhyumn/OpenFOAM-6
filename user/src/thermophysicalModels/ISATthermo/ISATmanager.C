@@ -43,7 +43,7 @@ Foam::ISATmanager<FuncType>::ISATmanager(label in_n, label out_n, FuncType& func
     noISAT_(ISATDict_.lookupOrDefault<bool>("noISAT", false)),
     checkInterval_(readLabel(ISATDict_.lookup("checkInterval"))),
     maxDepthFactor_(readScalar(ISATDict_.lookup("maxDepthFactor"))),
-    maxLeafsize_(ISATDict_.lookup("maxLeafsize")),
+    maxLeafsize_(in_n),
     nRetrieved_(0),
     nGrowth_(0),
     nAdd_(0),
@@ -69,9 +69,13 @@ Foam::ISATmanager<FuncType>::ISATmanager(label in_n, label out_n, FuncType& func
     }
     for (int i = 0;i < in_n;i++)
         scaleIn_[i][i] = 1.0;
-    scalarList toleranceOut_temp(ISATDict_.lookup("toleranceOut"));
-    scalarList initToleranceIn_temp(ISATDict_.lookup("initToleranceIn"));
-    scalarList scaleIn_temp(ISATDict_.lookup("scaleIn"));
+    //scalarList toleranceOut_temp(ISATDict_.lookup("toleranceOut"));
+    //scalarList initToleranceIn_temp(ISATDict_.lookup("initToleranceIn"));
+    //scalarList scaleIn_temp(ISATDict_.lookup("scaleIn"));
+    scalarList toleranceOut_temp(out_n);
+    scalarList initToleranceIn_temp(in_n);
+    scalarList scaleIn_temp(in_n);
+    FuncType::read(ISATDict_,maxLeafsize_, toleranceOut_temp,initToleranceIn_temp,scaleIn_temp);
     for (int i = 0;i < out_n;i++)
     {
         toleranceOut_[i][i] = 1.0 / toleranceOut_temp[i];

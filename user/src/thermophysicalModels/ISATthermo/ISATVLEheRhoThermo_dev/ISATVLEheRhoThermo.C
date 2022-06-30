@@ -54,7 +54,6 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate_init()
             auto sol(mixture_.TPN(pCells[celli], TCells[celli]));
             rhoCells[celli] = mixture_.rho_noVLE(pCells[celli], TCells[celli], sol());
             soundspeedCells[celli] = mixture_.c_noVLE(pCells[celli], TCells[celli], sol());
-            //std::tie(rhoCells[celli], vaporfracCells[celli], soundspeedCells[celli]) = mixture_.rhovfc_ISAT(pCells[celli], TCells[celli]);
             psiCells[celli] = rhoCells[celli] / pCells[celli];
             vaporfracCells[celli] = 1;
         }
@@ -65,19 +64,6 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate_init()
         {
             const typename MixtureType::thermoType& mixture_ =
                 this->cellMixture(celli);
-            //tempT = mixture_.THE(hCells[celli], pCells[celli], TCells[celli]);
-            //if (tempT < 452)
-            //{
-                //Info << hCells[900] << "," << hCells[100] << endl;
-            //    FatalErrorInFunction << hCells[900] << "," << hCells[100] << "T=" << tempT << ",h=" << hCells[celli] << ",p=" << pCells[celli] << abort(FatalError);
-            //}
-
-            /*TCells[celli] = mixture_.THE
-            (
-                hCells[celli],
-                pCells[celli],
-                TCells[celli]
-            );*/
 
             std::tie(rhoCells[celli], vaporfracCells[celli], soundspeedCells[celli]) = mixture_.rhovfc_ISAT(pCells[celli], TCells[celli]);
             psiCells[celli] = rhoCells[celli] / pCells[celli];
@@ -391,7 +377,7 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
             const typename MixtureType::thermoType& mixture_ = this->cellMixture(celli);
 
             //std::tie(TCells[celli], psiCells[celli], vaporfracCells[celli], soundspeedCells[celli]) = mixture_.Tpsivfc_XHP(hCells[celli] + pCells[celli] / rhoCells[celli], pCells[celli], TCells[celli]);
-            std::tie(TCells[celli], tempHe, vaporfracCells[celli], soundspeedCells[celli]) = mixture_.THvfc_XHP(rhoCells[celli], pCells[celli], TCells[celli]);
+            std::tie(TCells[celli], tempHe, vaporfracCells[celli], soundspeedCells[celli]) = mixture_.THvfc_XrhoP(rhoCells[celli], pCells[celli], TCells[celli]);
             //hCells[celli] -= pCells[celli] / rhoCells[celli];
             //autoPtr<typename MixtureType::thermoType::solution> sol;
             //std::tie(TCells[celli], temppsi, vaporfracCells[celli], soundspeedCells[celli], sol) = mixture_.Tpsivfcsol_XHP(hCells[celli] + pCells[celli] / rhoCells[celli], pCells[celli], TCells[celli]);
@@ -528,8 +514,10 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
                     //std::tie(pT[facei], ppsi[facei], pvaporfrac[facei]) = mixture_.Tpsivf_HP(phe[facei], pp[facei], pT[facei]);
                     //std::tie(pT[facei], pp[facei], pvaporfrac[facei], psoundspeed[facei]) = mixture_.TPvf_Erho(phe[facei], prho[facei], pT[facei], pp[facei]);
                     
-                    std::tie(pT[facei], ppsi[facei], pvaporfrac[facei], psoundspeed[facei]) = mixture_.Tpsivfc_XHP(phe[facei] + pp[facei] / prho[facei], pp[facei], pT[facei]);
-                    prho[facei] = ppsi[facei] * pp[facei];
+                    //std::tie(pT[facei], ppsi[facei], pvaporfrac[facei], psoundspeed[facei]) = mixture_.Tpsivfc_XHP(phe[facei] + pp[facei] / prho[facei], pp[facei], pT[facei]);
+                    std::tie(pT[facei], tempHe, pvaporfrac[facei], psoundspeed[facei]) = mixture_.THvfc_XrhoP(prho[facei], pp[facei], pT[facei]);
+
+                    ppsi[facei] = prho[facei]/pp[facei];
                     //autoPtr<typename MixtureType::thermoType::solution> sol;
                     //std::tie(pT[facei], temppsi, pvaporfrac[facei], psoundspeed[facei],sol) = mixture_.Tpsivfcsol_XHP(phe[facei] + pp[facei] / prho[facei], pp[facei], pT[facei]);
                     //ppsi[facei] = prho[facei] / pp[facei];
