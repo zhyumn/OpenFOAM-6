@@ -66,8 +66,20 @@ inline Foam::VLE<ThermoMixture>::VLE(
     inputK(thermoDict.lookupOrDefault<bool>("inputK", false)),
     Kinit(thermoDict.lookup("Kinit"))
 {
+    if(inputK==true && Kinit.size()!=this->X_.size())
+    {
+        inputK=false;
+        WarningInFunction
+            << "Kinit size = "
+            << Kinit.size() 
+            << ", which is not equal to number of species: "
+            << this->X_.size()
+            << ". \'inputK\' is reset to false."
+            << endl;
 
-    //FatalErrorInFunction << "!!!\n" <<inputK<<"\n"<< K_init<< exit(FatalError);
+    }
+
+
 }
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
