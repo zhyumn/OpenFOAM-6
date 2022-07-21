@@ -1,7 +1,0 @@
-
-../ISATleaf.C
-../ISATbinaryTree.C
-../ISATNode.C
-ISATVLERhoThermos.C
-
-LIB = $(FOAM_USER_LIBBIN)/libISATVLERhoThermoDEV

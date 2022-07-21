@@ -59,7 +59,10 @@ class nonlinearMixture
 
 
         //- Temporary storage for the cell/face mixture thermo data
+        mutable ThermoMixtureType<ThermoType> temp_mixture_;
         mutable ThermoMixtureType<ThermoType> mixture_;
+        //PtrList<ThermoType> temp_speciesData_;
+        
 
         //- Temporary storage for the volume weighted
         //  cell/face mixture thermo data

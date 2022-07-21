@@ -107,15 +107,25 @@ namespace Foam
         }
 
         //- Dynamic viscosity [kg/ms]
-        inline scalar mu(const scalar p, const scalar T, const scalarList* Xinp) const;
+        inline scalar mu(const scalar p, const scalar T, const label pf = 2, const scalarList* Xinp = NULL) const;
 
-        inline scalar mu(const scalar p, const scalar T) const
+        inline scalar mu_rho(const scalar p, const scalar T, scalar rho, const scalarList& Xinp) const;
+        inline scalar mu_rho(const scalar p, const scalar T, scalar rho) const { return mu_rho(p, T, rho, this->X_); };
+
+        /*inline scalar mu(const scalar p, const scalar T, const label pf = 2) const
         {
-            return mu(p, T, NULL);
-        }
+            return mu(p, T, pf, NULL);
+        }*/
+
+        inline scalar phi(scalar PRR, scalar TRR) const;
+
+        inline scalar Dimix(const scalar p, const scalar T, label speciei) const;
 
         //- Thermal conductivity [W/mK]
         inline scalar kappa(const scalar p, const scalar T, const label pf = 2, const scalarList* Xinp = NULL) const;
+
+        inline scalar kappa_rho(const scalar p, const scalar T, scalar rho, const scalarList& Xinp) const;
+        inline scalar kappa_rho(const scalar p, const scalar T, scalar rho) const { return kappa_rho(p, T, rho, this->X_); };
 
         //- Thermal diffusivity of enthalpy [kg/ms]
         inline scalar alphah(const scalar p, const scalar T) const;

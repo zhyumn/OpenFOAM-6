@@ -43,45 +43,47 @@ SourceFiles
 namespace Foam
 {
 
-// Forward declaration of friend functions and operators
+    // Forward declaration of friend functions and operators
 
-template<class Thermo> class chungTransport;
+    template<class Thermo> class chungTransport;
 
-template<class Thermo>
-inline chungTransport<Thermo> operator+
-(
-    const chungTransport<Thermo>&,
-    const chungTransport<Thermo>&
-);
+    template<class Thermo>
+    inline chungTransport<Thermo> operator+
+        (
+            const chungTransport<Thermo>&,
+            const chungTransport<Thermo>&
+            );
 
-template<class Thermo>
-inline chungTransport<Thermo> operator*
-(
-    const scalar a,
-    const chungTransport<Thermo>& b
-){FatalErrorInFunction
+    template<class Thermo>
+    inline chungTransport<Thermo> operator*
+        (
+            const scalar a,
+            const chungTransport<Thermo>& b
+            ) {
+        FatalErrorInFunction
             << " chungTransport<Thermo> operator*"
-            << exit(FatalError);return *(new chungTransport<Thermo>(b));};
+            << exit(FatalError);return *(new chungTransport<Thermo>(b));
+    };
 
 
-template<class Thermo>
-Ostream& operator<<
-(
-    Ostream&,
-    const chungTransport<Thermo>&
-);
+    template<class Thermo>
+    Ostream& operator<<
+        (
+            Ostream&,
+            const chungTransport<Thermo>&
+            );
 
 
-/*---------------------------------------------------------------------------*\
-                           Class chungTransport Declaration
-\*---------------------------------------------------------------------------*/
+    /*---------------------------------------------------------------------------*\
+                               Class chungTransport Declaration
+    \*---------------------------------------------------------------------------*/
 
-template<class Thermo>
-class chungTransport
-:
-    public Thermo
-{
-    // Private data
+    template<class Thermo>
+    class chungTransport
+        :
+        public Thermo
+    {
+        // Private data
     public:
         //- Dipole moment (?old [Pa.s])
         scalar mu_;
@@ -89,21 +91,23 @@ class chungTransport
         //- Reciprocal Prandtl Number []
         scalar kappa_;
 
+        scalar sigmvi_;
 
-    // Private Member Functions
 
-        //- Construct from components
+        // Private Member Functions
+
+            //- Construct from components
         inline chungTransport
         (
             const Thermo& t
         );
 
 
-public:
+    public:
 
-    // Constructors
+        // Constructors
 
-        //- Construct as named copy
+            //- Construct as named copy
         inline chungTransport(const word&, const chungTransport&);
 
         //- Construct from dictionary
@@ -116,22 +120,22 @@ public:
         inline static autoPtr<chungTransport> New(const dictionary& dict);
 
 
-    // Member functions
+        // Member functions
 
-        //- Return the instantiated type name
+            //- Return the instantiated type name
         static word typeName()
         {
             return "chung<" + Thermo::typeName() + '>';
         }
 
         //- Dynamic viscosity [kg/ms]
-        inline scalar mu(const scalar p, const scalar T,const scalarList *Xinp=NULL) const{return 0;};
+        inline scalar mu(const scalar p, const scalar T, const scalarList* Xinp = NULL) const { return 0; };
 
         //- Thermal conductivity [W/mK]
-        inline scalar kappa(const scalar p, const scalar T) const{return 0;};
+        inline scalar kappa(const scalar p, const scalar T) const { return 0; };
 
         //- Thermal diffusivity of enthalpy [kg/ms]
-        inline scalar alphah(const scalar p, const scalar T) const{return 0;};
+        inline scalar alphah(const scalar p, const scalar T) const { return 0; };
 
         // Species diffusivity
         // inline scalar D(const scalar p, const scalar T) const;
@@ -140,27 +144,27 @@ public:
         void write(Ostream& os) const;
 
 
-    // Member operators
+        // Member operators
 
 
 
 
-    // Friend operators
+        // Friend operators
 
 
 
 
-    // Ostream Operator
+        // Ostream Operator
 
         friend Ostream& operator<< <Thermo>
-        (
-            Ostream&,
-            const chungTransport&
-        );
-};
+            (
+                Ostream&,
+                const chungTransport&
+                );
+    };
 
 
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 } // End namespace Foam
 
@@ -169,7 +173,7 @@ public:
 #include "chungTransportI.H"
 
 #ifdef NoRepository
-    #include "chungTransport.C"
+#include "chungTransport.C"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

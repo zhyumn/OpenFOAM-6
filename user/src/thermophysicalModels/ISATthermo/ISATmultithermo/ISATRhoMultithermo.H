@@ -40,6 +40,7 @@ SourceFiles
 
 #include "thermodynamicConstants.H"
 #include "ISATmanager.H"
+#include "ISATFunction.H"
 #include <tuple>
 using namespace Foam::constant::thermodynamic;
 
@@ -120,460 +121,7 @@ namespace Foam
                 const ISATRhoMultithermo<ThermoMixture, Type>&
                 );
 
-        template<class Type>
-        struct Hnflashfunction
-        {
-            Type* p;
-            Hnflashfunction(Type* pin) :p(pin) {}
-            void value(const scalarList& in, scalarList& out, scalar T0) const   //ToDo ADd t0 as sep agru
-            {
-                scalar H = in[in.size() - 2];
-                scalar P = in[in.size() - 1];
-                scalarList temp(p->X_.size());
-                out.resize(1);
-                double sum = 0;
-                int n_sp = p->X_.size();
-                for (int i = 0;i < n_sp - 1;i++)
-                {
-                    temp[i] = p->X_[i];
-                    p->X_[i] = in[i];
-                    sum += in[i];
-                }
-                temp[n_sp - 1] = p->X_[n_sp - 1];
-                p->X_[n_sp - 1] = 1 - sum;
-                out[0] = p->T(H, P, T0, &Type::Hs, &Type::Cp, &Type::limit);
-                //Info << out << endl;
-                for (int i = 0;i < n_sp;i++)
-                {
-                    p->X_[i] = temp[i];
-                }
-
-            }
-
-            void  derive(const scalarList& in, scalarRectangularMatrix& out, scalar T0)
-            {
-                scalarList temp = in;
-                scalarList tempv;
-                value(in, tempv, T0);
-                scalarList tempv2;
-                scalarList dd;
-                double sum = 0;
-                for (int i = 0;i < in.size() - 2;i++)
-                    sum += in[i];
-                scalar dx = 1e-6;
-                for (int i = 0;i < in.size();i++)
-                {
-                    temp[i] += dx;
-                    value(temp, tempv2, T0);
-                    dd = (tempv2 - tempv) / dx;
-                    for (int j = 0;j < tempv2.size();j++)
-                    {
-                        out[i][j] = dd[j];
-                    }
-                    temp[i] -= dx;
-                }
-            }
-        };
-
-        template<class Type>
-        struct thermofunction
-        {
-            Type* p;
-            typedef scalar(Type::* Tfunc) (const scalar p, const scalar T, autoPtr<typename Type::solution>& sol) const;
-            Tfunc pfunc;
-            thermofunction(Type* pin, Tfunc fin) :p(pin), pfunc(fin) {}
-            void value(const scalarList& in, scalarList& out) const
-            {
-                scalarList temp(p->X_.size());
-                out.resize(1);
-                double sum = 0;
-                int n_sp = p->X_.size();
-                for (int i = 0;i < n_sp - 1;i++)
-                {
-                    temp[i] = p->X_[i];
-                    p->X_[i] = in[i];
-                    sum += in[i];
-                }
-                temp[n_sp - 1] = p->X_[n_sp - 1];
-                p->X_[n_sp - 1] = 1 - sum;
-                autoPtr<typename Type::solution> sol(p->TPn_flash(in[in.size() - 2], in[in.size() - 1]));
-                out[0] = (p->*pfunc)(in[in.size() - 2], in[in.size() - 1], sol);
-                //Info << out << endl;
-                for (int i = 0;i < n_sp;i++)
-                {
-                    p->X_[i] = temp[i];
-                }
-
-            }
-
-            void  derive(const scalarList& in, scalarRectangularMatrix& out)
-            {
-                scalarList temp = in;
-                scalarList tempv;
-                value(in, tempv);
-                scalarList tempv2;
-                scalarList dd;
-                double sum = 0;
-                for (int i = 0;i < in.size() - 2;i++)
-                    sum += in[i];
-                scalar dx = 1e-6;
-                for (int i = 0;i < in.size();i++)
-                {
-                    temp[i] += dx;
-                    value(temp, tempv2);
-                    dd = (tempv2 - tempv) / dx;
-                    for (int j = 0;j < tempv2.size();j++)
-                    {
-                        out[i][j] = dd[j];
-                    }
-                    temp[i] -= dx;
-                }
-            }
-        };
-        template<class Type>
-        struct thermofunction_psi
-        {
-            Type* p;
-            typedef scalar(Type::* Tfunc) (const scalar p, const scalar T, autoPtr<typename Type::solution>& sol) const;
-            thermofunction_psi(Type* pin) :p(pin) {}
-            void value(const scalarList& in, scalarList& out, scalar T0) const
-            {
-                scalar H = in[in.size() - 2];
-                scalar P = in[in.size() - 1];
-                scalar T = p->T(H, P, T0, &Type::Hs, &Type::Cp, &Type::limit);
-                //scalarList temp(p->X_.size());
-                out.resize(1);
-                /*
-                for (int i = 0;i < p->X_.size();i++)
-                {
-                    temp[i] = in[i];
-                }
-                */
-                p->setX(in);
-                autoPtr<typename Type::solution> sol(p->TPn_flash(P, T));
-
-                out[0] = (p->Type::thermoVLE::psi)(P, T, sol);
-            }
-
-            void  derive(const scalarList& in, scalarRectangularMatrix& out, scalar T0)
-            {
-                //static double maxx = 0;
-                scalar H = in[in.size() - 2];
-                scalar P = in[in.size() - 1];
-                scalar T = p->T(H, P, T0, &Type::Hs, &Type::Cp, &Type::limit);
-                /*
-                scalarList temp(p->X_.size());
-                int n_sp = p->X_.size();
-                for (int i = 0;i < n_sp;i++)
-                {
-                    temp[i] = in[i];
-                }
-                */
-                p->setX(in);
-                autoPtr<typename Type::solution> sol(p->TPn_flash(P, T));
-                autoPtr<scalarList> grad(p->drhoPdXHP_HsP(P, T, sol()));
-                for (int i = 0;i < grad->size();i++)
-                {
-                    out[i][0] = grad()[i];
-                }
-                /*
-                for (int i = 0;i < p->X_.size();i++)
-                {
-                    out[i][0] = p->drhoPdXi_HsP(P, T, i, sol());
-                }
-                out[p->X_.size()][0] = p->drhoPdH_HsP(P, T, sol());
-                out[p->X_.size() + 1][0] = p->drhoPdP_HsP(P, T, sol());
-                */
-                //Info << grad() << endl;
-                //Info << out << endl;
-                /*
-                for (int i = 0;i < 4;i++)
-                {
-                    if (fabs((out[i][0] - grad()[i]) / grad()[i]) > maxx)
-                        maxx = fabs((out[i][0] - grad()[i]) / grad()[i]);
-                    //Info << (out[i][0] - grad()[i]) / grad()[i] << ",";
-                }
-                if (maxx > 1e-06)
-                {
-                    Info << grad() << endl;
-                    Info << out << endl;
-                    Info << maxx << endl;
-                }*/
-                //Info << maxx << endl;
-                //FatalErrorInFunction << "vaporf 1" << exit(FatalError);
-            }
-        };
-        template<class Type>
-        struct thermofunction_Tpsi
-        {
-            Type* p;
-            thermofunction_Tpsi(Type* pin) :p(pin) {}
-            void value(const scalarList& in, scalarList& out, scalar T0) const
-            {
-                scalar H = in[in.size() - 2];
-                scalar P = in[in.size() - 1];
-                scalar T = p->T(H, P, T0, &Type::Hs, &Type::Cp, &Type::limit);
-                //scalarList temp(p->X_.size());
-                out.resize(2);
-                /*
-                for (int i = 0;i < p->X_.size();i++)
-                {
-                    temp[i] = in[i];
-                }
-                */
-                p->setX(in);
-                autoPtr<typename Type::solution> sol(p->TPn_flash(P, T));
-                out[0] = T;
-                out[1] = (p->Type::thermoVLE::psi)(P, T, sol);
-            }
-
-            void  derive(const scalarList& in, scalarRectangularMatrix& out, scalar T0)
-            {
-                scalar H = in[in.size() - 2];
-                scalar P = in[in.size() - 1];
-                scalar T = p->T(H, P, T0, &Type::Hs, &Type::Cp, &Type::limit);
-
-                p->setX(in);
-                autoPtr<typename Type::solution> sol(p->TPn_flash(P, T));
-                autoPtr<scalarRectangularMatrix> grad(p->dTrhoPdXHP_HsP(P, T, sol()));
-                out = grad();
-            }
-        };
-
-        template<class Type>
-        struct thermofunction_Tpsivf
-        {
-            Type* p;
-            thermofunction_Tpsivf(Type* pin) :p(pin) {}
-            void value(const scalarList& in, scalarList& out, scalar T0) const
-            {
-                scalar H = in[in.size() - 2];
-                scalar P = in[in.size() - 1];
-                scalar T = p->T(H, P, T0, &Type::Hs, &Type::Cp, &Type::limit);
-                //scalarList temp(p->X_.size());
-                out.resize(3);
-                /*
-                for (int i = 0;i < p->X_.size();i++)
-                {
-                    temp[i] = in[i];
-                }
-                */
-                p->setX(in);
-                autoPtr<typename Type::solution> sol(p->TPn_flash(P, T));
-                out[0] = T;
-                out[1] = (p->Type::thermoVLE::psi)(P, T, sol);
-                out[2] = sol().vaporfra;
-            }
-
-            void  derive(const scalarList& in, scalarRectangularMatrix& out, scalar T0)
-            {
-                scalar H = in[in.size() - 2];
-                scalar P = in[in.size() - 1];
-                scalar T = p->T(H, P, T0, &Type::Hs, &Type::Cp, &Type::limit);
-
-                p->setX(in);
-                autoPtr<typename Type::solution> sol(p->TPn_flash(P, T));//sol(p->TPn_flash_New_TPD(P, T));//sol(p->TPn_flash(P, T));
-                autoPtr<scalarRectangularMatrix> grad(p->dTrhoPvfdXHP_HsP(P, T, sol()));
-                out = grad();
-            }
-        };
-
-        template<class Type>
-        struct thermofunction_TPvf
-        {
-            Type* p;
-            thermofunction_TPvf(Type* pin) :p(pin) {}
-            void value(const scalarList& in, scalarList& out, scalar T0, scalar P0) const
-            {
-                scalar E = in[in.size() - 2];
-                scalar rho = in[in.size() - 1];
-                scalar T, P;
-                std::tie(P, T) = p->TrhoE(E, rho, P0, T0);
-                //scalarList temp(p->X_.size());
-                out.resize(4);
-                //out.resize(3);
-                /*
-                for (int i = 0;i < p->X_.size();i++)
-                {
-                    temp[i] = in[i];
-                }
-                */
-                p->setX(in);
-                autoPtr<typename Type::solution> sol(p->TPn_flash(P, T));
-                out[0] = T;
-                out[1] = P;
-                out[2] = sol().vaporfra;
-                out[3] = p->c(P, T, sol());
-            }
-
-            void  derive(const scalarList& in, scalarRectangularMatrix& out, scalar T0, scalar P0)
-            {
-                scalar E = in[in.size() - 2];
-                scalar rho = in[in.size() - 1];
-                scalar T, P;
-                std::tie(P, T) = p->TrhoE(E, rho, P0, T0);
-
-                p->setX(in);
-                autoPtr<typename Type::solution> sol(p->TPn_flash(P, T));//sol(p->TPn_flash_New_TPD(P, T));//sol(p->TPn_flash(P, T));
-                autoPtr<scalarRectangularMatrix> grad(p->dTPvfdXErho_constC(P, T, sol()));
-                //autoPtr<scalarRectangularMatrix> grad(p->dTPvfdXErho(P, T, sol()));
-                out = grad();
-            }
-        };
-        /*
-                template<class Type>
-                struct thermofunction_TPvf
-                {
-                    Type* p;
-                    thermofunction_TPvf(Type* pin) :p(pin) {}
-                    void value(const scalarList& in, scalarList& out, scalar T0,scalar P0) const
-                    {
-                        scalar E = in[in.size() - 2];
-                        scalar rho = in[in.size() - 1];
-                        scalar P,T;
-                        std::tie(P,T)=p->TrhoEs(E, rho, P0, T0, &Type::Es, &Type::rho);
-                        //scalar T = p->T(H, P, T0, &Type::Hs, &Type::Cp, &Type::limit);
-                        //scalarList temp(p->X_.size());
-                        out.resize(3);
-
-                        p->setX(in);
-                        autoPtr<typename Type::solution> sol(p->TPn_flash(P, T));
-                        out[0] = T;
-                        out[1] = P;
-                        out[2] = sol().vaporfra;
-                    }
-
-                    void  derive(const scalarList& in, scalarRectangularMatrix& out, scalar T0,scalar P0)
-                    {
-                        scalar E = in[in.size() - 2];
-                        scalar rho = in[in.size() - 1];
-                        //Todo finish these
-                        //scalar H = in[in.size() - 2];
-                        //scalar P = in[in.size() - 1];
-                        //scalar T = p->T(H, P, T0, &Type::Hs, &Type::Cp, &Type::limit);
-                        scalar P,T;
-                        std::tie(P,T)=p->TrhoEs(E, rho, P0, T0, &Type::Es, &Type::rho);
-                        p->setX(in);
-                        autoPtr<typename Type::solution> sol(p->TPn_flash(P, T));//sol(p->TPn_flash_New_TPD(P, T));//sol(p->TPn_flash(P, T));
-                        //Todo finish these
-                        autoPtr<scalarRectangularMatrix> grad(p->dTrhoPvfdXHP_HsP(P, T, sol()));
-                        out = grad();
-                    }
-                };
-        */
-
-
-        template<class Type>
-        struct thermofunction2
-        {
-            Type* p;
-            typedef scalar(Type::* Tfunc) (const scalar p, const scalar T) const;
-            Tfunc pfunc;
-            thermofunction2(Type* pin, Tfunc fin) :p(pin), pfunc(fin) {}
-            void value(const scalarList& in, scalarList& out) const
-            {
-                scalarList temp(p->X_.size());
-                out.resize(1);
-                double sum = 0;
-                int n_sp = p->X_.size();
-                for (int i = 0;i < n_sp - 1;i++)
-                {
-                    temp[i] = p->X_[i];
-                    p->X_[i] = in[i];
-                    sum += in[i];
-                }
-                temp[n_sp - 1] = p->X_[n_sp - 1];
-                p->X_[n_sp - 1] = 1 - sum;
-                out[0] = (p->*pfunc)(in[in.size() - 2], in[in.size() - 1]);
-                //Info << out << endl;
-                for (int i = 0;i < n_sp;i++)
-                {
-                    p->X_[i] = temp[i];
-                }
-
-            }
-
-            void  derive(const scalarList& in, scalarRectangularMatrix& out)
-            {
-                scalarList temp = in;
-                scalarList tempv;
-                value(in, tempv);
-                scalarList tempv2;
-                scalarList dd;
-                double sum = 0;
-                for (int i = 0;i < in.size() - 2;i++)
-                    sum += in[i];
-                scalar dx = 1e-6;
-                for (int i = 0;i < in.size();i++)
-                {
-                    temp[i] += dx;
-                    value(temp, tempv2);
-                    dd = (tempv2 - tempv) / dx;
-                    for (int j = 0;j < tempv2.size();j++)
-                    {
-                        out[i][j] = dd[j];
-                    }
-                    temp[i] -= dx;
-                }
-            }
-        };
-
-        template<class Type>
-        struct psi_vffunction
-        {
-            Type* p;
-            typedef scalar(Type::* Tfunc) (const scalar p, const scalar T, autoPtr<typename Type::solution>& sol) const;
-            Tfunc ppsi, pvf;
-            psi_vffunction(Type* pin, Tfunc ppsi_in, Tfunc pvf_in) :p(pin), ppsi(ppsi_in), pvf(pvf_in) {}
-            void value(const scalarList& in, scalarList& out) const
-            {
-                scalarList temp(p->X_.size());
-                out.resize(2);
-                double sum = 0;
-                int n_sp = p->X_.size();
-                for (int i = 0;i < n_sp - 1;i++)
-                {
-                    temp[i] = p->X_[i];
-                    p->X_[i] = in[i];
-                    sum += in[i];
-                }
-                temp[n_sp - 1] = p->X_[n_sp - 1];
-                p->X_[n_sp - 1] = 1 - sum;
-                autoPtr<typename Type::solution> sol(p->TPn_flash(in[in.size() - 2], in[in.size() - 1]));
-                out[0] = (p->*ppsi)(in[in.size() - 2], in[in.size() - 1], sol);
-                out[1] = (p->*pvf)(in[in.size() - 2], in[in.size() - 1], sol);
-                //Info << out << endl;
-                for (int i = 0;i < n_sp;i++)
-                {
-                    p->X_[i] = temp[i];
-                }
-
-            }
-
-            void  derive(const scalarList& in, scalarRectangularMatrix& out)
-            {
-                scalarList temp = in;
-                scalarList tempv;
-                value(in, tempv);
-                scalarList tempv2;
-                scalarList dd;
-                double sum = 0;
-                for (int i = 0;i < in.size() - 2;i++)
-                    sum += in[i];
-                scalar dx = 1e-6;
-                for (int i = 0;i < in.size();i++)
-                {
-                    temp[i] += dx;
-                    value(temp, tempv2);
-                    dd = (tempv2 - tempv) / dx;
-                    for (int j = 0;j < tempv2.size();j++)
-                    {
-                        out[i][j] = dd[j];
-                    }
-                    temp[i] -= dx;
-                }
-            }
-        };
+        
 
 
         /*---------------------------------------------------------------------------*\
@@ -595,15 +143,32 @@ namespace Foam
             static const int maxIter_;
             dictionary ISATDict_;
 
-            thermofunction_TPvf<ISATRhoMultithermo<ThermoMixture, Type>> TPvffun_Erho;
-            thermofunction2<ThermoMixture> mufun;
-            thermofunction2<ThermoMixture> alphahfun;
+
+            ISATRhoMultithermo<ThermoMixture, Type>* temp_p;
+            //thermofunction_TPvf<ISATRhoMultithermo<ThermoMixture, Type>> TPvfcfun_XErho;
+            thermofunction_TPX_to_Erhovfc<ISATRhoMultithermo<ThermoMixture, Type>>  Erhovfcfun_XTP;
+            //thermofunction_Tpsivf<ISATRhoMultithermo<ThermoMixture, Type>> Tpsivfcfun_XHP;
+            //thermofunction_TPsolvf<ISATRhoMultithermo<ThermoMixture, Type>> TPvfcsolfun_XErho;
+            //thermofunction_Tpsivfsol<ISATRhoMultithermo<ThermoMixture, Type>> Tpsivfcsolfun_XHP;
+            thermofunction_THvf<ISATRhoMultithermo<ThermoMixture, Type>> THvfcfun_XrhoP;
+            //thermofunction2<ThermoMixture> HEfun;
+            //thermofunction3<ThermoMixture> kappafun_XTP;
+            //thermofunction3<ThermoMixture> mufun_XTP;
+            //thermofunction3<ThermoMixture> alphahfun_XTP;
 
 
 
-            mutable ISATmanager< thermofunction_TPvf<ISATRhoMultithermo<ThermoMixture, Type>>> TPvftree_Erho;
-            mutable ISATmanager< thermofunction2<ThermoMixture>> mutree;
-            mutable ISATmanager< thermofunction2<ThermoMixture>> alphahtree;
+            //mutable ISATmanager< thermofunction_TPvf<ISATRhoMultithermo<ThermoMixture, Type>>> TPvfctree_XErho;
+            mutable ISATmanager< thermofunction_TPX_to_Erhovfc<ISATRhoMultithermo<ThermoMixture, Type>>> Erhovfctree_XTP;
+            //mutable ISATmanager< thermofunction_Tpsivf<ISATRhoMultithermo<ThermoMixture, Type>>> Tpsivfctree_XHP;
+            //mutable ISATmanager< thermofunction_Tpsivfsol<ISATRhoMultithermo<ThermoMixture, Type>>> Tpsivfcsoltree_XHP;
+            mutable ISATmanager< thermofunction_THvf<ISATRhoMultithermo<ThermoMixture, Type>>> THvfctree_XrhoP;
+            
+            //mutable ISATmanager< thermofunction_TPsolvf<ISATRhoMultithermo<ThermoMixture, Type>>> TPvfcsoltree_XErho;
+            //mutable ISATmanager< thermofunction2<ThermoMixture>> HEtree;
+            //mutable ISATmanager< thermofunction3<ThermoMixture>> kappatree_XTP;
+            //mutable ISATmanager< thermofunction3<ThermoMixture>> mutree_XTP;
+            //mutable ISATmanager< thermofunction3<ThermoMixture>> alphahtree_XTP;
 
 
 
@@ -642,7 +207,7 @@ namespace Foam
                 scalar T0,
                 scalar(ISATRhoMultithermo<ThermoMixture, Type>::* Fe)(const scalar, const scalar) const,
                 scalar(ISATRhoMultithermo<ThermoMixture, Type>::* Frho)(const scalar, const scalar) const
-            ) const;
+            );
 
         public:
 
@@ -655,7 +220,6 @@ namespace Foam
 
                 //- Construct from components
             inline ISATRhoMultithermo(const ThermoMixture& sp);
-
             //- Construct from dictionary
             ISATRhoMultithermo(const dictionary& dict, PtrList<ThermoMixture>& speciesData);
 
@@ -663,7 +227,7 @@ namespace Foam
             inline ISATRhoMultithermo(const word& name, const ISATRhoMultithermo&);
 
 
-            inline ISATRhoMultithermo(const word& name, PtrList<SingleThermoType>&, const speciesTable&, const dictionary&);
+            inline ISATRhoMultithermo(const word& name, PtrList<SingleThermoType>&, const speciesTable&, const dictionary&, ISATRhoMultithermo<ThermoMixture, Type>* pin);
 
 
             // Member Functions
@@ -693,17 +257,23 @@ namespace Foam
                 // Absolute Enthalpy [J/kg]
                 // inline scalar Ha(const scalar p, const scalar T) const;
 
+
                 // Entropy [J/(kg K)]
                 // inline scalar S(const scalar p, const scalar T) const;
             inline scalar psi(const scalar p, const scalar T) const;
             inline scalar psi_a(const scalar p, const scalar T, const scalar T0) const;
             inline scalar psi_HP(const scalar p, const scalar T, const scalar T0) const;
             inline std::tuple<scalar, scalar> Tpsi_HP(const scalar p, const scalar T, const scalar T0) const;
-            inline std::tuple<scalar, scalar, scalar> Tpsivf_HP(const scalar p, const scalar T, const scalar T0) const;
-            inline std::tuple<scalar, scalar, scalar, scalar > TPvf_Erho(const scalar E, const scalar rho, const scalar T0, const scalar P0) const;
+            //inline std::tuple<scalar, scalar, scalar, scalar > Tpsivfc_XHP(const scalar p, const scalar T, const scalar T0) const;
+            inline std::tuple<scalar, scalar, scalar, scalar > THvfc_XrhoP(const scalar p, const scalar T, const scalar T0) const;
+            inline std::tuple<scalar, scalar, scalar, scalar > TPvfc_Erho(const scalar E, const scalar rho, const scalar T0, const scalar P0) const;
+            //inline std::tuple<scalar, scalar, scalar, scalar, autoPtr<typename ThermoMixture::solution>> TPvfcsol_Erho(const scalar E, const scalar rho, const scalar T0, const scalar P0) const;
+            inline std::tuple<scalar, scalar, scalar, scalar, autoPtr<typename ThermoMixture::solution>> Tpsivfcsol_XHP(const scalar H, const scalar P, const scalar T0) const;
 
+            
             inline scalar mu(const scalar p, const scalar T) const;
             inline scalar alphah(const scalar p, const scalar T) const;
+            inline scalar kappa(const scalar p, const scalar T) const;
             inline scalar vaporfra(const scalar p, const scalar T) const;
             inline void psi_vf(const scalar p, const scalar T, scalar& psi_out, scalar& vf_out) const;
             //inline scalar psi(const scalar p, const scalar T) const;
@@ -728,6 +298,11 @@ namespace Foam
 
             //- Sensible internal energy [J/kg]
             inline scalar Es(const scalar p, const scalar T) const;
+            inline scalar Es_ac(const scalar p, const scalar T) const;
+            inline scalar THP(const scalar H, const scalar P, const scalar T0) const;
+
+
+            inline std::tuple<scalar, scalar, scalar> rhovfc_ISAT(const scalar p, const scalar T) const;
 
             //- Absolute internal energy [J/kg]
             inline scalar Ea(const scalar p, const scalar T) const;
@@ -864,7 +439,7 @@ namespace Foam
                 const scalar rho,
                 const scalar p0,
                 const scalar T0
-            ) const;
+            );
 
 
             // Derivative term used for Jacobian
@@ -927,6 +502,10 @@ namespace Foam
             friend struct thermofunction_Tpsi;
             template<class TypeName>
             friend struct thermofunction_Tpsivf;
+            template<class TypeName>
+            friend struct thermofunction_Tpsivfsol;
+            template<class TypeName>
+            friend struct thermofunction_THvf;
         };
 
 

@@ -241,11 +241,13 @@ namespace Foam {
         autoPtr<solution> TPn_flash(scalar p, scalar T) const;
         autoPtr<solution> TPn_flash_New(scalar p, scalar T) const;
         autoPtr<solution> TPn_flash_New2(scalar p, scalar T, bool stable, bool isVapor, Foam::scalarList& K_init) const;
-        autoPtr<solution> TPn_flash_Matheis(scalar p, scalar T, bool stable, bool isVapor, Foam::scalarList& K_init, bool& success) const;
-        autoPtr<solution> TPn_flash_New_TPD_Tudisco(scalar p, scalar T) const;
+        autoPtr<solution> TPn_flash_Matheis(scalar p, scalar T, const scalarList& Xinp, bool stable, bool isVapor, Foam::scalarList& K_init, bool& success) const;
+        autoPtr<solution> TPn_flash_New_TPD_Tudisco(scalar p, scalar T, const scalarList& Xinp) const;
+        autoPtr<solution> TPn_flash_New_TPD_Tudisco(scalar p, scalar T) const { return TPn_flash_New_TPD_Tudisco(p, T, this->X_); };
         autoPtr<solution> TPn_flash_New_TPD(scalar p, scalar T) const;
         inline tuple<bool, autoPtr<scalarList>, bool> solveTPD_BFGS(scalar p, scalar T) const;
-        inline tuple<bool, Foam::autoPtr<List<scalarList>>, bool, autoPtr<scalarList>> solveTPD_BFGS_v2(scalar p, scalar T) const;
+        inline tuple<bool, Foam::autoPtr<List<scalarList>>, bool, autoPtr<scalarList>> solveTPD_BFGS_v2(scalar p, scalar T, const scalarList& Xinp) const;
+        inline tuple<bool, Foam::autoPtr<List<scalarList>>, bool, autoPtr<scalarList>> solveTPD_BFGS_v2(scalar p, scalar T) const { return solveTPD_BFGS_v2(p, T, this->X_); };
         void TPn_validation(scalar p, scalar T) const;
 
         //HPX system

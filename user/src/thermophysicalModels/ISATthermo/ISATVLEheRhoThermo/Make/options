@@ -17,6 +17,7 @@ EXE_INC = \
     -I../../VLEthermos/nonlinearMixture \
     -I../../VLEthermos \
     -I../ISATmultithermo \
+    -fmax-errors=1 \
     -I../ 
 
 LIB_LIBS = \

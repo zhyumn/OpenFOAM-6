@@ -85,7 +85,8 @@ Foam::nonlinearMixture<ThermoType, ThermoMixtureType>::nonlinearMixture
     :
     basicSpecieMixture(thermoDict, specieNames, mesh, phaseName),
     speciesData_(species_.size()),
-    mixture_("mixture", speciesData_, specieNames, thermoDict)//,
+    temp_mixture_("temp_mixture", speciesData_, specieNames, thermoDict,nullptr),
+    mixture_("mixture", speciesData_, specieNames, thermoDict,&temp_mixture_)//,
     //mixtureVol_("volMixture", speciesData_,specieNames,thermoDict)
 {
     forAll(species_, i)
@@ -96,6 +97,7 @@ Foam::nonlinearMixture<ThermoType, ThermoMixtureType>::nonlinearMixture
             new ThermoType(*thermoData[species_[i]])
         );
     }
+    //mixture_.temp_p=&temp_mixture_;
 
     correctMassFractions();
 }
@@ -117,9 +119,11 @@ Foam::nonlinearMixture<ThermoType, ThermoMixtureType>::nonlinearMixture
         phaseName
     ),
     speciesData_(species_.size()),
-    mixture_("mixture", constructSpeciesData(thermoDict))//,
+    mixture_("mixture", constructSpeciesData(thermoDict)),
+    temp_mixture_("mixture", constructSpeciesData(thermoDict))//,
     //mixtureVol_("volMixture", speciesData_[0])
 {
+    mixture_.temp_p=&temp_mixture_;
     correctMassFractions();
 }
 
@@ -187,7 +191,6 @@ const ThermoMixtureType<ThermoType>& Foam::nonlinearMixture<ThermoType, ThermoMi
         Y[n] = Y_[n][celli];
     }
     mixture_.setY(Y);
-
     return mixture_;
 }
 

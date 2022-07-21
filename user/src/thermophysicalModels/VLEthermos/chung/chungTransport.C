@@ -33,7 +33,8 @@ Foam::chungTransport<Thermo>::chungTransport(const dictionary& dict)
 :
     Thermo(dict),
     mu_(readScalar(dict.subDict("equationOfState").lookup("mu"))),
-    kappa_(readScalar(dict.subDict("equationOfState").lookup("kappa")))
+    kappa_(readScalar(dict.subDict("equationOfState").lookup("kappa"))),
+    sigmvi_(readScalar(dict.subDict("equationOfState").lookup("sigmvi")))
 {}
 
 

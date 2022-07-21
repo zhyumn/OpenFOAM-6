@@ -44,23 +44,33 @@ SourceFiles
 namespace Foam
 {
 
-/*---------------------------------------------------------------------------*\
-                         Class ISATVLEheRhoThermo Declaration
-\*---------------------------------------------------------------------------*/
+    /*---------------------------------------------------------------------------*\
+                             Class ISATVLEheRhoThermo Declaration
+    \*---------------------------------------------------------------------------*/
 
-template<class BasicPsiThermo, class MixtureType>
-class ISATVLEheRhoThermo
-:
-    public heThermo<BasicPsiThermo, MixtureType>
-{
+    template<class BasicPsiThermo, class MixtureType>
+    class ISATVLEheRhoThermo
+        :
+        public heThermo<BasicPsiThermo, MixtureType>
+    {
 
-    volScalarField vaporfrac_;
-    volScalarField soundspeed_;
-    //volScalarField rho_;
+        volScalarField vaporfrac_;
+        volScalarField soundspeed_;
+        //volScalarField rho_;
+        volScalarField kappa_;
+        //volScalarField rho_;
 
-    // Private Member Functions
+        //- Store list of mass diffusion coefficients
+        PtrList<volScalarField> Dimix_; //
 
-        //- Calculate the thermo variables
+        PtrList<volScalarField> heList_;
+        PtrList<volScalarField> WList_;
+        bool inviscid_;
+        bool noVLE_;
+
+        // Private Member Functions
+
+            //- Calculate the thermo variables
         void calculate_init();
 
         void calculate();
@@ -68,15 +78,15 @@ class ISATVLEheRhoThermo
         //- Construct as copy (not implemented)
         ISATVLEheRhoThermo(const ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>&);
 
-public:
+    public:
 
-    //- Runtime type information
-    TypeName("ISATVLEheRhoThermo");
+        //- Runtime type information
+        TypeName("ISATVLEheRhoThermo");
 
 
-    // Constructors
+        // Constructors
 
-        //- Construct from mesh and phase name
+            //- Construct from mesh and phase name
         ISATVLEheRhoThermo
         (
             const fvMesh&,
@@ -84,25 +94,25 @@ public:
         );
 
 
-    //- Destructor
-    virtual ~ISATVLEheRhoThermo();
+        //- Destructor
+        virtual ~ISATVLEheRhoThermo();
 
 
-    // Member functions
+        // Member functions
 
-        //- Update properties
+            //- Update properties
         virtual void correct();
-};
+    };
 
 
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 } // End namespace Foam
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "ISATVLEheRhoThermo.C"
+#include "ISATVLEheRhoThermo.C"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

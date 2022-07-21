@@ -81,6 +81,8 @@ namespace Foam
     template <class Thermo>
     using  nLreactingMixtureISATRhoChungPR = nLreactingMixture<Thermo, ISATVLERhoThermo>;
 
+    template<>
+    bool VLE<chungTransportMixture<PengRobinsonMixture<multispecie<VLEChungPREThermoPhysics>>>>::noVLE=false; 
 
     makeThermoPhysicsReactionThermos
     (

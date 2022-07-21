@@ -66,12 +66,12 @@ inline Foam::VLE<ThermoMixture>::VLE(
     inputK(thermoDict.lookupOrDefault<bool>("inputK", false)),
     Kinit(thermoDict.lookup("Kinit"))
 {
-    if(inputK==true && Kinit.size()!=this->X_.size())
+    if (inputK == true && Kinit.size() != this->X_.size())
     {
-        inputK=false;
+        inputK = false;
         WarningInFunction
             << "Kinit size = "
-            << Kinit.size() 
+            << Kinit.size()
             << ", which is not equal to number of species: "
             << this->X_.size()
             << ". \'inputK\' is reset to false."
@@ -1089,6 +1089,7 @@ inline Foam::autoPtr<typename Foam::VLE<ThermoMixture>::solution> Foam::VLE<Ther
 (
     scalar p,  //input
     scalar T,  //input
+    const scalarList& Xinp,
     bool stable,
     bool isVapor,
     Foam::scalarList& K_init,
@@ -1111,7 +1112,7 @@ inline Foam::autoPtr<typename Foam::VLE<ThermoMixture>::solution> Foam::VLE<Ther
     if (stable != true)
     {
         Sol.equalconstant.reset(new scalarList(this->N_));
-        forAll(this->X_, i)
+        forAll(Xinp, i)
         {
             Sol.equalconstant()[i] = K_init[i];
         }
@@ -1142,13 +1143,13 @@ inline Foam::autoPtr<typename Foam::VLE<ThermoMixture>::solution> Foam::VLE<Ther
         scalar sum1 = 0, sum2 = 0;
         for (int i = 0;i < this->N_;i++)
         {
-            sum1 += this->X_[i] * K[i];
-            sum2 += this->X_[i] / K[i];
+            sum1 += Xinp[i] * K[i];
+            sum2 += Xinp[i] / K[i];
         }
         if (iter_outer == 0 && (sum1 < 1 || sum2 < 1))
         {
-            K[0] = 1 / this->X_[0];
-            K[1] = this->X_[1];
+            K[0] = 1 / Xinp[0];
+            K[1] = Xinp[1];
             continue;
         }
         if (sum1 >= 1.0 && sum2 >= 1)
@@ -1160,9 +1161,9 @@ inline Foam::autoPtr<typename Foam::VLE<ThermoMixture>::solution> Foam::VLE<Ther
             for (int i = 0;i < this->N_;i++)
             {
                 if (K[i] > 1)
-                    vf_min = max(0.0, (this->X_[i] * K[i] - 1) / (K[i] - 1));
+                    vf_min = max(0.0, (Xinp[i] * K[i] - 1) / (K[i] - 1));
                 else
-                    vf_max = min(1.0, (1 - this->X_[i]) / (1 - K[i]));
+                    vf_max = min(1.0, (1 - Xinp[i]) / (1 - K[i]));
             }
             vf = 0.5 * (vf_min + vf_max);
 
@@ -1173,8 +1174,8 @@ inline Foam::autoPtr<typename Foam::VLE<ThermoMixture>::solution> Foam::VLE<Ther
                 dRR = 0;
                 for (int i = 0;i < this->N_;i++)
                 {
-                    RR += this->X_[i] * (K[i] - 1) / (1 + vf * (K[i] - 1));
-                    dRR -= this->X_[i] * (K[i] - 1) * (K[i] - 1) / ((1 + vf * (K[i] - 1)) * (1 + vf * (K[i] - 1)));
+                    RR += Xinp[i] * (K[i] - 1) / (1 + vf * (K[i] - 1));
+                    dRR -= Xinp[i] * (K[i] - 1) * (K[i] - 1) / ((1 + vf * (K[i] - 1)) * (1 + vf * (K[i] - 1)));
                 }
                 if (RR > 0)
                     vf_min = vf;
@@ -1195,7 +1196,7 @@ inline Foam::autoPtr<typename Foam::VLE<ThermoMixture>::solution> Foam::VLE<Ther
 
             for (int i = 0;i < this->N_;i++)
             {
-                Sol.X_liq()[i] = this->X_[i] / (1 + vf * (K[i] - 1));
+                Sol.X_liq()[i] = Xinp[i] / (1 + vf * (K[i] - 1));
                 Sol.X_gas()[i] = K[i] * Sol.X_liq()[i];
             }
         }
@@ -1206,8 +1207,8 @@ inline Foam::autoPtr<typename Foam::VLE<ThermoMixture>::solution> Foam::VLE<Ther
             for (int i = 0;i < this->N_;i++)
             {
                 //K[i] = sqr(K[i]);
-                Sol.X_liq()[i] = this->X_[i] / K[i];
-                Sol.X_gas()[i] = this->X_[i];
+                Sol.X_liq()[i] = Xinp[i] / K[i];
+                Sol.X_gas()[i] = Xinp[i];
                 sum_ += Sol.X_liq()[i];
             }
             for (int i = 0;i < this->N_;i++)
@@ -1223,8 +1224,8 @@ inline Foam::autoPtr<typename Foam::VLE<ThermoMixture>::solution> Foam::VLE<Ther
             for (int i = 0;i < this->N_;i++)
             {
                 //K[i] = sqr(K[i]);
-                Sol.X_liq()[i] = this->X_[i];
-                Sol.X_gas()[i] = this->X_[i] * K[i];
+                Sol.X_liq()[i] = Xinp[i];
+                Sol.X_gas()[i] = Xinp[i] * K[i];
                 sum_ += Sol.X_gas()[i];
             }
             for (int i = 0;i < this->N_;i++)
@@ -1236,8 +1237,8 @@ inline Foam::autoPtr<typename Foam::VLE<ThermoMixture>::solution> Foam::VLE<Ther
         else
             FatalErrorInFunction << "TPn_flash_Matheis" << exit(FatalError);
 
-        Ln_fugcoef_liq.reset(this->Ln_fugacityCoefficient(p, T, 0, &(Sol.X_liq())).ptr()); //todo optimize 
-        Ln_fugcoef_gas.reset(this->Ln_fugacityCoefficient(p, T, 1, &(Sol.X_gas())).ptr());
+        Ln_fugcoef_liq.reset(this->Ln_fugacityCoefficient(p, T, Sol.X_liq(), 0).ptr()); //todo optimize 
+        Ln_fugcoef_gas.reset(this->Ln_fugacityCoefficient(p, T, Sol.X_gas(), 1).ptr());
 
         eps_outer = 0;
         for (int i = 0;i < this->N_;i++)
@@ -1502,7 +1503,8 @@ template <class ThermoMixture>
 inline Foam::autoPtr<typename Foam::VLE<ThermoMixture>::solution> Foam::VLE<ThermoMixture>::TPn_flash_New_TPD_Tudisco  // PY:with a course initialization
 (
     scalar p,  //input
-    scalar T   //input
+    scalar T,   //input
+    const scalarList& Xinp
 ) const {
     if (noVLE)
     {
@@ -1510,9 +1512,9 @@ inline Foam::autoPtr<typename Foam::VLE<ThermoMixture>::solution> Foam::VLE<Ther
         solution& Sol = *pS;
         Sol.X_liq.reset(new scalarList(this->N_));
         Sol.X_gas.reset(new scalarList(this->N_));
-        forAll(this->X_, i) {
-            Sol.X_liq()[i] = this->X_[i];  //use this in PT_x flash, cancle this in hn flash
-            Sol.X_gas()[i] = this->X_[i];  //use this in PT_x flash, cancle this in hn flash
+        forAll(Xinp, i) {
+            Sol.X_liq()[i] = Xinp[i];  //use this in PT_x flash, cancle this in hn flash
+            Sol.X_gas()[i] = Xinp[i];  //use this in PT_x flash, cancle this in hn flash
         }
         Sol.vaporfra = 0.9999999;
         Sol.equalconstant.reset(new scalarList(this->N_));
@@ -1520,27 +1522,27 @@ inline Foam::autoPtr<typename Foam::VLE<ThermoMixture>::solution> Foam::VLE<Ther
     }
 
     bool success = false;
-    bool stable, isVapor;
+    bool stable=false, isVapor=false;
     scalar gmin = DBL_MAX;
     const scalar delta = 1e-13;
     const scalar be_negative = -1.E-9;
     autoPtr<List<scalarList>> p_K_init;
     autoPtr<solution> sol_min;
     autoPtr<scalarList> p_TPD_star;
-    scalarList K_init(this->X_.size());
+    scalarList K_init(Xinp.size());
     if (inputK == false)
-        for (int i = 0; i < this->X_.size(); i++) {
+        for (int i = 0; i < Xinp.size(); i++) {
 
             K_init[i] = (*this)[i].Pc_ / p * exp(5.373 * (1.0 + (*this)[i].omega_) * (1.0 - (*this)[i].Tc_ / T));
         }
     else
     {
-        for (int i = 0; i < this->X_.size(); i++) {
+        for (int i = 0; i < Xinp.size(); i++) {
             K_init[i] = Kinit[i];
         }
 
     }
-    autoPtr<solution> sol = TPn_flash_Matheis(p, T, stable, isVapor, K_init, success);
+    autoPtr<solution> sol = TPn_flash_Matheis(p, T,Xinp, stable, isVapor, K_init, success);
     /*
     if(sol().vaporfra<0.99&&sol().vaporfra>0.01)
     {
@@ -1561,7 +1563,7 @@ inline Foam::autoPtr<typename Foam::VLE<ThermoMixture>::solution> Foam::VLE<Ther
     sortedOrder(p_TPD_star(), order);
     if (p_TPD_star()[order[0]] < be_negative)
     {
-        autoPtr<solution> sol2 = TPn_flash_Matheis(p, T, stable, isVapor, p_K_init()[0], success);
+        autoPtr<solution> sol2 = TPn_flash_Matheis(p, T,Xinp, stable, isVapor, p_K_init()[0], success);
         return sol2;
         if (success)
         {
@@ -1578,9 +1580,9 @@ inline Foam::autoPtr<typename Foam::VLE<ThermoMixture>::solution> Foam::VLE<Ther
         if (i == 0 || (p_TPD_star()[order[i]] < be_negative && fabs(p_TPD_star()[order[i]] - p_TPD_star()[order[i - 1]]) > delta)) {
             //Info << "tryed2:" << i << endl;
             //Info << p_TPD_star()[order[i]] << "," << p_TPD_star()[order[i]] - p_TPD_star()[order[i == 0 ? i : i - 1]] << endl;
-            autoPtr<solution> sol = TPn_flash_Matheis(p, T, stable, isVapor, p_K_init()[order[i]], success);
-            scalar ggas = this->G_Mole(p, T, &(sol().X_gas()));
-            scalar gliq = this->G_Mole(p, T, &(sol().X_liq()));
+            autoPtr<solution> sol = TPn_flash_Matheis(p, T,Xinp, stable, isVapor, p_K_init()[order[i]], success);
+            scalar ggas = this->G_Mole(p, T, sol().X_gas());
+            scalar gliq = this->G_Mole(p, T, sol().X_liq());
             scalar g = sol().vaporfra * ggas + (1 - sol().vaporfra) * gliq;
             //Info << sol().vaporfra << " g:" << g << endl;
             //Info << ggas << "," << gliq << "," << sol().vaporfra << "," << sol().vaporfra * ggas + (1 - sol().vaporfra) * gliq << endl;
@@ -1829,7 +1831,8 @@ inline tuple<bool, Foam::autoPtr<Foam::scalarList>, bool> Foam::VLE<ThermoMixtur
 template <class ThermoMixture>
 inline tuple<bool, Foam::autoPtr<Foam::List<Foam::scalarList>>, bool, Foam::autoPtr<Foam::scalarList>> Foam::VLE<ThermoMixture>::solveTPD_BFGS_v2(
     scalar p,  //input
-    scalar T   //input
+    scalar T,   //input
+    const scalarList& Xinp
 ) const {
     const scalar be_negative = -1.E-9;
     //const scalar be_pure_substance = 1. - 1.E-8;
@@ -1841,26 +1844,26 @@ inline tuple<bool, Foam::autoPtr<Foam::List<Foam::scalarList>>, bool, Foam::auto
     bool stable = true;
     bool isVapor;
     int n_sp = 0;
-    for (int i = 0;i < this->X_.size();i++)
+    for (int i = 0;i < Xinp.size();i++)
     {
-        if (this->X_[i] > 0)
+        if (Xinp[i] > 0)
             n_sp++;
     }
 
     //scalar TPDmin = 10.0;
-    int n = this->X_.size();
+    int n = Xinp.size();
     int ntrial = 4 + n;
     autoPtr<List<scalarList>> p_K_init(new List<scalarList>(ntrial));
     List<scalarList>& K_init = p_K_init();
     for (int i = 0; i < ntrial; i++) {
-        K_init[i].resize(this->X_.size());
+        K_init[i].resize(Xinp.size());
     }
     autoPtr<scalarList> p_TPD_star(new scalarList(ntrial));
     scalarList& TPD_star = p_TPD_star();
     if (n_sp == 1)
     {
         stable = true;
-        for (int i = 0; i < this->X_.size(); i++)
+        for (int i = 0; i < Xinp.size(); i++)
         {
             TPD_star[i] = 10;
         }
@@ -1869,66 +1872,66 @@ inline tuple<bool, Foam::autoPtr<Foam::List<Foam::scalarList>>, bool, Foam::auto
     scalar tol = 1.E-9;
     int iter_max = 1000;
     scalarList y_sp[ntrial];
-    scalar z = this->Z_gibbs(p, T, &this->X_);
+    scalar z = this->Z_gibbs(p, T, Xinp);
 
     scalarList TPD(ntrial), mask_stationary(ntrial);
-    autoPtr<scalarList> lnphi(this->ln_fugacityCoefficient(p, T, z, &this->X_));
-    scalarList d(this->X_.size()), K(this->X_.size());
-    for (int i = 0; i < this->X_.size(); i++) {
-        d[i] = log(this->X_[i]) + lnphi()[i];
+    autoPtr<scalarList> lnphi(this->ln_fugacityCoefficient(p, T, z, Xinp));
+    scalarList d(Xinp.size()), K(Xinp.size());
+    for (int i = 0; i < Xinp.size(); i++) {
+        d[i] = log(Xinp[i]) + lnphi()[i];
         K[i] = (*this)[i].Pc_ / p * exp(5.373 * (1.0 + (*this)[i].omega_) * (1.0 - (*this)[i].Tc_ / T));
     }
-    scalar B = this->B(p, T, &this->X_);
+    scalar B = this->B(p, T, Xinp);
     scalarList Y_init[ntrial];
     for (int i = 0; i < ntrial; i++) {
-        y_sp[i].resize(this->X_.size());
-        Y_init[i].resize(this->X_.size());
+        y_sp[i].resize(Xinp.size());
+        Y_init[i].resize(Xinp.size());
     }
     if (z < 3.5 * B) {
         isVapor = false;
-        for (int i = 0; i < this->X_.size(); i++) {
+        for (int i = 0; i < Xinp.size(); i++) {
             for (int j = 0; j < 4; j++) {
 
-                Y_init[j][i] = this->X_[i] * pow(K[i], pow_v[j]);
+                Y_init[j][i] = Xinp[i] * pow(K[i], pow_v[j]);
 
             }
         }
     }
     else {
         isVapor = true;
-        for (int i = 0; i < this->X_.size(); i++) {
+        for (int i = 0; i < Xinp.size(); i++) {
             for (int j = 0; j < 4; j++) {
-                Y_init[j][i] = this->X_[i] * pow(K[i], pow_l[j]);
+                Y_init[j][i] = Xinp[i] * pow(K[i], pow_l[j]);
             }
         }
     }
 
-    for (int i = 0; i < this->X_.size(); i++) {
-        for (int j = 0; j < this->X_.size(); j++) {
+    for (int i = 0; i < Xinp.size(); i++) {
+        for (int j = 0; j < Xinp.size(); j++) {
             Y_init[4 + i][j] = 0.1 / (n - 1);
         }
         Y_init[4 + i][i] = 0.90;
     }
     scalar sum = 0, z_y, beta;
-    scalarList Y(this->X_.size()), y_trial(this->X_.size());
-    scalarList alpha_old(this->X_.size()), F_old(this->X_.size());
-    scalarList alpha_new(this->X_.size()), F_new(this->X_.size());
-    scalarList g(this->X_.size()), s(this->X_.size());
-    scalarList dalpha(this->X_.size());
+    scalarList Y(Xinp.size()), y_trial(Xinp.size());
+    scalarList alpha_old(Xinp.size()), F_old(Xinp.size());
+    scalarList alpha_new(Xinp.size()), F_new(Xinp.size());
+    scalarList g(Xinp.size()), s(Xinp.size());
+    scalarList dalpha(Xinp.size());
     scalar F_times_s, F_times_g, s_times_g, g_times_g, eps, r;
 
     for (int itrial = 0; itrial < ntrial; itrial++) {
         sum = 0;
-        for (int i = 0; i < this->X_.size(); i++) {
+        for (int i = 0; i < Xinp.size(); i++) {
             Y[i] = Y_init[itrial][i];
             sum += Y[i];
         }
-        for (int i = 0; i < this->X_.size(); i++) {
+        for (int i = 0; i < Xinp.size(); i++) {
             y_trial[i] = Y[i] / sum;
         }
-        z_y = this->Z_gibbs(p, T, &y_trial);
-        autoPtr<scalarList> lnphi_y(this->ln_fugacityCoefficient(p, T, z_y, &y_trial));
-        for (int i = 0; i < this->X_.size(); i++) {
+        z_y = this->Z_gibbs(p, T, y_trial);
+        autoPtr<scalarList> lnphi_y(this->ln_fugacityCoefficient(p, T, z_y, y_trial));
+        for (int i = 0; i < Xinp.size(); i++) {
             alpha_old[i] = 2 * sqrt(Y[i]);
             F_old[i] = alpha_old[i] / 2 * (lnphi_y()[i] + log(Y[i]) - d[i]);
             alpha_new[i] = 2 * exp(-0.5 * (lnphi_y()[i] - d[i]));
@@ -1936,26 +1939,26 @@ inline tuple<bool, Foam::autoPtr<Foam::List<Foam::scalarList>>, bool, Foam::auto
         int iter;
         for (iter = 0; iter < iter_max; iter++) {
             sum = 0;
-            for (int i = 0; i < this->X_.size(); i++) {
+            for (int i = 0; i < Xinp.size(); i++) {
                 Y[i] = 0.25 * alpha_new[i] * alpha_new[i];
                 sum += Y[i];
             }
-            for (int i = 0; i < this->X_.size(); i++) {
+            for (int i = 0; i < Xinp.size(); i++) {
                 y_trial[i] = Y[i] / sum;
             }
-            z_y = this->Z_gibbs(p, T, &y_trial);
+            z_y = this->Z_gibbs(p, T, y_trial);
 
             TPD_star[itrial] = 1.;
             beta = 0;
 
             //lnphi_y.reset(this->ln_fugacityCoefficient(p, T, z_y, &y_trial));
-            autoPtrReset(lnphi_y, this->ln_fugacityCoefficient(p, T, z_y, &y_trial));
-            for (int i = 0; i < this->X_.size(); i++) {
+            autoPtrReset(lnphi_y, this->ln_fugacityCoefficient(p, T, z_y, y_trial));
+            for (int i = 0; i < Xinp.size(); i++) {
                 F_new[i] = alpha_new[i] / 2 * (lnphi_y()[i] + log(Y[i]) - d[i]);
                 TPD_star[itrial] += +Y[i] * (lnphi_y()[i] + log(Y[i]) - d[i] - 1);
-                beta += (Y[i] - this->X_[i]) * (lnphi_y()[i] + log(Y[i]) - d[i]);
+                beta += (Y[i] - Xinp[i]) * (lnphi_y()[i] + log(Y[i]) - d[i]);
             }
-            for (int i = 0; i < this->X_.size(); i++) {
+            for (int i = 0; i < Xinp.size(); i++) {
                 g[i] = F_new[i] - F_old[i];
                 F_old[i] = F_new[i];
                 s[i] = alpha_new[i] - alpha_old[i];
@@ -1965,14 +1968,14 @@ inline tuple<bool, Foam::autoPtr<Foam::List<Foam::scalarList>>, bool, Foam::auto
             F_times_g = 0;
             s_times_g = 0;
             g_times_g = 0;
-            for (int i = 0; i < this->X_.size(); i++) {
+            for (int i = 0; i < Xinp.size(); i++) {
                 F_times_s += F_old[i] * s[i];
                 F_times_g += F_old[i] * g[i];
                 s_times_g += s[i] * g[i];
                 g_times_g += g[i] * g[i];
             }
             eps = 0;
-            for (int i = 0; i < this->X_.size(); i++) {
+            for (int i = 0; i < Xinp.size(); i++) {
                 dalpha[i] = (g[i] * F_times_s - s[i] * (F_times_s - F_times_g + g_times_g * F_times_s / s_times_g)) / s_times_g - F_old[i];
                 alpha_new[i] = alpha_old[i] + dalpha[i];
                 eps += dalpha[i] * dalpha[i];
@@ -1989,10 +1992,10 @@ inline tuple<bool, Foam::autoPtr<Foam::List<Foam::scalarList>>, bool, Foam::auto
 
             if (eps < tol) {
                 sum = 0;
-                for (int i = 0; i < this->X_.size(); i++) {
+                for (int i = 0; i < Xinp.size(); i++) {
                     sum += Y[i];
                 }
-                for (int i = 0; i < this->X_.size(); i++) {
+                for (int i = 0; i < Xinp.size(); i++) {
                     y_sp[itrial][i] = Y[i] / sum;
                 }
                 TPD[itrial] = -log(sum);
@@ -2001,16 +2004,16 @@ inline tuple<bool, Foam::autoPtr<Foam::List<Foam::scalarList>>, bool, Foam::auto
                 if (TPD_star[itrial] < be_negative) {
                     stable = false;
 
-                    scalar z2 = this->Z_gibbs(p, T, &y_sp[itrial]);
+                    scalar z2 = this->Z_gibbs(p, T, y_sp[itrial]);
                     if (z < z2)
-                        for (int i = 0; i < this->X_.size(); i++) {
+                        for (int i = 0; i < Xinp.size(); i++) {
                             //K_init_min[i] = Y_init[itrial][i] / this->X_[i];
-                            K_init[itrial][i] = y_sp[itrial][i] / this->X_[i];
+                            K_init[itrial][i] = y_sp[itrial][i] / Xinp[i];
                         }
                     else
-                        for (int i = 0; i < this->X_.size(); i++) {
+                        for (int i = 0; i < Xinp.size(); i++) {
                             //K_init_min[i] = Y_init[itrial][i] / this->X_[i];
-                            K_init[itrial][i] = this->X_[i] / y_sp[itrial][i];
+                            K_init[itrial][i] = Xinp[i] / y_sp[itrial][i];
                         }
                 }
                 break;
@@ -2019,7 +2022,7 @@ inline tuple<bool, Foam::autoPtr<Foam::List<Foam::scalarList>>, bool, Foam::auto
                 TPD[itrial] = 10.;
                 TPD_star[itrial] = 10.;
                 mask_stationary[itrial] = false;
-                for (int i = 0; i < this->X_.size(); i++) {
+                for (int i = 0; i < Xinp.size(); i++) {
                     y_sp[itrial][i] = -1;
                 }
                 break;
@@ -2028,10 +2031,10 @@ inline tuple<bool, Foam::autoPtr<Foam::List<Foam::scalarList>>, bool, Foam::auto
         if (iter >= iter_max)
         {
             sum = 0;
-            for (int i = 0; i < this->X_.size(); i++) {
+            for (int i = 0; i < Xinp.size(); i++) {
                 sum += Y[i];
             }
-            for (int i = 0; i < this->X_.size(); i++) {
+            for (int i = 0; i < Xinp.size(); i++) {
                 y_sp[itrial][i] = Y[i] / sum;
             }
             TPD[itrial] = -log(sum);
@@ -2040,16 +2043,16 @@ inline tuple<bool, Foam::autoPtr<Foam::List<Foam::scalarList>>, bool, Foam::auto
             if (TPD_star[itrial] < be_negative) {
                 stable = false;
 
-                scalar z2 = this->Z_gibbs(p, T, &y_sp[itrial]);
+                scalar z2 = this->Z_gibbs(p, T, y_sp[itrial]);
                 if (z < z2)
-                    for (int i = 0; i < this->X_.size(); i++) {
+                    for (int i = 0; i < Xinp.size(); i++) {
                         //K_init_min[i] = Y_init[itrial][i] / this->X_[i];
-                        K_init[itrial][i] = y_sp[itrial][i] / this->X_[i];
+                        K_init[itrial][i] = y_sp[itrial][i] / Xinp[i];
                     }
                 else
-                    for (int i = 0; i < this->X_.size(); i++) {
+                    for (int i = 0; i <Xinp.size(); i++) {
                         //K_init_min[i] = Y_init[itrial][i] / this->X_[i];
-                        K_init[itrial][i] = this->X_[i] / y_sp[itrial][i];
+                        K_init[itrial][i] = Xinp[i] / y_sp[itrial][i];
                     }
             }
         }
@@ -2352,35 +2355,35 @@ template <class ThermoMixture>
 inline Foam::scalar Foam::VLE<ThermoMixture>::Ha(scalar p, scalar T) const {
     autoPtr<solution> sol(TPN(p, T));
 
-    scalar mw_gas = this->W(&(sol().X_gas()));  //kg/mol
+    scalar mw_gas = this->W(sol().X_gas());  //kg/mol
     scalar mw_mixture = this->W();
     scalar ygas = sol().vaporfra * mw_gas / mw_mixture;
     //Info << sol().vaporfra << endl;
-    //Info << this->ThermoMixture::Ha(p, T, 1, &(sol().X_gas())) << endl;
-    //Info << this->ThermoMixture::Ha(p, T, 0, &(sol().X_liq())) << endl;
+    //Info << this->ThermoMixture::Ha(p, T,sol().X_gas(), 1) << endl;
+    //Info << this->ThermoMixture::Ha(p, T,sol().X_liq(), 0) << endl;
     //Info << "mw_gas / mw_mixture=" << mw_gas / mw_mixture << endl;
     //Info << ygas << endl;
-    return this->ThermoMixture::Ha(p, T, 1, &(sol().X_gas())) * ygas + this->ThermoMixture::Ha(p, T, 0, &(sol().X_liq())) * (1.0 - ygas);
+    return this->ThermoMixture::Ha(p, T, sol().X_gas(), 1) * ygas + this->ThermoMixture::Ha(p, T, sol().X_liq(), 0) * (1.0 - ygas);
 }
 
 template <class ThermoMixture>
 inline Foam::scalar Foam::VLE<ThermoMixture>::Ha(scalar p, scalar T, solution& sol) const {
     //autoPtr<solution> sol(TPN(p, T));
 
-    scalar mw_gas = this->W(&(sol.X_gas()));  //kg/mol
+    scalar mw_gas = this->W(sol.X_gas());  //kg/mol
     scalar mw_mixture = this->W();
     scalar ygas = sol.vaporfra * mw_gas / mw_mixture;
     //Info << sol().vaporfra << endl;
-    //Info << this->ThermoMixture::Ha(p, T, 1, &(sol().X_gas())) << endl;
-    //Info << this->ThermoMixture::Ha(p, T, 0, &(sol().X_liq())) << endl;
+    //Info << this->ThermoMixture::Ha(p, T,sol().X_gas(), 1) << endl;
+    //Info << this->ThermoMixture::Ha(p, T,sol().X_liq(), 0) << endl;
     //Info << "mw_gas / mw_mixture=" << mw_gas / mw_mixture << endl;
     //Info << ygas << endl;
-    return this->ThermoMixture::Ha(p, T, 1, &(sol.X_gas())) * ygas + this->ThermoMixture::Ha(p, T, 0, &(sol.X_liq())) * (1.0 - ygas);
+    return this->ThermoMixture::Ha(p, T, sol.X_gas(), 1) * ygas + this->ThermoMixture::Ha(p, T, sol.X_liq(), 0) * (1.0 - ygas);
 }
 //Chemical enthalpy
 template <class ThermoMixture>
 inline Foam::scalar Foam::VLE<ThermoMixture>::Hc() const {
-    return this->ThermoMixture::Hc(&(this->X_));
+    return this->ThermoMixture::Hc(this->X_);
 }
 
 //Sensible enthalpy
@@ -2407,7 +2410,7 @@ inline Foam::scalar Foam::VLE<ThermoMixture>::Cp(scalar p, scalar T) const {
 template <class ThermoMixture>
 inline Foam::scalar Foam::VLE<ThermoMixture>::Cp(scalar p, scalar T, solution& sol) const {
 
-    scalar mw_gas = this->W(&(sol.X_gas()));  //kg/mol
+    scalar mw_gas = this->W(sol.X_gas());  //kg/mol
     scalar dmw_gasdT = this->dWdT_gas(p, T, sol);
     scalar mw_mixture = this->W();
     scalar ygas = sol.vaporfra * mw_gas / mw_mixture;
@@ -2417,17 +2420,17 @@ inline Foam::scalar Foam::VLE<ThermoMixture>::Cp(scalar p, scalar T, solution& s
         dvfdT += dvidt()[i];
     }
     scalar dygasdT = (dvfdT * mw_gas + sol.vaporfra * dmw_gasdT) / mw_mixture;
-    scalar dHadT_gas = this->dHadT(p, T, 1, &(sol.X_gas()));
+    scalar dHadT_gas = this->dHadT(p, T, sol.X_gas(), 1);
     autoPtr<scalarList> dXdt_gas(this->dXdT_gas(p, T, sol));
     for (int i = 0; i < this->X_.size(); i++) {
-        dHadT_gas += this->dHadxi(p, T, i, 1, &(sol.X_gas())) * dXdt_gas()[i];
+        dHadT_gas += this->dHadxi(p, T, i, sol.X_gas(), 1) * dXdt_gas()[i];
     }
-    scalar dHadT_liq = this->dHadT(p, T, 0, &(sol.X_liq()));
+    scalar dHadT_liq = this->dHadT(p, T, sol.X_liq(), 0);
     autoPtr<scalarList> dXdt_liq(this->dXdT_liq(p, T, sol));
     for (int i = 0; i < this->X_.size(); i++) {
-        dHadT_liq += this->dHadxi(p, T, i, 0, &(sol.X_liq())) * dXdt_liq()[i];
+        dHadT_liq += this->dHadxi(p, T, i, sol.X_liq(), 0) * dXdt_liq()[i];
     }
-    return this->ThermoMixture::Ha(p, T, 1, &(sol.X_gas())) * dygasdT + dHadT_gas * ygas - this->ThermoMixture::Ha(p, T, 0, &(sol.X_liq())) * dygasdT + dHadT_liq * (1.0 - ygas);
+    return this->ThermoMixture::Ha(p, T, sol.X_gas(), 1) * dygasdT + dHadT_gas * ygas - this->ThermoMixture::Ha(p, T, sol.X_liq(), 0) * dygasdT + dHadT_liq * (1.0 - ygas);
 }
 
 
@@ -2471,17 +2474,17 @@ inline Foam::scalar Foam::VLE<ThermoMixture>::Cv_VLE(scalar p, scalar T, solutio
         dvfdT += dvidt()[i];
     }
     scalar dygasdT = (dvfdT * mw_gas + sol.vaporfra * dmw_gasdT) / mw_mixture;
-    scalar dHadT_gas = this->dHadT(p, T, 1, &(sol.X_gas()));
+    scalar dHadT_gas = this->dHadT(p, T, sol.X_gas(), 1);
     autoPtr<scalarList> dXdt_gas(this->dXdT_gas(p, T, sol));
     for (int i = 0; i < this->X_.size(); i++) {
         dHadT_gas += this->dHadxi(p, T, i, 1, &(sol.X_gas())) * dXdt_gas()[i];
     }
-    scalar dHadT_liq = this->dHadT(p, T, 0, &(sol.X_liq()));
+    scalar dHadT_liq = this->dHadT(p, T, sol.X_liq(), 0);
     autoPtr<scalarList> dXdt_liq(this->dXdT_liq(p, T, sol));
     for (int i = 0; i < this->X_.size(); i++) {
         dHadT_liq += this->dHadxi(p, T, i, 0, &(sol.X_liq())) * dXdt_liq()[i];
     }
-    scalar Cp_ret = this->ThermoMixture::Ha(p, T, 1, &(sol.X_gas())) * dygasdT + dHadT_gas * ygas - this->ThermoMixture::Ha(p, T, 0, &(sol.X_liq())) * dygasdT + dHadT_liq * (1.0 - ygas);
+    scalar Cp_ret = this->ThermoMixture::Ha(p, T, sol.X_gas(), 1) * dygasdT + dHadT_gas * ygas - this->ThermoMixture::Ha(p, T, sol.X_liq(), 0) * dygasdT + dHadT_liq * (1.0 - ygas);
     //scalar Cp_ret= 0;
 
 
@@ -2489,10 +2492,10 @@ inline Foam::scalar Foam::VLE<ThermoMixture>::Cv_VLE(scalar p, scalar T, solutio
     autoPtr<scalarList> dXdT_L_(this->dXdT_liq(p, T, sol));
     scalar dvfdT_ = dvfdT;
     scalar vf_ = sol.vaporfra;
-    scalar Z_G_ = this->ThermoMixture::Z(p, T, 1, &(sol.X_gas()));
-    scalar Z_L_ = this->ThermoMixture::Z(p, T, 0, &(sol.X_liq()));
-    scalar dZdT_G_ = this->ThermoMixture::dZdT(p, T, 1, &(sol.X_gas()));
-    scalar dZdT_L_ = this->ThermoMixture::dZdT(p, T, 0, &(sol.X_liq()));
+    scalar Z_G_ = this->ThermoMixture::Z(p, T, sol.X_gas(), 1);
+    scalar Z_L_ = this->ThermoMixture::Z(p, T, sol.X_liq(), 0);
+    scalar dZdT_G_ = this->ThermoMixture::dZdT(p, T, sol.X_gas(), 1);
+    scalar dZdT_L_ = this->ThermoMixture::dZdT(p, T, sol.X_liq(), 0);
     for (int i = 0; i < this->X_.size(); i++) {
         dZdT_G_ +=
             this->ThermoMixture::dZdxi(p, T, i, 1, &(sol.X_gas())) * dXdT_G_()[i];
@@ -2528,7 +2531,7 @@ inline Foam::scalar Foam::VLE<ThermoMixture>::Cv_gas(scalar p, scalar T, solutio
 // Cp_Hs=dHsdT system (T,P,X)
 template <class ThermoMixture>
 inline Foam::scalar Foam::VLE<ThermoMixture>::Cp_Hs(scalar p, scalar T, solution& sol) const {
-    scalar mw_gas = this->W(&(sol.X_gas()));  //kg/mol
+    scalar mw_gas = this->W(sol.X_gas());  //kg/mol
     scalar dmw_gasdT = this->dWdT_gas(p, T, sol);
     scalar mw_mixture = this->W();
     scalar ygas = sol.vaporfra * mw_gas / mw_mixture;
@@ -2539,17 +2542,17 @@ inline Foam::scalar Foam::VLE<ThermoMixture>::Cp_Hs(scalar p, scalar T, solution
     }
     scalar dygasdT = (dvfdT * mw_gas + sol.vaporfra * dmw_gasdT) / mw_mixture;
 
-    scalar dHadT_gas = this->dHsdT(p, T, 1, &(sol.X_gas()));
+    scalar dHadT_gas = this->dHsdT(p, T, sol.X_gas(), 1);
     autoPtr<scalarList> dXdt_gas(this->dXdT_gas(p, T, sol));
     for (int i = 0; i < this->X_.size(); i++) {
-        dHadT_gas += this->dHsdxi(p, T, i, 1, &(sol.X_gas())) * dXdt_gas()[i];
+        dHadT_gas += this->dHsdxi(p, T, i, sol.X_gas(), 1) * dXdt_gas()[i];
     }
-    scalar dHadT_liq = this->dHsdT(p, T, 0, &(sol.X_liq()));
+    scalar dHadT_liq = this->dHsdT(p, T, sol.X_liq(), 0);
     autoPtr<scalarList> dXdt_liq(this->dXdT_liq(p, T, sol));
     for (int i = 0; i < this->X_.size(); i++) {
-        dHadT_liq += this->dHsdxi(p, T, i, 0, &(sol.X_liq())) * dXdt_liq()[i];
+        dHadT_liq += this->dHsdxi(p, T, i, sol.X_liq(), 0) * dXdt_liq()[i];
     }
-    return this->ThermoMixture::Hs(p, T, 1, &(sol.X_gas())) * dygasdT + dHadT_gas * ygas - this->ThermoMixture::Hs(p, T, 0, &(sol.X_liq())) * dygasdT + dHadT_liq * (1.0 - ygas);
+    return this->ThermoMixture::Hs(p, T, sol.X_gas(), 1) * dygasdT + dHadT_gas * ygas - this->ThermoMixture::Hs(p, T, sol.X_liq(), 0) * dygasdT + dHadT_liq * (1.0 - ygas);
 }
 
 //system (T,P,X)
@@ -2579,13 +2582,13 @@ inline Foam::scalar Foam::VLE<ThermoMixture>::dHadXi(scalar p, scalar T, label d
         dHadT_liq += this->dHadxi(p, T, i, 0, &(sol.X_liq())) * dXdt_liq()[i];
     }
 
-    return this->ThermoMixture::Ha(p, T, 1, &(sol.X_gas())) * dygasdT + dHadT_gas * ygas - this->ThermoMixture::Ha(p, T, 0, &(sol.X_liq())) * dygasdT + dHadT_liq * (1.0 - ygas);
+    return this->ThermoMixture::Ha(p, T, sol.X_gas(), 1) * dygasdT + dHadT_gas * ygas - this->ThermoMixture::Ha(p, T, sol.X_liq(), 0) * dygasdT + dHadT_liq * (1.0 - ygas);
 }
 
 //system (T,P,X)
 template <class ThermoMixture>
 inline Foam::scalar Foam::VLE<ThermoMixture>::dHsdXi(scalar p, scalar T, label di, solution& sol) const {
-    scalar mw_gas = this->W(&(sol.X_gas()));  //kg/mol
+    scalar mw_gas = this->W(sol.X_gas());  //kg/mol
     scalar dmw_gasdT = this->dWdXi_gas(p, T, di, sol);
     scalar mw_mixture = this->W();
     scalar ygas = sol.vaporfra * mw_gas / mw_mixture;
@@ -2600,16 +2603,16 @@ inline Foam::scalar Foam::VLE<ThermoMixture>::dHsdXi(scalar p, scalar T, label d
     scalar dHadT_gas = 0.0;
     autoPtr<scalarList> dXdt_gas(this->dXdXi_gas(p, T, di, sol));
     for (int i = 0; i < this->X_.size(); i++) {
-        dHadT_gas += this->dHsdxi(p, T, i, 1, &(sol.X_gas())) * dXdt_gas()[i];
+        dHadT_gas += this->dHsdxi(p, T, i, sol.X_gas(), 1) * dXdt_gas()[i];
     }
 
     scalar dHadT_liq = 0.0;
     autoPtr<scalarList> dXdt_liq(this->dXdXi_liq(p, T, di, sol));
     for (int i = 0; i < this->X_.size(); i++) {
-        dHadT_liq += this->dHsdxi(p, T, i, 0, &(sol.X_liq())) * dXdt_liq()[i];
+        dHadT_liq += this->dHsdxi(p, T, i, sol.X_liq(), 0) * dXdt_liq()[i];
     }
     //Info << ",dygasd=" << this->dHsdxi(p, T, 0, 1, &(sol.X_gas())) << endl;
-    return this->ThermoMixture::Hs(p, T, 1, &(sol.X_gas())) * dygasdT + dHadT_gas * ygas - this->ThermoMixture::Hs(p, T, 0, &(sol.X_liq())) * dygasdT + dHadT_liq * (1.0 - ygas);
+    return this->ThermoMixture::Hs(p, T, sol.X_gas(), 1) * dygasdT + dHadT_gas * ygas - this->ThermoMixture::Hs(p, T, sol.X_liq(), 0) * dygasdT + dHadT_liq * (1.0 - ygas);
 }
 
 //system (T,P,X)
@@ -2626,25 +2629,25 @@ inline Foam::scalar Foam::VLE<ThermoMixture>::dHadP(scalar p, scalar T, solution
     }
     scalar dygasdT = (dvfdT * mw_gas + sol.vaporfra * dmw_gasdT) / mw_mixture;
 
-    scalar dHadT_gas = this->ThermoMixture::dHadP(p, T, 1, &(sol.X_gas()));
+    scalar dHadT_gas = this->ThermoMixture::dHadP(p, T, sol.X_gas(), 1);
     autoPtr<scalarList> dXdt_gas(this->dXdP_gas(p, T, sol));
     for (int i = 0; i < this->X_.size(); i++) {
         dHadT_gas += this->dHadxi(p, T, i, 1, &(sol.X_gas())) * dXdt_gas()[i];
     }
 
-    scalar dHadT_liq = this->ThermoMixture::dHadP(p, T, 0, &(sol.X_liq()));
+    scalar dHadT_liq = this->ThermoMixture::dHadP(p, T, sol.X_liq(), 0);
     autoPtr<scalarList> dXdt_liq(this->dXdP_liq(p, T, sol));
     for (int i = 0; i < this->X_.size(); i++) {
         dHadT_liq += this->dHadxi(p, T, i, 0, &(sol.X_liq())) * dXdt_liq()[i];
     }
 
-    return this->ThermoMixture::Ha(p, T, 1, &(sol.X_gas())) * dygasdT + dHadT_gas * ygas - this->ThermoMixture::Ha(p, T, 0, &(sol.X_liq())) * dygasdT + dHadT_liq * (1.0 - ygas);
+    return this->ThermoMixture::Ha(p, T, sol.X_gas(), 1) * dygasdT + dHadT_gas * ygas - this->ThermoMixture::Ha(p, T, sol.X_liq(), 0) * dygasdT + dHadT_liq * (1.0 - ygas);
 }
 
 //system (T,P,X)
 template <class ThermoMixture>
 inline Foam::scalar Foam::VLE<ThermoMixture>::dHsdP(scalar p, scalar T, solution& sol) const {
-    scalar mw_gas = this->W(&(sol.X_gas()));  //kg/mol
+    scalar mw_gas = this->W(sol.X_gas());  //kg/mol
     scalar dmw_gasdT = this->dWdP_gas(p, T, sol);
     scalar mw_mixture = this->W();
     scalar ygas = sol.vaporfra * mw_gas / mw_mixture;
@@ -2655,19 +2658,19 @@ inline Foam::scalar Foam::VLE<ThermoMixture>::dHsdP(scalar p, scalar T, solution
     }
     scalar dygasdT = (dvfdT * mw_gas + sol.vaporfra * dmw_gasdT) / mw_mixture;
 
-    scalar dHadT_gas = this->ThermoMixture::dHsdP(p, T, 1, &(sol.X_gas()));
+    scalar dHadT_gas = this->ThermoMixture::dHsdP(p, T, sol.X_gas(), 1);
     autoPtr<scalarList> dXdt_gas(this->dXdP_gas(p, T, sol));
     for (int i = 0; i < this->X_.size(); i++) {
-        dHadT_gas += this->dHsdxi(p, T, i, 1, &(sol.X_gas())) * dXdt_gas()[i];
+        dHadT_gas += this->dHsdxi(p, T, i, sol.X_gas(), 1) * dXdt_gas()[i];
     }
 
-    scalar dHadT_liq = this->ThermoMixture::dHsdP(p, T, 0, &(sol.X_liq()));
+    scalar dHadT_liq = this->ThermoMixture::dHsdP(p, T, sol.X_liq(), 0);
     autoPtr<scalarList> dXdt_liq(this->dXdP_liq(p, T, sol));
     for (int i = 0; i < this->X_.size(); i++) {
-        dHadT_liq += this->dHsdxi(p, T, i, 0, &(sol.X_liq())) * dXdt_liq()[i];
+        dHadT_liq += this->dHsdxi(p, T, i, sol.X_liq(), 0) * dXdt_liq()[i];
     }
 
-    return this->ThermoMixture::Hs(p, T, 1, &(sol.X_gas())) * dygasdT + dHadT_gas * ygas - this->ThermoMixture::Hs(p, T, 0, &(sol.X_liq())) * dygasdT + dHadT_liq * (1.0 - ygas);
+    return this->ThermoMixture::Hs(p, T, sol.X_gas(), 1) * dygasdT + dHadT_gas * ygas - this->ThermoMixture::Hs(p, T, sol.X_liq(), 0) * dygasdT + dHadT_liq * (1.0 - ygas);
 }
 
 template <class ThermoMixture>
@@ -2682,17 +2685,17 @@ inline Foam::scalar Foam::VLE<ThermoMixture>::dSdT(scalar p, scalar T, solution&
         dvfdT += dvidt()[i];
     }
     scalar dygasdT = (dvfdT * mw_gas + sol.vaporfra * dmw_gasdT) / mw_mixture;
-    scalar dSdT_gas = this->ThermoMixture::dSdT(p, T, 1, &(sol.X_gas()));
+    scalar dSdT_gas = this->ThermoMixture::dSdT(p, T, sol.X_gas(), 1);
     autoPtr<scalarList> dXdt_gas(this->dXdT_gas(p, T, sol));
     for (int i = 0; i < this->X_.size(); i++) {
         dSdT_gas += this->dSdxi(p, T, i, 1, &(sol.X_gas())) * dXdt_gas()[i];
     }
-    scalar dSdT_liq = this->ThermoMixture::dSdT(p, T, 0, &(sol.X_liq()));
+    scalar dSdT_liq = this->ThermoMixture::dSdT(p, T, sol.X_liq(), 0);
     autoPtr<scalarList> dXdt_liq(this->dXdT_liq(p, T, sol));
     for (int i = 0; i < this->X_.size(); i++) {
         dSdT_liq += this->dSdxi(p, T, i, 0, &(sol.X_liq())) * dXdt_liq()[i];
     }
-    return this->ThermoMixture::S(p, T, 1, &(sol.X_gas())) * dygasdT + dSdT_gas * ygas - this->ThermoMixture::S(p, T, 0, &(sol.X_liq())) * dygasdT + dSdT_liq * (1.0 - ygas);
+    return this->ThermoMixture::S(p, T, sol.X_gas(), 1) * dygasdT + dSdT_gas * ygas - this->ThermoMixture::S(p, T, sol.X_liq(), 0) * dygasdT + dSdT_liq * (1.0 - ygas);
 }
 template <class ThermoMixture>
 inline Foam::scalar Foam::VLE<ThermoMixture>::dSdP(scalar p, scalar T, solution& sol) const {
@@ -2706,17 +2709,17 @@ inline Foam::scalar Foam::VLE<ThermoMixture>::dSdP(scalar p, scalar T, solution&
         dvfdT += dvidt()[i];
     }
     scalar dygasdT = (dvfdT * mw_gas + sol.vaporfra * dmw_gasdT) / mw_mixture;
-    scalar dSdT_gas = this->ThermoMixture::dSdP(p, T, 1, &(sol.X_gas()));
+    scalar dSdT_gas = this->ThermoMixture::dSdP(p, T, sol.X_gas(), 1);
     autoPtr<scalarList> dXdt_gas(this->dXdP_gas(p, T, sol));
     for (int i = 0; i < this->X_.size(); i++) {
         dSdT_gas += this->dSdxi(p, T, i, 1, &(sol.X_gas())) * dXdt_gas()[i];
     }
-    scalar dSdT_liq = this->ThermoMixture::dSdP(p, T, 0, &(sol.X_liq()));
+    scalar dSdT_liq = this->ThermoMixture::dSdP(p, T, sol.X_liq(), 0);
     autoPtr<scalarList> dXdt_liq(this->dXdP_liq(p, T, sol));
     for (int i = 0; i < this->X_.size(); i++) {
         dSdT_liq += this->dSdxi(p, T, i, 0, &(sol.X_liq())) * dXdt_liq()[i];
     }
-    return this->ThermoMixture::S(p, T, 1, &(sol.X_gas())) * dygasdT + dSdT_gas * ygas - this->ThermoMixture::S(p, T, 0, &(sol.X_liq())) * dygasdT + dSdT_liq * (1.0 - ygas);
+    return this->ThermoMixture::S(p, T, sol.X_gas(), 1) * dygasdT + dSdT_gas * ygas - this->ThermoMixture::S(p, T, sol.X_liq(), 0) * dygasdT + dSdT_liq * (1.0 - ygas);
 }
 //system (X,Ha,P)
 template <class ThermoMixture>
@@ -2847,14 +2850,14 @@ inline Foam::autoPtr<Foam::scalarList> Foam::VLE<ThermoMixture>::drhoPdXHP_HsP(s
         for (int j = 0; j < nsp; j++) {
             dvfdXi_value[i] += dvidXi_value[i]()[j];
         }
-        dHsdxi_gas_value[i] = this->dHsdxi(p, T, i, 1, &X_gas);
-        dHsdxi_liq_value[i] = this->dHsdxi(p, T, i, 0, &X_liq);
+        dHsdxi_gas_value[i] = this->dHsdxi(p, T, i, X_gas, 1);
+        dHsdxi_liq_value[i] = this->dHsdxi(p, T, i, X_liq, 0);
     }
 
-    scalar dHsdT_gas = this->ThermoMixture::dHsdT(p, T, 1, &X_gas);
-    scalar dHsdT_liq = this->ThermoMixture::dHsdT(p, T, 0, &X_liq);
-    scalar dHsdP_gas = this->ThermoMixture::dHsdP(p, T, 1, &X_gas);
-    scalar dHsdP_liq = this->ThermoMixture::dHsdP(p, T, 0, &X_liq);
+    scalar dHsdT_gas = this->ThermoMixture::dHsdT(p, T, X_gas, 1);
+    scalar dHsdT_liq = this->ThermoMixture::dHsdT(p, T, X_liq, 0);
+    scalar dHsdP_gas = this->ThermoMixture::dHsdP(p, T, X_gas, 1);
+    scalar dHsdP_liq = this->ThermoMixture::dHsdP(p, T, X_liq, 0);
     scalarList dHsdXi_gas(nsp);
     scalarList dHsdXi_liq(nsp);
 
@@ -2910,7 +2913,7 @@ inline Foam::autoPtr<Foam::scalarList> Foam::VLE<ThermoMixture>::drhoPdXHP_HsP(s
         }
     }
 
-    scalar mw_gas = this->W(&X_gas);  //kg/mol
+    scalar mw_gas = this->W(X_gas);  //kg/mol
     scalar mw_mixture = this->W();
     scalar ygas = vf * mw_gas / mw_mixture;
     //scalar dmw_gasdT = this->dWdT_gas(p, T, sol);
@@ -2936,8 +2939,8 @@ inline Foam::autoPtr<Foam::scalarList> Foam::VLE<ThermoMixture>::drhoPdXHP_HsP(s
         dygasdXi[i] = ((dvfdXi_value[i] + vf) * mw_gas + vf * dmw_gasdXi[i]) / mw_mixture - ygas / mw_mixture * This[i].W() * 1.0e-03;
     }
 
-    scalar Hs_gas = this->ThermoMixture::Hs(p, T, 1, &X_gas);
-    scalar Hs_liq = this->ThermoMixture::Hs(p, T, 0, &X_liq);
+    scalar Hs_gas = this->ThermoMixture::Hs(p, T, X_gas, 1);
+    scalar Hs_liq = this->ThermoMixture::Hs(p, T, X_liq, 0);
     scalar Cp_Hs_value = Hs_gas * dygasdT + dHsdT_gas * ygas - Hs_liq * dygasdT + dHsdT_liq * (1.0 - ygas);
     scalar dHsdP_value = Hs_gas * dygasdP + dHsdP_gas * ygas - Hs_liq * dygasdP + dHsdP_liq * (1.0 - ygas);
     scalarList dHsdXi_value(nsp);
@@ -2948,17 +2951,17 @@ inline Foam::autoPtr<Foam::scalarList> Foam::VLE<ThermoMixture>::drhoPdXHP_HsP(s
     //Info << "aa=" << dHsdxi_gas_value[0] << "," << dHsdXi(p, T, 0, sol) << endl;
 
     scalar ZMixture = Z(p, T, sol);
-    scalar ZGas = this->ThermoMixture::Z(p, T, 1, &X_gas);
-    scalar ZLiq = this->ThermoMixture::Z(p, T, 0, &X_liq);
-    scalar dZgasdT = this->ThermoMixture::dZdT(p, T, 1, &X_gas);
-    scalar dZliqdT = this->ThermoMixture::dZdT(p, T, 0, &X_liq);
-    scalar dZgasdP = this->ThermoMixture::dZdP(p, T, 1, &X_gas);
-    scalar dZliqdP = this->ThermoMixture::dZdP(p, T, 0, &X_liq);
+    scalar ZGas = this->ThermoMixture::Z(p, T, X_gas, 1);
+    scalar ZLiq = this->ThermoMixture::Z(p, T, X_liq, 0);
+    scalar dZgasdT = this->ThermoMixture::dZdT(p, T, X_gas, 1);
+    scalar dZliqdT = this->ThermoMixture::dZdT(p, T, X_liq, 0);
+    scalar dZgasdP = this->ThermoMixture::dZdP(p, T, X_gas, 1);
+    scalar dZliqdP = this->ThermoMixture::dZdP(p, T, X_liq, 0);
     scalarList dZgasdXi(nsp), dZliqdXi(nsp);
     scalarList dZdxi_gas_value(nsp), dZdxi_liq_value(nsp);
     for (int i = 0; i < nsp; i++) {
-        dZdxi_gas_value[i] = this->ThermoMixture::dZdxi(p, T, i, 1, &X_gas);
-        dZdxi_liq_value[i] = this->ThermoMixture::dZdxi(p, T, i, 0, &X_liq);
+        dZdxi_gas_value[i] = this->ThermoMixture::dZdxi(p, T, i, X_gas, 1);
+        dZdxi_liq_value[i] = this->ThermoMixture::dZdxi(p, T, i, X_liq, 0);
     }
     for (int i = 0; i < nsp; i++) {
         dZgasdT += dZdxi_gas_value[i] * dXdT_gas_value[i];
@@ -3051,14 +3054,14 @@ inline Foam::autoPtr<scalarRectangularMatrix> Foam::VLE<ThermoMixture>::dTrhoPdX
         for (int j = 0; j < nsp; j++) {
             dvfdXi_value[i] += dvidXi_value[i]()[j];
         }
-        dHsdxi_gas_value[i] = this->dHsdxi(p, T, i, 1, &X_gas);
-        dHsdxi_liq_value[i] = this->dHsdxi(p, T, i, 0, &X_liq);
+        dHsdxi_gas_value[i] = this->dHsdxi(p, T, i, X_gas, 1);
+        dHsdxi_liq_value[i] = this->dHsdxi(p, T, i, X_liq, 0);
     }
 
-    scalar dHsdT_gas = this->ThermoMixture::dHsdT(p, T, 1, &X_gas);
-    scalar dHsdT_liq = this->ThermoMixture::dHsdT(p, T, 0, &X_liq);
-    scalar dHsdP_gas = this->ThermoMixture::dHsdP(p, T, 1, &X_gas);
-    scalar dHsdP_liq = this->ThermoMixture::dHsdP(p, T, 0, &X_liq);
+    scalar dHsdT_gas = this->ThermoMixture::dHsdT(p, T, X_gas, 1);
+    scalar dHsdT_liq = this->ThermoMixture::dHsdT(p, T, X_liq, 0);
+    scalar dHsdP_gas = this->ThermoMixture::dHsdP(p, T, X_gas, 1);
+    scalar dHsdP_liq = this->ThermoMixture::dHsdP(p, T, X_liq, 0);
     scalarList dHsdXi_gas(nsp);
     scalarList dHsdXi_liq(nsp);
 
@@ -3114,7 +3117,7 @@ inline Foam::autoPtr<scalarRectangularMatrix> Foam::VLE<ThermoMixture>::dTrhoPdX
         }
     }
 
-    scalar mw_gas = this->W(&X_gas);  //kg/mol
+    scalar mw_gas = this->W(X_gas);  //kg/mol
     scalar mw_mixture = this->W();
     scalar ygas = vf * mw_gas / mw_mixture;
     //scalar dmw_gasdT = this->dWdT_gas(p, T, sol);
@@ -3140,8 +3143,8 @@ inline Foam::autoPtr<scalarRectangularMatrix> Foam::VLE<ThermoMixture>::dTrhoPdX
         dygasdXi[i] = ((dvfdXi_value[i] + vf) * mw_gas + vf * dmw_gasdXi[i]) / mw_mixture - ygas / mw_mixture * This[i].W() * 1.0e-03;
     }
 
-    scalar Hs_gas = this->ThermoMixture::Hs(p, T, 1, &X_gas);
-    scalar Hs_liq = this->ThermoMixture::Hs(p, T, 0, &X_liq);
+    scalar Hs_gas = this->ThermoMixture::Hs(p, T, X_gas, 1);
+    scalar Hs_liq = this->ThermoMixture::Hs(p, T, X_liq, 0);
     scalar Cp_Hs_value = Hs_gas * dygasdT + dHsdT_gas * ygas - Hs_liq * dygasdT + dHsdT_liq * (1.0 - ygas);
     scalar dHsdP_value = Hs_gas * dygasdP + dHsdP_gas * ygas - Hs_liq * dygasdP + dHsdP_liq * (1.0 - ygas);
     scalarList dHsdXi_value(nsp);
@@ -3152,17 +3155,17 @@ inline Foam::autoPtr<scalarRectangularMatrix> Foam::VLE<ThermoMixture>::dTrhoPdX
     //Info << "aa=" << dHsdxi_gas_value[0] << "," << dHsdXi(p, T, 0, sol) << endl;
 
     scalar ZMixture = Z(p, T, sol);
-    scalar ZGas = this->ThermoMixture::Z(p, T, 1, &X_gas);
-    scalar ZLiq = this->ThermoMixture::Z(p, T, 0, &X_liq);
-    scalar dZgasdT = this->ThermoMixture::dZdT(p, T, 1, &X_gas);
-    scalar dZliqdT = this->ThermoMixture::dZdT(p, T, 0, &X_liq);
-    scalar dZgasdP = this->ThermoMixture::dZdP(p, T, 1, &X_gas);
-    scalar dZliqdP = this->ThermoMixture::dZdP(p, T, 0, &X_liq);
+    scalar ZGas = this->ThermoMixture::Z(p, T, X_gas, 1);
+    scalar ZLiq = this->ThermoMixture::Z(p, T, X_liq, 0);
+    scalar dZgasdT = this->ThermoMixture::dZdT(p, T, X_gas, 1);
+    scalar dZliqdT = this->ThermoMixture::dZdT(p, T, X_liq, 0);
+    scalar dZgasdP = this->ThermoMixture::dZdP(p, T, X_gas, 1);
+    scalar dZliqdP = this->ThermoMixture::dZdP(p, T, X_liq, 0);
     scalarList dZgasdXi(nsp), dZliqdXi(nsp);
     scalarList dZdxi_gas_value(nsp), dZdxi_liq_value(nsp);
     for (int i = 0; i < nsp; i++) {
-        dZdxi_gas_value[i] = this->ThermoMixture::dZdxi(p, T, i, 1, &X_gas);
-        dZdxi_liq_value[i] = this->ThermoMixture::dZdxi(p, T, i, 0, &X_liq);
+        dZdxi_gas_value[i] = this->ThermoMixture::dZdxi(p, T, i, X_gas, 1);
+        dZdxi_liq_value[i] = this->ThermoMixture::dZdxi(p, T, i, X_liq, 0);
     }
     for (int i = 0; i < nsp; i++) {
         dZgasdT += dZdxi_gas_value[i] * dXdT_gas_value[i];
@@ -3257,14 +3260,14 @@ inline Foam::autoPtr<scalarRectangularMatrix> Foam::VLE<ThermoMixture>::dTrhoPvf
         for (int j = 0; j < nsp; j++) {
             dvfdXi_value[i] += dvidXi_value[i]()[j];
         }
-        dHsdxi_gas_value[i] = this->dHsdxi(p, T, i, 1, &X_gas);
-        dHsdxi_liq_value[i] = this->dHsdxi(p, T, i, 0, &X_liq);
+        dHsdxi_gas_value[i] = this->dHsdxi(p, T, i, X_gas, 1);
+        dHsdxi_liq_value[i] = this->dHsdxi(p, T, i, X_liq, 0);
     }
 
-    scalar dHsdT_gas = this->ThermoMixture::dHsdT(p, T, 1, &X_gas);
-    scalar dHsdT_liq = this->ThermoMixture::dHsdT(p, T, 0, &X_liq);
-    scalar dHsdP_gas = this->ThermoMixture::dHsdP(p, T, 1, &X_gas);
-    scalar dHsdP_liq = this->ThermoMixture::dHsdP(p, T, 0, &X_liq);
+    scalar dHsdT_gas = this->ThermoMixture::dHsdT(p, T, X_gas, 1);
+    scalar dHsdT_liq = this->ThermoMixture::dHsdT(p, T, X_liq, 0);
+    scalar dHsdP_gas = this->ThermoMixture::dHsdP(p, T, X_gas, 1);
+    scalar dHsdP_liq = this->ThermoMixture::dHsdP(p, T, X_liq, 0);
     scalarList dHsdXi_gas(nsp);
     scalarList dHsdXi_liq(nsp);
 
@@ -3320,7 +3323,7 @@ inline Foam::autoPtr<scalarRectangularMatrix> Foam::VLE<ThermoMixture>::dTrhoPvf
         }
     }
 
-    scalar mw_gas = this->W(&X_gas);  //kg/mol
+    scalar mw_gas = this->W(X_gas);  //kg/mol
     scalar mw_mixture = this->W();
     scalar ygas = vf * mw_gas / mw_mixture;
     //scalar dmw_gasdT = this->dWdT_gas(p, T, sol);
@@ -3346,8 +3349,8 @@ inline Foam::autoPtr<scalarRectangularMatrix> Foam::VLE<ThermoMixture>::dTrhoPvf
         dygasdXi[i] = ((dvfdXi_value[i] + vf) * mw_gas + vf * dmw_gasdXi[i]) / mw_mixture - ygas / mw_mixture * This[i].W() * 1.0e-03;
     }
 
-    scalar Hs_gas = this->ThermoMixture::Hs(p, T, 1, &X_gas);
-    scalar Hs_liq = this->ThermoMixture::Hs(p, T, 0, &X_liq);
+    scalar Hs_gas = this->ThermoMixture::Hs(p, T, X_gas, 1);
+    scalar Hs_liq = this->ThermoMixture::Hs(p, T, X_liq, 0);
     scalar Cp_Hs_value = Hs_gas * dygasdT + dHsdT_gas * ygas - Hs_liq * dygasdT + dHsdT_liq * (1.0 - ygas);
     scalar dHsdP_value = Hs_gas * dygasdP + dHsdP_gas * ygas - Hs_liq * dygasdP + dHsdP_liq * (1.0 - ygas);
     scalarList dHsdXi_value(nsp);
@@ -3358,17 +3361,17 @@ inline Foam::autoPtr<scalarRectangularMatrix> Foam::VLE<ThermoMixture>::dTrhoPvf
     //Info << "aa=" << dHsdxi_gas_value[0] << "," << dHsdXi(p, T, 0, sol) << endl;
 
     scalar ZMixture = Z(p, T, sol);
-    scalar ZGas = this->ThermoMixture::Z(p, T, 1, &X_gas);
-    scalar ZLiq = this->ThermoMixture::Z(p, T, 0, &X_liq);
-    scalar dZgasdT = this->ThermoMixture::dZdT(p, T, 1, &X_gas);
-    scalar dZliqdT = this->ThermoMixture::dZdT(p, T, 0, &X_liq);
-    scalar dZgasdP = this->ThermoMixture::dZdP(p, T, 1, &X_gas);
-    scalar dZliqdP = this->ThermoMixture::dZdP(p, T, 0, &X_liq);
+    scalar ZGas = this->ThermoMixture::Z(p, T, X_gas, 1);
+    scalar ZLiq = this->ThermoMixture::Z(p, T, X_liq, 0);
+    scalar dZgasdT = this->ThermoMixture::dZdT(p, T, X_gas, 1);
+    scalar dZliqdT = this->ThermoMixture::dZdT(p, T, X_liq, 0);
+    scalar dZgasdP = this->ThermoMixture::dZdP(p, T, X_gas, 1);
+    scalar dZliqdP = this->ThermoMixture::dZdP(p, T, X_liq, 0);
     scalarList dZgasdXi(nsp), dZliqdXi(nsp);
     scalarList dZdxi_gas_value(nsp), dZdxi_liq_value(nsp);
     for (int i = 0; i < nsp; i++) {
-        dZdxi_gas_value[i] = this->ThermoMixture::dZdxi(p, T, i, 1, &X_gas);
-        dZdxi_liq_value[i] = this->ThermoMixture::dZdxi(p, T, i, 0, &X_liq);
+        dZdxi_gas_value[i] = this->ThermoMixture::dZdxi(p, T, i, X_gas, 1);
+        dZdxi_liq_value[i] = this->ThermoMixture::dZdxi(p, T, i, X_liq, 0);
     }
     for (int i = 0; i < nsp; i++) {
         dZgasdT += dZdxi_gas_value[i] * dXdT_gas_value[i];
@@ -3466,14 +3469,14 @@ inline Foam::autoPtr<scalarRectangularMatrix> Foam::VLE<ThermoMixture>::dTrhoPvf
         for (int j = 0; j < nsp; j++) {
             dvfdXi_value[i] += dvidXi_value[i]()[j];
         }
-        dHsdxi_gas_value[i] = this->dHsdxi(p, T, i, 1, &X_gas);
-        dHsdxi_liq_value[i] = this->dHsdxi(p, T, i, 0, &X_liq);
+        dHsdxi_gas_value[i] = this->dHsdxi(p, T, i, X_gas, 1);
+        dHsdxi_liq_value[i] = this->dHsdxi(p, T, i, X_liq, 0);
     }
 
-    scalar dHsdT_gas = this->ThermoMixture::dHsdT(p, T, 1, &X_gas);
-    scalar dHsdT_liq = this->ThermoMixture::dHsdT(p, T, 0, &X_liq);
-    scalar dHsdP_gas = this->ThermoMixture::dHsdP(p, T, 1, &X_gas);
-    scalar dHsdP_liq = this->ThermoMixture::dHsdP(p, T, 0, &X_liq);
+    scalar dHsdT_gas = this->ThermoMixture::dHsdT(p, T, X_gas, 1);
+    scalar dHsdT_liq = this->ThermoMixture::dHsdT(p, T, X_liq, 0);
+    scalar dHsdP_gas = this->ThermoMixture::dHsdP(p, T, X_gas, 1);
+    scalar dHsdP_liq = this->ThermoMixture::dHsdP(p, T, X_liq, 0);
     scalarList dHsdXi_gas(nsp);
     scalarList dHsdXi_liq(nsp);
 
@@ -3582,7 +3585,7 @@ inline Foam::autoPtr<scalarRectangularMatrix> Foam::VLE<ThermoMixture>::dTrhoPvf
         }
     }
 
-    scalar mw_gas = this->W(&X_gas);  //kg/mol
+    scalar mw_gas = this->W(X_gas);  //kg/mol
     scalar mw_mixture = this->W();
     scalar ygas = vf * mw_gas / mw_mixture;
     //scalar dmw_gasdT = this->dWdT_gas(p, T, sol);
@@ -3608,8 +3611,8 @@ inline Foam::autoPtr<scalarRectangularMatrix> Foam::VLE<ThermoMixture>::dTrhoPvf
         dygasdXi[i] = ((dvfdXi_value[i] + vf) * mw_gas + vf * dmw_gasdXi[i]) / mw_mixture - ygas / mw_mixture * This[i].W() * 1.0e-03;
     }
 
-    scalar Hs_gas = this->ThermoMixture::Hs(p, T, 1, &X_gas);
-    scalar Hs_liq = this->ThermoMixture::Hs(p, T, 0, &X_liq);
+    scalar Hs_gas = this->ThermoMixture::Hs(p, T, X_gas, 1);
+    scalar Hs_liq = this->ThermoMixture::Hs(p, T, X_liq, 0);
     scalar Cp_Hs_value = Hs_gas * dygasdT + dHsdT_gas * ygas - Hs_liq * dygasdT + dHsdT_liq * (1.0 - ygas);
     scalar dHsdP_value = Hs_gas * dygasdP + dHsdP_gas * ygas - Hs_liq * dygasdP + dHsdP_liq * (1.0 - ygas);
     scalarList dHsdXi_value(nsp);
@@ -3620,17 +3623,17 @@ inline Foam::autoPtr<scalarRectangularMatrix> Foam::VLE<ThermoMixture>::dTrhoPvf
     //Info << "aa=" << dHsdxi_gas_value[0] << "," << dHsdXi(p, T, 0, sol) << endl;
 
     scalar ZMixture = Z(p, T, sol);
-    scalar ZGas = this->ThermoMixture::Z(p, T, 1, &X_gas);
-    scalar ZLiq = this->ThermoMixture::Z(p, T, 0, &X_liq);
-    scalar dZgasdT = this->ThermoMixture::dZdT(p, T, 1, &X_gas);
-    scalar dZliqdT = this->ThermoMixture::dZdT(p, T, 0, &X_liq);
-    scalar dZgasdP = this->ThermoMixture::dZdP(p, T, 1, &X_gas);
-    scalar dZliqdP = this->ThermoMixture::dZdP(p, T, 0, &X_liq);
+    scalar ZGas = this->ThermoMixture::Z(p, T, X_gas, 1);
+    scalar ZLiq = this->ThermoMixture::Z(p, T, X_liq, 0);
+    scalar dZgasdT = this->ThermoMixture::dZdT(p, T, X_gas, 1);
+    scalar dZliqdT = this->ThermoMixture::dZdT(p, T, X_liq, 0);
+    scalar dZgasdP = this->ThermoMixture::dZdP(p, T, X_gas, 1);
+    scalar dZliqdP = this->ThermoMixture::dZdP(p, T, X_liq, 0);
     scalarList dZgasdXi(nsp), dZliqdXi(nsp);
     scalarList dZdxi_gas_value(nsp), dZdxi_liq_value(nsp);
     for (int i = 0; i < nsp; i++) {
-        dZdxi_gas_value[i] = this->ThermoMixture::dZdxi(p, T, i, 1, &X_gas);
-        dZdxi_liq_value[i] = this->ThermoMixture::dZdxi(p, T, i, 0, &X_liq);
+        dZdxi_gas_value[i] = this->ThermoMixture::dZdxi(p, T, i, X_gas, 1);
+        dZdxi_liq_value[i] = this->ThermoMixture::dZdxi(p, T, i, X_liq, 0);
     }
     for (int i = 0; i < nsp; i++) {
         dZgasdT += dZdxi_gas_value[i] * dXdT_gas_value[i];
@@ -3731,14 +3734,14 @@ inline Foam::autoPtr<scalarRectangularMatrix> Foam::VLE<ThermoMixture>::dTrhoPvf
         for (int j = 0; j < nsp; j++) {
             dvfdXi_value[i] += dvidXi_value[i]()[j];
         }
-        dHsdxi_gas_value[i] = this->dHsdxi(p, T, i, 1, &X_gas);
-        dHsdxi_liq_value[i] = this->dHsdxi(p, T, i, 0, &X_liq);
+        dHsdxi_gas_value[i] = this->dHsdxi(p, T, i, X_gas, 1);
+        dHsdxi_liq_value[i] = this->dHsdxi(p, T, i, X_liq, 0);
     }
 
-    scalar dHsdT_gas = this->ThermoMixture::dHsdT(p, T, 1, &X_gas);
-    scalar dHsdT_liq = this->ThermoMixture::dHsdT(p, T, 0, &X_liq);
-    scalar dHsdP_gas = this->ThermoMixture::dHsdP(p, T, 1, &X_gas);
-    scalar dHsdP_liq = this->ThermoMixture::dHsdP(p, T, 0, &X_liq);
+    scalar dHsdT_gas = this->ThermoMixture::dHsdT(p, T, X_gas, 1);
+    scalar dHsdT_liq = this->ThermoMixture::dHsdT(p, T, X_liq, 0);
+    scalar dHsdP_gas = this->ThermoMixture::dHsdP(p, T, X_gas, 1);
+    scalar dHsdP_liq = this->ThermoMixture::dHsdP(p, T, X_liq, 0);
     scalarList dHsdXi_gas(nsp);
     scalarList dHsdXi_liq(nsp);
 
@@ -3836,7 +3839,7 @@ inline Foam::autoPtr<scalarRectangularMatrix> Foam::VLE<ThermoMixture>::dTrhoPvf
         }
     }
 
-    scalar mw_gas = this->W(&X_gas);  //kg/mol
+    scalar mw_gas = this->W(X_gas);  //kg/mol
     scalar mw_mixture = this->W();
     scalar ygas = vf * mw_gas / mw_mixture;
     scalar dmw_gasdT = 0;
@@ -3859,8 +3862,8 @@ inline Foam::autoPtr<scalarRectangularMatrix> Foam::VLE<ThermoMixture>::dTrhoPvf
         dygasdXi[i] = ((dvfdXi_value[i] + vf) * mw_gas + vf * dmw_gasdXi[i]) / mw_mixture - ygas / mw_mixture * This[i].W() * 1.0e-03;
     }
 
-    scalar Hs_gas = this->ThermoMixture::Hs(p, T, 1, &X_gas);
-    scalar Hs_liq = this->ThermoMixture::Hs(p, T, 0, &X_liq);
+    scalar Hs_gas = this->ThermoMixture::Hs(p, T, X_gas, 1);
+    scalar Hs_liq = this->ThermoMixture::Hs(p, T, X_liq, 0);
     scalar Cp_Hs_value = Hs_gas * dygasdT + dHsdT_gas * ygas - Hs_liq * dygasdT + dHsdT_liq * (1.0 - ygas);
     scalar dHsdP_value = Hs_gas * dygasdP + dHsdP_gas * ygas - Hs_liq * dygasdP + dHsdP_liq * (1.0 - ygas);
     scalarList dHsdXi_value(nsp);
@@ -3869,17 +3872,17 @@ inline Foam::autoPtr<scalarRectangularMatrix> Foam::VLE<ThermoMixture>::dTrhoPvf
     }
 
     scalar ZMixture = Z(p, T, sol);
-    scalar ZGas = this->ThermoMixture::Z(p, T, 1, &X_gas);
-    scalar ZLiq = this->ThermoMixture::Z(p, T, 0, &X_liq);
-    scalar dZgasdT = this->ThermoMixture::dZdT(p, T, 1, &X_gas);
-    scalar dZliqdT = this->ThermoMixture::dZdT(p, T, 0, &X_liq);
-    scalar dZgasdP = this->ThermoMixture::dZdP(p, T, 1, &X_gas);
-    scalar dZliqdP = this->ThermoMixture::dZdP(p, T, 0, &X_liq);
+    scalar ZGas = this->ThermoMixture::Z(p, T, X_gas, 1);
+    scalar ZLiq = this->ThermoMixture::Z(p, T, X_liq, 0);
+    scalar dZgasdT = this->ThermoMixture::dZdT(p, T, X_gas, 1);
+    scalar dZliqdT = this->ThermoMixture::dZdT(p, T, X_liq, 0);
+    scalar dZgasdP = this->ThermoMixture::dZdP(p, T, X_gas, 1);
+    scalar dZliqdP = this->ThermoMixture::dZdP(p, T, X_liq, 0);
     scalarList dZgasdXi(nsp), dZliqdXi(nsp);
     scalarList dZdxi_gas_value(nsp), dZdxi_liq_value(nsp);
     for (int i = 0; i < nsp; i++) {
-        dZdxi_gas_value[i] = this->ThermoMixture::dZdxi(p, T, i, 1, &X_gas);
-        dZdxi_liq_value[i] = this->ThermoMixture::dZdxi(p, T, i, 0, &X_liq);
+        dZdxi_gas_value[i] = this->ThermoMixture::dZdxi(p, T, i, X_gas, 1);
+        dZdxi_liq_value[i] = this->ThermoMixture::dZdxi(p, T, i, X_liq, 0);
     }
     for (int i = 0; i < nsp; i++) {
         dZgasdT += dZdxi_gas_value[i] * dXdT_gas_value[i];
@@ -3974,14 +3977,14 @@ inline Foam::autoPtr<scalarRectangularMatrix> Foam::VLE<ThermoMixture>::dTHvfcdX
         for (int j = 0; j < nsp; j++) {
             dvfdXi_value[i] += dvidXi_value[i]()[j];
         }
-        dHsdxi_gas_value[i] = this->dHsdxi(p, T, i, 1, &X_gas);
-        dHsdxi_liq_value[i] = this->dHsdxi(p, T, i, 0, &X_liq);
+        dHsdxi_gas_value[i] = this->dHsdxi(p, T, i, X_gas, 1);
+        dHsdxi_liq_value[i] = this->dHsdxi(p, T, i, X_liq, 0);
     }
 
-    scalar dHsdT_gas = this->ThermoMixture::dHsdT(p, T, 1, &X_gas);
-    scalar dHsdT_liq = this->ThermoMixture::dHsdT(p, T, 0, &X_liq);
-    scalar dHsdP_gas = this->ThermoMixture::dHsdP(p, T, 1, &X_gas);
-    scalar dHsdP_liq = this->ThermoMixture::dHsdP(p, T, 0, &X_liq);
+    scalar dHsdT_gas = this->ThermoMixture::dHsdT(p, T, X_gas, 1);
+    scalar dHsdT_liq = this->ThermoMixture::dHsdT(p, T, X_liq, 0);
+    scalar dHsdP_gas = this->ThermoMixture::dHsdP(p, T, X_gas, 1);
+    scalar dHsdP_liq = this->ThermoMixture::dHsdP(p, T, X_liq, 0);
     scalarList dHsdXi_gas(nsp);
     scalarList dHsdXi_liq(nsp);
 
@@ -4079,7 +4082,7 @@ inline Foam::autoPtr<scalarRectangularMatrix> Foam::VLE<ThermoMixture>::dTHvfcdX
         }
     }
 
-    scalar mw_gas = this->W(&X_gas);  //kg/mol
+    scalar mw_gas = this->W(X_gas);  //kg/mol
     scalar mw_mixture = this->W();
     scalar ygas = vf * mw_gas / mw_mixture;
     scalar dmw_gasdT = 0;
@@ -4102,8 +4105,8 @@ inline Foam::autoPtr<scalarRectangularMatrix> Foam::VLE<ThermoMixture>::dTHvfcdX
         dygasdXi[i] = ((dvfdXi_value[i] + vf) * mw_gas + vf * dmw_gasdXi[i]) / mw_mixture - ygas / mw_mixture * This[i].W() * 1.0e-03;
     }
 
-    scalar Hs_gas = this->ThermoMixture::Hs(p, T, 1, &X_gas);
-    scalar Hs_liq = this->ThermoMixture::Hs(p, T, 0, &X_liq);
+    scalar Hs_gas = this->ThermoMixture::Hs(p, T, X_gas, 1);
+    scalar Hs_liq = this->ThermoMixture::Hs(p, T, X_liq, 0);
     scalar Cp_Hs_value = Hs_gas * dygasdT + dHsdT_gas * ygas - Hs_liq * dygasdT + dHsdT_liq * (1.0 - ygas);
     scalar dHsdP_value = Hs_gas * dygasdP + dHsdP_gas * ygas - Hs_liq * dygasdP + dHsdP_liq * (1.0 - ygas);
     scalarList dHsdXi_value(nsp);
@@ -4112,17 +4115,17 @@ inline Foam::autoPtr<scalarRectangularMatrix> Foam::VLE<ThermoMixture>::dTHvfcdX
     }
 
     scalar ZMixture = Z(p, T, sol);
-    scalar ZGas = this->ThermoMixture::Z(p, T, 1, &X_gas);
-    scalar ZLiq = this->ThermoMixture::Z(p, T, 0, &X_liq);
-    scalar dZgasdT = this->ThermoMixture::dZdT(p, T, 1, &X_gas);
-    scalar dZliqdT = this->ThermoMixture::dZdT(p, T, 0, &X_liq);
-    scalar dZgasdP = this->ThermoMixture::dZdP(p, T, 1, &X_gas);
-    scalar dZliqdP = this->ThermoMixture::dZdP(p, T, 0, &X_liq);
+    scalar ZGas = this->ThermoMixture::Z(p, T, X_gas, 1);
+    scalar ZLiq = this->ThermoMixture::Z(p, T, X_liq, 0);
+    scalar dZgasdT = this->ThermoMixture::dZdT(p, T, X_gas, 1);
+    scalar dZliqdT = this->ThermoMixture::dZdT(p, T, X_liq, 0);
+    scalar dZgasdP = this->ThermoMixture::dZdP(p, T, X_gas, 1);
+    scalar dZliqdP = this->ThermoMixture::dZdP(p, T, X_liq, 0);
     scalarList dZgasdXi(nsp), dZliqdXi(nsp);
     scalarList dZdxi_gas_value(nsp), dZdxi_liq_value(nsp);
     for (int i = 0; i < nsp; i++) {
-        dZdxi_gas_value[i] = this->ThermoMixture::dZdxi(p, T, i, 1, &X_gas);
-        dZdxi_liq_value[i] = this->ThermoMixture::dZdxi(p, T, i, 0, &X_liq);
+        dZdxi_gas_value[i] = this->ThermoMixture::dZdxi(p, T, i, X_gas, 1);
+        dZdxi_liq_value[i] = this->ThermoMixture::dZdxi(p, T, i, X_liq, 0);
     }
     for (int i = 0; i < nsp; i++) {
         dZgasdT += dZdxi_gas_value[i] * dXdT_gas_value[i];
@@ -4240,13 +4243,13 @@ inline Foam::autoPtr<scalarRectangularMatrix> Foam::VLE<ThermoMixture>::dTPvfdXE
         for (int j = 0; j < nsp; j++) {
             dvfdXi_value[i] += dvidXi_value[i]()[j];
         }
-        dHsdxi_gas_value[i] = this->dHsdxi(p, T, i, 1, &X_gas);
-        dHsdxi_liq_value[i] = this->dHsdxi(p, T, i, 0, &X_liq);
+        dHsdxi_gas_value[i] = this->dHsdxi(p, T, i, X_gas, 1);
+        dHsdxi_liq_value[i] = this->dHsdxi(p, T, i, X_liq, 0);
     }
-    scalar dHsdT_gas = this->ThermoMixture::dHsdT(p, T, 1, &X_gas);
-    scalar dHsdT_liq = this->ThermoMixture::dHsdT(p, T, 0, &X_liq);
-    scalar dHsdP_gas = this->ThermoMixture::dHsdP(p, T, 1, &X_gas);
-    scalar dHsdP_liq = this->ThermoMixture::dHsdP(p, T, 0, &X_liq);
+    scalar dHsdT_gas = this->ThermoMixture::dHsdT(p, T, X_gas, 1);
+    scalar dHsdT_liq = this->ThermoMixture::dHsdT(p, T, X_liq, 0);
+    scalar dHsdP_gas = this->ThermoMixture::dHsdP(p, T, X_gas, 1);
+    scalar dHsdP_liq = this->ThermoMixture::dHsdP(p, T, X_liq, 0);
 
     scalarList dHsdXi_gas(nsp);
     scalarList dHsdXi_liq(nsp);
@@ -4302,7 +4305,7 @@ inline Foam::autoPtr<scalarRectangularMatrix> Foam::VLE<ThermoMixture>::dTPvfdXE
         }
     }
 
-    scalar mw_gas = this->W(&X_gas);  //kg/mol
+    scalar mw_gas = this->W(X_gas);  //kg/mol
     scalar mw_mixture = this->W();
     scalar ygas = vf * mw_gas / mw_mixture;
     //scalar dmw_gasdT = this->dWdT_gas(p, T, sol);
@@ -4328,8 +4331,8 @@ inline Foam::autoPtr<scalarRectangularMatrix> Foam::VLE<ThermoMixture>::dTPvfdXE
         dygasdXi[i] = ((dvfdXi_value[i] + vf) * mw_gas + vf * dmw_gasdXi[i]) / mw_mixture - ygas / mw_mixture * This[i].W() * 1.0e-03;
     }
 
-    scalar Hs_gas = this->ThermoMixture::Hs(p, T, 1, &X_gas);
-    scalar Hs_liq = this->ThermoMixture::Hs(p, T, 0, &X_liq);
+    scalar Hs_gas = this->ThermoMixture::Hs(p, T, X_gas, 1);
+    scalar Hs_liq = this->ThermoMixture::Hs(p, T, X_liq, 0);
     scalar Cp_Hs_value = Hs_gas * dygasdT + dHsdT_gas * ygas - Hs_liq * dygasdT + dHsdT_liq * (1.0 - ygas);
     scalar dHsdP_value = Hs_gas * dygasdP + dHsdP_gas * ygas - Hs_liq * dygasdP + dHsdP_liq * (1.0 - ygas);
     scalarList dHsdXi_value(nsp);
@@ -4338,17 +4341,17 @@ inline Foam::autoPtr<scalarRectangularMatrix> Foam::VLE<ThermoMixture>::dTPvfdXE
     }
 
     scalar ZMixture = Z(p, T, sol);
-    scalar ZGas = this->ThermoMixture::Z(p, T, 1, &X_gas);
-    scalar ZLiq = this->ThermoMixture::Z(p, T, 0, &X_liq);
-    scalar dZgasdT = this->ThermoMixture::dZdT(p, T, 1, &X_gas);
-    scalar dZliqdT = this->ThermoMixture::dZdT(p, T, 0, &X_liq);
-    scalar dZgasdP = this->ThermoMixture::dZdP(p, T, 1, &X_gas);
-    scalar dZliqdP = this->ThermoMixture::dZdP(p, T, 0, &X_liq);
+    scalar ZGas = this->ThermoMixture::Z(p, T, X_gas, 1);
+    scalar ZLiq = this->ThermoMixture::Z(p, T, X_liq, 0);
+    scalar dZgasdT = this->ThermoMixture::dZdT(p, T, X_gas, 1);
+    scalar dZliqdT = this->ThermoMixture::dZdT(p, T, X_liq, 0);
+    scalar dZgasdP = this->ThermoMixture::dZdP(p, T, X_gas, 1);
+    scalar dZliqdP = this->ThermoMixture::dZdP(p, T, X_liq, 0);
     scalarList dZgasdXi(nsp), dZliqdXi(nsp);
     scalarList dZdxi_gas_value(nsp), dZdxi_liq_value(nsp);
     for (int i = 0; i < nsp; i++) {
-        dZdxi_gas_value[i] = this->ThermoMixture::dZdxi(p, T, i, 1, &X_gas);
-        dZdxi_liq_value[i] = this->ThermoMixture::dZdxi(p, T, i, 0, &X_liq);
+        dZdxi_gas_value[i] = this->ThermoMixture::dZdxi(p, T, i, X_gas, 1);
+        dZdxi_liq_value[i] = this->ThermoMixture::dZdxi(p, T, i, X_liq, 0);
     }
     for (int i = 0; i < nsp; i++) {
         dZgasdT += dZdxi_gas_value[i] * dXdT_gas_value[i];
@@ -4448,13 +4451,13 @@ inline Foam::autoPtr<scalarRectangularMatrix> Foam::VLE<ThermoMixture>::dTPvfdXE
         for (int j = 0; j < nsp; j++) {
             dvfdXi_value[i] += dvidXi_value[i]()[j];
         }
-        dHsdxi_gas_value[i] = this->dHsdxi(p, T, i, 1, &X_gas);
-        dHsdxi_liq_value[i] = this->dHsdxi(p, T, i, 0, &X_liq);
+        dHsdxi_gas_value[i] = this->dHsdxi(p, T, i, X_gas, 1);
+        dHsdxi_liq_value[i] = this->dHsdxi(p, T, i, X_liq, 0);
     }
-    scalar dHsdT_gas = this->ThermoMixture::dHsdT(p, T, 1, &X_gas);
-    scalar dHsdT_liq = this->ThermoMixture::dHsdT(p, T, 0, &X_liq);
-    scalar dHsdP_gas = this->ThermoMixture::dHsdP(p, T, 1, &X_gas);
-    scalar dHsdP_liq = this->ThermoMixture::dHsdP(p, T, 0, &X_liq);
+    scalar dHsdT_gas = this->ThermoMixture::dHsdT(p, T, X_gas, 1);
+    scalar dHsdT_liq = this->ThermoMixture::dHsdT(p, T, X_liq, 0);
+    scalar dHsdP_gas = this->ThermoMixture::dHsdP(p, T, X_gas, 1);
+    scalar dHsdP_liq = this->ThermoMixture::dHsdP(p, T, X_liq, 0);
 
     scalarList dHsdXi_gas(nsp);
     scalarList dHsdXi_liq(nsp);
@@ -4563,7 +4566,7 @@ inline Foam::autoPtr<scalarRectangularMatrix> Foam::VLE<ThermoMixture>::dTPvfdXE
         }
     }
 
-    scalar mw_gas = this->W(&X_gas);  //kg/mol
+    scalar mw_gas = this->W(X_gas);  //kg/mol
     scalar mw_mixture = this->W();
     scalar ygas = vf * mw_gas / mw_mixture;
     //scalar dmw_gasdT = this->dWdT_gas(p, T, sol);
@@ -4589,8 +4592,8 @@ inline Foam::autoPtr<scalarRectangularMatrix> Foam::VLE<ThermoMixture>::dTPvfdXE
         dygasdXi[i] = ((dvfdXi_value[i] + vf) * mw_gas + vf * dmw_gasdXi[i]) / mw_mixture - ygas / mw_mixture * This[i].W() * 1.0e-03;
     }
 
-    scalar Hs_gas = this->ThermoMixture::Hs(p, T, 1, &X_gas);
-    scalar Hs_liq = this->ThermoMixture::Hs(p, T, 0, &X_liq);
+    scalar Hs_gas = this->ThermoMixture::Hs(p, T, X_gas, 1);
+    scalar Hs_liq = this->ThermoMixture::Hs(p, T, X_liq, 0);
     scalar Cp_Hs_value = Hs_gas * dygasdT + dHsdT_gas * ygas - Hs_liq * dygasdT + dHsdT_liq * (1.0 - ygas);
     scalar dHsdP_value = Hs_gas * dygasdP + dHsdP_gas * ygas - Hs_liq * dygasdP + dHsdP_liq * (1.0 - ygas);
     scalarList dHsdXi_value(nsp);
@@ -4599,17 +4602,17 @@ inline Foam::autoPtr<scalarRectangularMatrix> Foam::VLE<ThermoMixture>::dTPvfdXE
     }
 
     scalar ZMixture = Z(p, T, sol);
-    scalar ZGas = this->ThermoMixture::Z(p, T, 1, &X_gas);
-    scalar ZLiq = this->ThermoMixture::Z(p, T, 0, &X_liq);
-    scalar dZgasdT = this->ThermoMixture::dZdT(p, T, 1, &X_gas);
-    scalar dZliqdT = this->ThermoMixture::dZdT(p, T, 0, &X_liq);
-    scalar dZgasdP = this->ThermoMixture::dZdP(p, T, 1, &X_gas);
-    scalar dZliqdP = this->ThermoMixture::dZdP(p, T, 0, &X_liq);
+    scalar ZGas = this->ThermoMixture::Z(p, T, X_gas, 1);
+    scalar ZLiq = this->ThermoMixture::Z(p, T, X_liq, 0);
+    scalar dZgasdT = this->ThermoMixture::dZdT(p, T, X_gas, 1);
+    scalar dZliqdT = this->ThermoMixture::dZdT(p, T, X_liq, 0);
+    scalar dZgasdP = this->ThermoMixture::dZdP(p, T, X_gas, 1);
+    scalar dZliqdP = this->ThermoMixture::dZdP(p, T, X_liq, 0);
     scalarList dZgasdXi(nsp), dZliqdXi(nsp);
     scalarList dZdxi_gas_value(nsp), dZdxi_liq_value(nsp);
     for (int i = 0; i < nsp; i++) {
-        dZdxi_gas_value[i] = this->ThermoMixture::dZdxi(p, T, i, 1, &X_gas);
-        dZdxi_liq_value[i] = this->ThermoMixture::dZdxi(p, T, i, 0, &X_liq);
+        dZdxi_gas_value[i] = this->ThermoMixture::dZdxi(p, T, i, X_gas, 1);
+        dZdxi_liq_value[i] = this->ThermoMixture::dZdxi(p, T, i, X_liq, 0);
     }
     for (int i = 0; i < nsp; i++) {
         dZgasdT += dZdxi_gas_value[i] * dXdT_gas_value[i];
@@ -4712,13 +4715,13 @@ inline Foam::autoPtr<scalarRectangularMatrix> Foam::VLE<ThermoMixture>::dTPvfsol
         for (int j = 0; j < nsp; j++) {
             dvfdXi_value[i] += dvidXi_value[i]()[j];
         }
-        dHsdxi_gas_value[i] = this->dHsdxi(p, T, i, 1, &X_gas);
-        dHsdxi_liq_value[i] = this->dHsdxi(p, T, i, 0, &X_liq);
+        dHsdxi_gas_value[i] = this->dHsdxi(p, T, i,X_gas, 1);
+        dHsdxi_liq_value[i] = this->dHsdxi(p, T, i,X_liq, 0);
     }
-    scalar dHsdT_gas = this->ThermoMixture::dHsdT(p, T, 1, &X_gas);
-    scalar dHsdT_liq = this->ThermoMixture::dHsdT(p, T, 0, &X_liq);
-    scalar dHsdP_gas = this->ThermoMixture::dHsdP(p, T, 1, &X_gas);
-    scalar dHsdP_liq = this->ThermoMixture::dHsdP(p, T, 0, &X_liq);
+    scalar dHsdT_gas = this->ThermoMixture::dHsdT(p, T,X_gas, 1);
+    scalar dHsdT_liq = this->ThermoMixture::dHsdT(p, T,X_liq, 0);
+    scalar dHsdP_gas = this->ThermoMixture::dHsdP(p, T,X_gas, 1);
+    scalar dHsdP_liq = this->ThermoMixture::dHsdP(p, T,X_liq, 0);
 
     scalarList dHsdXi_gas(nsp);
     scalarList dHsdXi_liq(nsp);
@@ -4822,7 +4825,7 @@ inline Foam::autoPtr<scalarRectangularMatrix> Foam::VLE<ThermoMixture>::dTPvfsol
         }
     }
 
-    scalar mw_gas = this->W(&X_gas);  //kg/mol
+    scalar mw_gas = this->W(X_gas);  //kg/mol
     scalar mw_mixture = this->W();
     scalar ygas = vf * mw_gas / mw_mixture;
     //scalar dmw_gasdT = this->dWdT_gas(p, T, sol);
@@ -4848,8 +4851,8 @@ inline Foam::autoPtr<scalarRectangularMatrix> Foam::VLE<ThermoMixture>::dTPvfsol
         dygasdXi[i] = ((dvfdXi_value[i] + vf) * mw_gas + vf * dmw_gasdXi[i]) / mw_mixture - ygas / mw_mixture * This[i].W() * 1.0e-03;
     }
 
-    scalar Hs_gas = this->ThermoMixture::Hs(p, T, 1, &X_gas);
-    scalar Hs_liq = this->ThermoMixture::Hs(p, T, 0, &X_liq);
+    scalar Hs_gas = this->ThermoMixture::Hs(p, T,X_gas, 1);
+    scalar Hs_liq = this->ThermoMixture::Hs(p, T,X_liq, 0);
     scalar Cp_Hs_value = Hs_gas * dygasdT + dHsdT_gas * ygas - Hs_liq * dygasdT + dHsdT_liq * (1.0 - ygas);
     scalar dHsdP_value = Hs_gas * dygasdP + dHsdP_gas * ygas - Hs_liq * dygasdP + dHsdP_liq * (1.0 - ygas);
     scalarList dHsdXi_value(nsp);
@@ -4858,17 +4861,17 @@ inline Foam::autoPtr<scalarRectangularMatrix> Foam::VLE<ThermoMixture>::dTPvfsol
     }
 
     scalar ZMixture = Z(p, T, sol);
-    scalar ZGas = this->ThermoMixture::Z(p, T, 1, &X_gas);
-    scalar ZLiq = this->ThermoMixture::Z(p, T, 0, &X_liq);
-    scalar dZgasdT = this->ThermoMixture::dZdT(p, T, 1, &X_gas);
-    scalar dZliqdT = this->ThermoMixture::dZdT(p, T, 0, &X_liq);
-    scalar dZgasdP = this->ThermoMixture::dZdP(p, T, 1, &X_gas);
-    scalar dZliqdP = this->ThermoMixture::dZdP(p, T, 0, &X_liq);
+    scalar ZGas = this->ThermoMixture::Z(p, T,X_gas, 1);
+    scalar ZLiq = this->ThermoMixture::Z(p, T,X_liq, 0);
+    scalar dZgasdT = this->ThermoMixture::dZdT(p, T,X_gas, 1);
+    scalar dZliqdT = this->ThermoMixture::dZdT(p, T,X_liq, 0);
+    scalar dZgasdP = this->ThermoMixture::dZdP(p, T,X_gas, 1);
+    scalar dZliqdP = this->ThermoMixture::dZdP(p, T,X_liq, 0);
     scalarList dZgasdXi(nsp), dZliqdXi(nsp);
     scalarList dZdxi_gas_value(nsp), dZdxi_liq_value(nsp);
     for (int i = 0; i < nsp; i++) {
-        dZdxi_gas_value[i] = this->ThermoMixture::dZdxi(p, T, i, 1, &X_gas);
-        dZdxi_liq_value[i] = this->ThermoMixture::dZdxi(p, T, i, 0, &X_liq);
+        dZdxi_gas_value[i] = this->ThermoMixture::dZdxi(p, T, i,X_gas, 1);
+        dZdxi_liq_value[i] = this->ThermoMixture::dZdxi(p, T, i,X_liq, 0);
     }
     for (int i = 0; i < nsp; i++) {
         dZgasdT += dZdxi_gas_value[i] * dXdT_gas_value[i];
@@ -4989,13 +4992,13 @@ inline tuple<scalar, scalar, scalar, scalar> Foam::VLE<ThermoMixture>::dTPdErho(
         //for (int j = 0; j < nsp; j++) {
         //    dvfdXi_value[i] += dvidXi_value[i]()[j];
         //}
-        dHsdxi_gas_value[i] = this->dHsdxi(p, T, i, 1, &X_gas);
-        dHsdxi_liq_value[i] = this->dHsdxi(p, T, i, 0, &X_liq);
+        dHsdxi_gas_value[i] = this->dHsdxi(p, T, i, X_gas, 1);
+        dHsdxi_liq_value[i] = this->dHsdxi(p, T, i, X_liq, 0);
     }
-    scalar dHsdT_gas = this->ThermoMixture::dHsdT(p, T, 1, &X_gas);
-    scalar dHsdT_liq = this->ThermoMixture::dHsdT(p, T, 0, &X_liq);
-    scalar dHsdP_gas = this->ThermoMixture::dHsdP(p, T, 1, &X_gas);
-    scalar dHsdP_liq = this->ThermoMixture::dHsdP(p, T, 0, &X_liq);
+    scalar dHsdT_gas = this->ThermoMixture::dHsdT(p, T, X_gas, 1);
+    scalar dHsdT_liq = this->ThermoMixture::dHsdT(p, T, X_liq, 0);
+    scalar dHsdP_gas = this->ThermoMixture::dHsdP(p, T, X_gas, 1);
+    scalar dHsdP_liq = this->ThermoMixture::dHsdP(p, T, X_liq, 0);
 
     //scalarList dHsdXi_gas(nsp);
     //scalarList dHsdXi_liq(nsp);
@@ -5077,7 +5080,7 @@ inline tuple<scalar, scalar, scalar, scalar> Foam::VLE<ThermoMixture>::dTPdErho(
         //}
     }
 
-    scalar mw_gas = this->W(&X_gas);  //kg/mol
+    scalar mw_gas = this->W(X_gas);  //kg/mol
     scalar mw_mixture = this->W();
     scalar ygas = vf * mw_gas / mw_mixture;
     //scalar dmw_gasdT = this->dWdT_gas(p, T, sol);
@@ -5103,8 +5106,8 @@ inline tuple<scalar, scalar, scalar, scalar> Foam::VLE<ThermoMixture>::dTPdErho(
     //    dygasdXi[i] = ((dvfdXi_value[i] + vf) * mw_gas + vf * dmw_gasdXi[i]) / mw_mixture - ygas / mw_mixture * This[i].W() * 1.0e-03;
     //}
 
-    scalar Hs_gas = this->ThermoMixture::Hs(p, T, 1, &X_gas);
-    scalar Hs_liq = this->ThermoMixture::Hs(p, T, 0, &X_liq);
+    scalar Hs_gas = this->ThermoMixture::Hs(p, T, X_gas, 1);
+    scalar Hs_liq = this->ThermoMixture::Hs(p, T, X_liq, 0);
     scalar Cp_Hs_value = Hs_gas * dygasdT + dHsdT_gas * ygas - Hs_liq * dygasdT + dHsdT_liq * (1.0 - ygas);
     scalar dHsdP_value = Hs_gas * dygasdP + dHsdP_gas * ygas - Hs_liq * dygasdP + dHsdP_liq * (1.0 - ygas);
     //scalarList dHsdXi_value(nsp);
@@ -5113,17 +5116,17 @@ inline tuple<scalar, scalar, scalar, scalar> Foam::VLE<ThermoMixture>::dTPdErho(
     //}
 
     scalar ZMixture = Z(p, T, sol);
-    scalar ZGas = this->ThermoMixture::Z(p, T, 1, &X_gas);
-    scalar ZLiq = this->ThermoMixture::Z(p, T, 0, &X_liq);
-    scalar dZgasdT = this->ThermoMixture::dZdT(p, T, 1, &X_gas);
-    scalar dZliqdT = this->ThermoMixture::dZdT(p, T, 0, &X_liq);
-    scalar dZgasdP = this->ThermoMixture::dZdP(p, T, 1, &X_gas);
-    scalar dZliqdP = this->ThermoMixture::dZdP(p, T, 0, &X_liq);
+    scalar ZGas = this->ThermoMixture::Z(p, T, X_gas, 1);
+    scalar ZLiq = this->ThermoMixture::Z(p, T, X_liq, 0);
+    scalar dZgasdT = this->ThermoMixture::dZdT(p, T, X_gas, 1);
+    scalar dZliqdT = this->ThermoMixture::dZdT(p, T, X_liq, 0);
+    scalar dZgasdP = this->ThermoMixture::dZdP(p, T, X_gas, 1);
+    scalar dZliqdP = this->ThermoMixture::dZdP(p, T, X_liq, 0);
     scalarList dZgasdXi(nsp), dZliqdXi(nsp);
     scalarList dZdxi_gas_value(nsp), dZdxi_liq_value(nsp);
     for (int i = 0; i < nsp; i++) {
-        dZdxi_gas_value[i] = this->ThermoMixture::dZdxi(p, T, i, 1, &X_gas);
-        dZdxi_liq_value[i] = this->ThermoMixture::dZdxi(p, T, i, 0, &X_liq);
+        dZdxi_gas_value[i] = this->ThermoMixture::dZdxi(p, T, i, X_gas, 1);
+        dZdxi_liq_value[i] = this->ThermoMixture::dZdxi(p, T, i, X_liq, 0);
     }
     for (int i = 0; i < nsp; i++) {
         dZgasdT += dZdxi_gas_value[i] * dXdT_gas_value[i];
@@ -5247,10 +5250,10 @@ inline Foam::scalar Foam::VLE<ThermoMixture>::Cp_num(scalar p, scalar T) const {
 inline Foam::scalar Foam::VLE<ThermoMixture>::CpMCv(scalar p, scalar T) const {
     autoPtr<solution> sol(TPN(p, T));
     //label pfg = 1, pfl = 0;
-    scalar mw_gas = this->W(&(sol().X_gas()));  //kg/mol
+    scalar mw_gas = this->W(sol().X_gas());  //kg/mol
     scalar mw_mixture = this->W();
     scalar ygas = sol().vaporfra * mw_gas / mw_mixture;
-    return this->ThermoMixture::CpMCv(p, T, 1, &(sol().X_gas())) * ygas + this->ThermoMixture::CpMCv(p, T, 0, &(sol().X_liq())) * (1.0 - ygas);
+    return this->ThermoMixture::CpMCv(p, T, 1, &(sol().X_gas())) * ygas + this->ThermoMixture::CpMCv(p, T,sol().X_liq(), 0) * (1.0 - ygas);
 }*/
 
 template <class ThermoMixture>
@@ -5280,10 +5283,10 @@ template <class ThermoMixture>
 inline Foam::scalar Foam::VLE<ThermoMixture>::G(scalar p, scalar T) const {
     autoPtr<solution> sol(TPN(p, T));
     //label pfg = 1, pfl = 0;
-    scalar mw_gas = this->W(&(sol().X_gas()));  //kg/mol
+    scalar mw_gas = this->W(sol().X_gas());  //kg/mol
     scalar mw_mixture = this->W();
     scalar ygas = sol().vaporfra * mw_gas / mw_mixture;
-    return this->ThermoMixture::G(p, T, 1, &(sol().X_gas())) * ygas + this->ThermoMixture::G(p, T, 0, &(sol().X_liq())) * (1.0 - ygas);
+    return this->ThermoMixture::G(p, T, 1, &(sol().X_gas())) * ygas + this->ThermoMixture::G(p, T, sol().X_liq(), 0) * (1.0 - ygas);
 }
 
 template <class ThermoMixture>
@@ -5316,15 +5319,15 @@ template <class ThermoMixture>
 inline Foam::scalar Foam::VLE<ThermoMixture>::kappa_dev(scalar p, scalar T) const {
     autoPtr<solution> sol(TPN(p, T));
     //scalar Cv_ = this->Cp(p, T) - this->CpMCv(p, T); //J/kgK //warning 
-    //scalar V_ = this->V(p, T, 1, &(sol().X_gas())) * sol().vaporfra + this->V(p, T, 0, &(sol().X_liq())) * (1 - sol().vaporfra);
+    //scalar V_ = this->V(p, T, 1, &(sol().X_gas())) * sol().vaporfra + this->V(p, T,sol().X_liq(), 0) * (1 - sol().vaporfra);
 
-    //scalar mw_gas = this->W(&(sol().X_gas()));  //kg/mol
+    //scalar mw_gas = this->W(sol().X_gas());  //kg/mol
     //scalar mw_mixture = this->W();
     //scalar ygas = sol().vaporfra * mw_gas / mw_mixture;
 
     return this->ThermoMixture::kappa_rho(p, T, rho(p, T, sol()));
 
-    //return this->ThermoMixture::kappa(p, T, 1, &(sol().X_gas())) * ygas + this->ThermoMixture::kappa(p, T, 0, &(sol().X_liq())) * (1.0 - ygas);
+    //return this->ThermoMixture::kappa(p, T, 1, &(sol().X_gas())) * ygas + this->ThermoMixture::kappa(p, T,sol().X_liq(), 0) * (1.0 - ygas);
 }
 
 template <class ThermoMixture>
@@ -5337,24 +5340,24 @@ template <class ThermoMixture>
 inline Foam::scalar Foam::VLE<ThermoMixture>::mu_dev(scalar p, scalar T) const {
     autoPtr<solution> sol(TPN(p, T));
 
-    //scalar mw_gas = this->W(&(sol().X_gas()));  //kg/mol
+    //scalar mw_gas = this->W(sol().X_gas());  //kg/mol
     //scalar mw_mixture = this->W();
     //scalar ygas = sol().vaporfra * mw_gas / mw_mixture;
 
     return this->ThermoMixture::mu_rho(p, T, rho(p, T, sol()));
 
-    //return this->ThermoMixture::mu(p, T, 1, &(sol().X_gas())) * ygas + this->ThermoMixture::mu(p, T, 0, &(sol().X_liq())) * (1.0 - ygas);
+    //return this->ThermoMixture::mu(p, T, 1, &(sol().X_gas())) * ygas + this->ThermoMixture::mu(p, T,sol().X_liq(), 0) * (1.0 - ygas);
 }
 
 /*template <class ThermoMixture>
 inline Foam::scalar Foam::VLE<ThermoMixture>::Dimix_dev(scalar p, scalar T, label di) const {
     autoPtr<solution> sol(TPN(p, T));
 
-    scalar mw_gas = this->W(&(sol().X_gas()));  //kg/mol
+    scalar mw_gas = this->W(sol().X_gas());  //kg/mol
     scalar mw_mixture = this->W();
     scalar ygas = sol().vaporfra * mw_gas / mw_mixture;
 
-    return this->ThermoMixture::kappa(p, T, 1, &(sol().X_gas())) * ygas + this->ThermoMixture::kappa(p, T, 0, &(sol().X_liq())) * (1.0 - ygas);
+    return this->ThermoMixture::kappa(p, T, 1, &(sol().X_gas())) * ygas + this->ThermoMixture::kappa(p, T,sol().X_liq(), 0) * (1.0 - ygas);
 }*/
 
 
