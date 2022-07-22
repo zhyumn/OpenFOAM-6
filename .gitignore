@@ -88,3 +88,4 @@ doc/Doxygen/DTAGS
 /user/run
 *.exe
 *.out
+*.OLD
