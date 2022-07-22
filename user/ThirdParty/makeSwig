@@ -1,0 +1,4 @@
+cd swig-4.0.2
+./configure --prefix=$FOAM_USER_PF/swig
+make
+make install

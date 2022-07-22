@@ -151,36 +151,36 @@ namespace Foam
         inline scalar dHsdT(scalar p, scalar T, const scalarList& Xinp, const label pf = 2) const;
         inline scalar dHsdP(scalar p, scalar T, const scalarList& Xinp, const label pf = 2) const;
         inline scalar dHsdxi(scalar p, scalar T, label di, const scalarList& Xinp, const label pf = 2) const;
-        inline scalar dSdT(scalar p, scalar T, const label pf = 2, const scalarList* Xinp = NULL) const;
-        inline scalar dSdP(scalar p, scalar T, const label pf = 2, const scalarList* Xinp = NULL) const;
-        inline scalar dSdxi(scalar p, scalar T, label di, const label pf = 2, const scalarList* Xinp = NULL) const;
+        inline scalar dSdT(scalar p, scalar T, const scalarList& Xinp, const label pf = 2) const;
+        inline scalar dSdP(scalar p, scalar T, const scalarList& Xinp, const label pf = 2) const;
+        inline scalar dSdxi(scalar p, scalar T, label di, const scalarList& Xinp, const label pf = 2) const;
         inline scalar Hc(const scalarList& Xinp) const;
         inline scalar Hideal(scalar p, scalar T, const scalarList& Xinp) const;
         inline scalar Hideal_Mole(scalar p, scalar T, const scalarList& Xinp) const;
         inline scalar dHidealdT(scalar p, scalar T, const scalarList& Xinp) const;
         inline scalar dHidealdxi(scalar p, scalar T, label di, const scalarList& Xinp) const;
         inline scalar dHidealdP(scalar p, scalar T, const scalarList* Xinp = NULL) const;
-        inline scalar dSidealdT(scalar p, scalar T, const scalarList* Xinp = NULL) const;
-        inline scalar dSidealdP(scalar p, scalar T, const scalarList* Xinp = NULL) const;
-        inline scalar dSidealdxi(scalar p, scalar T, label di, const scalarList* Xinp = NULL) const;
+        inline scalar dSidealdT(scalar p, scalar T, const scalarList& Xinp) const;
+        inline scalar dSidealdP(scalar p, scalar T, const scalarList& Xinp) const;
+        inline scalar dSidealdxi(scalar p, scalar T, label di, const scalarList& Xinp) const;
         inline scalar Hig_phase(scalar T, const scalarList* Xinp = NULL) const;
         inline scalar Hig2_phase(scalar T, const scalarList* Xinp = NULL) const;
         inline scalar V(scalar p, scalar T, const label pf = 2, const scalarList* Xinp = NULL) const;
         inline scalar CpMCv(scalar p, scalar T, const label pf = 2, const scalarList* Xinp = NULL) const;
         inline scalar Cp(scalar p, scalar T, const label pf = 2, const scalarList* Xinp = NULL) const;
-        inline scalar S(scalar p, scalar T, const label pf = 2, const scalarList* Xinp = NULL) const;
+        inline scalar S(scalar p, scalar T, const scalarList& Xinp, const label pf = 2) const;
         inline scalar Sideal_Mole(scalar p, scalar T, const scalarList& Xinp) const;
-        inline scalar Sideal(scalar p, scalar T, const scalarList* Xinp = NULL) const;
+        inline scalar Sideal(scalar p, scalar T, const scalarList& Xinp) const;
         inline scalar Gideal_Mole(scalar p, scalar T, const scalarList& Xinp) const;
-        inline scalar Gideal(scalar p, scalar T, const scalarList* Xinp = NULL) const;
+        inline scalar Gideal(scalar p, scalar T, const scalarList& Xinp) const;
         inline scalar muideal_Mole(scalar p, scalar T, label di, const scalarList* Xinp = NULL) const;
-        inline scalar Aideal(scalar p, scalar T, const scalarList* Xinp = NULL) const;
+        inline scalar Aideal(scalar p, scalar T, const scalarList& Xinp) const;
         inline scalar Aideal_Mole(scalar p, scalar T, const scalarList* Xinp = NULL) const;
         inline scalar G(scalar p, scalar T, const label pf = 2, const scalarList* Xinp = NULL) const;
         inline scalar G_Mole(scalar p, scalar T, const scalarList& Xinp) const;
         inline scalar G_departure_Mole(scalar p, scalar T, const scalarList& Xinp) const;
-        inline scalar G_TPD(scalar p, scalar T, const scalarList* Xinp = NULL) const;
-        inline scalar A_TPD(scalar p, scalar T, const scalarList* Xinp = NULL) const;
+        inline scalar G_TPD(scalar p, scalar T, const scalarList& Xinp) const;
+        inline scalar A_TPD(scalar p, scalar T, const scalarList& Xinp) const;
         //- Return enthalpy departure [J/kg]
         inline scalar H(const scalar p, const scalar T) const;
 
@@ -211,7 +211,8 @@ namespace Foam
         inline scalar W() const { return W(this->X_); };
 
 
-        inline autoPtr<scalarList> fugacityCoefficient(scalar p, scalar T, const label pf = 2, const scalarList* Xinp = NULL) const;
+        inline autoPtr<scalarList> fugacityCoefficient(scalar p, scalar T, const scalarList& Xinp, const label pf = 2) const;
+        inline autoPtr<scalarList> fugacityCoefficient(scalar p, scalar T, const label pf = 2) const {return fugacityCoefficient(p, T, this->X_, pf);};
         inline autoPtr<scalarList> Ln_fugacityCoefficient(scalar p, scalar T, const scalarList& Xinp, const label pf = 2) const;
         inline autoPtr<scalarList> Ln_fugacityCoefficient(scalar p, scalar T, const label pf = 2) const { return Ln_fugacityCoefficient(p, T, this->X_, pf); }
         inline autoPtr<scalarList>ln_fugacityCoefficient(scalar p, scalar T, scalar z, const scalarList& Xinp) const;

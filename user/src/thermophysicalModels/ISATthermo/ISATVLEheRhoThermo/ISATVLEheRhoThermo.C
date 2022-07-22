@@ -30,8 +30,6 @@ License
 template<class BasicPsiThermo, class MixtureType>
 void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate_init()
 {
-
-    //double tempT;
     const scalarField& hCells = this->he_;
     const scalarField& pCells = this->p_;
 
@@ -41,7 +39,6 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate_init()
     scalarField& alphaCells = this->alpha_.primitiveFieldRef();
     scalarField& vaporfracCells = this->vaporfrac_.primitiveFieldRef();
     scalarField& soundspeedCells = this->soundspeed_.primitiveFieldRef();
-    //scalarField& entropyCells = this->entropy_.primitiveFieldRef();
     scalarField& rhoCells = this->rho_.primitiveFieldRef();
     scalarField& kappaCells = this->kappa_.primitiveFieldRef();
     scalar p_temp, T_temp;
@@ -67,30 +64,6 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate_init()
 
             std::tie(rhoCells[celli], vaporfracCells[celli], soundspeedCells[celli]) = mixture_.rhovfc_ISAT(pCells[celli], TCells[celli]);
             psiCells[celli] = rhoCells[celli] / pCells[celli];
-            //psiCells[celli] = mixture_.psi(pCells[celli], TCells[celli]);
-            //rhoCells[celli] = psiCells[celli] * pCells[celGli];
-            //muCells[celli] = mixture_.mu(pCells[celli, TCells[celli]);
-            //alphaCells[celli] = mixture_.alphah(pCells[celli], TCells[celli]);
-
-            //muCells[celli] = mixture_.mu_rho(pCells[celli], TCells[celli], rhoCells[celli]);;//mixture_.mu_dev(pCells[celli], TCells[celli]);
-            //kappaCells[celli] = mixture_.kappa(pCells[celli], TCells[celli]);
-            //alphaCells[celli] = mixture_.alphah(pCells[celli], TCells[celli]);;//kappaCells[celli] / mixture_.Cp(pCells[celli], TCells[celli]);
-
-            //vaporfracCells[celli] = 1.0;//mixture_.vaporfra(pCells[celli], TCells[celli]);
-            //muCells[celli] = mixture_.mu(100000, 293);
-            //alphaCells[celli] = mixture_.alphah(100000, 293);
-            //vaporfracCells[celli] = mixture_.vaporfra(100000, 293);
-            //vaporfracCells[celli] = mixture_.vaporfra(100000, 293);
-            //vaporfracCells[celli] = mixture_.vaporfra(100000, 293);
-            //FatalErrorInFunction
-            //    << "DEBUG: T:" <<TCells[celli]<<", p:"<<pCells[celli]
-            //    << exit(FatalError);
-            //vaporfracCells[celli] = mixture_.vaporfra(pCells[celli], TCells[celli]);
-            //FatalErrorInFunction
-            //    << "DEBUG: T:" <<TCells[celli]<<", p:"<<pCells[celli]
-            //    << exit(FatalError);
-            //soundspeedCells[celli] = 1.0;//mixture_.c(pCells[celli], TCells[celli]);
-            //entropyCells[celli] = mixture_.S(pCells[celli], TCells[celli]);
         }
     }
     if (!inviscid_)
@@ -99,12 +72,10 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate_init()
         {
             const typename MixtureType::thermoType& mixture_ =
                 this->cellMixture(celli);
-            //muCells[celli] = mixture_.mu_rho(pCells[celli], TCells[celli], rhoCells[celli]);;//mixture_.mu_dev(pCells[celli], TCells[celli]);
-            //muCells[celli] = mixture_.mu_rho(pCells[celli], TCells[celli], rhoCells[celli]);
-            //kappaCells[celli] = mixture_.kappa(pCells[celli], TCells[celli]);
-            //alphaCells[celli] = mixture_.alphah(pCells[celli], TCells[celli]);;//kappaCells[celli] / mixture_.Cp(pCells[celli], TCells[celli]);
+            muCells[celli] = mixture_.mu_rho(pCells[celli], TCells[celli], rhoCells[celli]);
+            kappaCells[celli] = mixture_.kappa_rho(pCells[celli], TCells[celli],rhoCells[celli]);
         }
-        /*
+        
         forAll(heList_, i)
         {
             forAll(TCells, celli)
@@ -118,7 +89,7 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate_init()
                     = mixture_.Dimix(pCells[celli], TCells[celli], i);
             }
         }
-        */
+        
     }
 
     volScalarField::Boundary& pBf =
@@ -179,10 +150,8 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate_init()
                     auto sol(mixture_.TPN(pp[facei], pT[facei]));
                     prho[facei] = mixture_.rho_noVLE(pp[facei], pT[facei], sol());
                     psoundspeed[facei] = mixture_.c_noVLE(pp[facei], pT[facei], sol());
-                    //std::tie(rhoCells[celli], vaporfracCells[celli], soundspeedCells[celli]) = mixture_.rhovfc_ISAT(pCells[celli], TCells[celli]);
                     ppsi[facei] = prho[facei] / pp[facei];
                     pvaporfrac[facei] = 1;
-                    //std::tie(prho[facei], pvaporfrac[facei], psoundspeed[facei]) = mixture_.rhovfc_ISAT(pp[facei], pT[facei]);
                 }
             }
             else
@@ -210,21 +179,7 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate_init()
                     const typename MixtureType::thermoType& mixture_ =
                         this->patchFaceMixture(patchi, facei);
                     std::tie(prho[facei], pvaporfrac[facei], psoundspeed[facei]) = mixture_.rhovfc_ISAT(pp[facei], pT[facei]);
-                    //phe[facei] = mixture_.HE(pp[facei], pT[facei]);
                     ppsi[facei] = prho[facei] / pp[facei];
-                    //ppsi[facei] = mixture_.psi(pp[facei], pT[facei]);
-                    //prho[facei] = ppsi[facei] * pp[facei];
-
-                    //pmu[facei] = mixture_.mu(pp[facei], pT[facei]);
-                    //pkappa[facei] = mixture_.kappa(pp[facei], pT[facei]);
-                    //palpha[facei] = mixture_.alphah(pp[facei], pT[facei]);
-
-                    //palpha[facei] = pkappa[facei] / mixture_.Cp(pp[facei], pT[facei]);
-                    //pmu[facei] = mixture_.mu(pp[facei], pT[facei]);
-                    //palpha[facei] = mixture_.alphah(pp[facei], pT[facei]);
-                    //pvaporfrac[facei] = mixture_.vaporfra(pp[facei], pT[facei]);
-                    //psoundspeed[facei] = mixture_.c(pp[facei], pT[facei]);
-                    //pentropy[facei] = mixture_.S(pp[facei], pT[facei]);
                 }
             }
             else
@@ -235,24 +190,6 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate_init()
                         this->patchFaceMixture(patchi, facei);
                     std::tie(prho[facei], pvaporfrac[facei], psoundspeed[facei]) = mixture_.rhovfc_ISAT(pp[facei], pT[facei]);
                     ppsi[facei] = prho[facei] / pp[facei];
-                    //pT[facei] = mixture_.THE(phe[facei], pp[facei], pT[facei]);
-
-                    //ppsi[facei] = mixture_.psi(pp[facei], pT[facei]);
-                    //rhoCells[celli] = psiCells[celli] * pCells[celli];
-
-                    //pmu[facei] = mixture_.mu(pp[facei], pT[facei]);
-                    //pkappa[facei] = mixture_.kappa(pp[facei], pT[facei]);
-                    //palpha[facei] = mixture_.alphah(pp[facei], pT[facei]);
-
-                    //pmu[facei] = mixture_.mu_dev(pp[facei], pT[facei]);
-                    //pkappa[facei] = mixture_.kappa_dev(pp[facei], pT[facei]);
-                    //palpha[facei] = pkappa[facei] / mixture_.Cp(pp[facei], pT[facei]);
-                    //prho[facei] = ppsi[facei] * pp[facei];
-                    //pmu[facei] = mixture_.mu(pp[facei], pT[facei]);
-                    //palpha[facei] = mixture_.alphah(pp[facei], pT[facei]);
-                    //pvaporfrac[facei] = mixture_.vaporfra(pp[facei], pT[facei]);
-                    //psoundspeed[facei] = mixture_.c(pp[facei], pT[facei]);
-                    //pentropy[facei] = mixture_.S(pp[facei], pT[facei]);
                 }
             }
         }
@@ -264,7 +201,8 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate_init()
                 {
                     const typename MixtureType::thermoType& mixture_ =
                         this->patchFaceMixture(patchi, facei);
-
+                    pmu[facei] = mixture_.mu_rho(pp[facei], pT[facei],prho[facei]);
+                    pkappa[facei] = mixture_.kappa_rho(pp[facei], pT[facei],prho[facei]);                    
                     //pmu[facei] = mixture_.mu_rho(pp[facei], pT[facei], prho[facei]);
                     //pkappa[facei] = mixture_.kappa_rho(pp[facei], pT[facei]);
                     //palpha[facei] = mixture_.alphah(pp[facei], pT[facei]);
@@ -276,7 +214,8 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate_init()
                 {
                     const typename MixtureType::thermoType& mixture_ =
                         this->patchFaceMixture(patchi, facei);
-
+                    pmu[facei] = mixture_.mu_rho(pp[facei], pT[facei],prho[facei]);
+                    pkappa[facei] = mixture_.kappa_rho(pp[facei], pT[facei],prho[facei]);  
                     //pmu[facei] = mixture_.mu_rho(pp[facei], pT[facei], prho[facei]);
                     //pkappa[facei] = mixture_.kappa_rho(pp[facei], pT[facei]);
                     //palpha[facei] = mixture_.alphah(pp[facei], pT[facei]);
@@ -286,7 +225,7 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate_init()
         }
     }
     //this->rho_= this->psi_* this->p_;
-    /*
+    
     if (!inviscid_)
     {
         forAll(heList_, i)
@@ -333,7 +272,7 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate_init()
             }
         }
     }
-    */
+    
 }
 
 
@@ -530,9 +469,8 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
             {
                 const typename MixtureType::thermoType& mixture_ =
                     this->patchFaceMixture(patchi, facei);
-
-               // pmu[facei] = mixture_.mu_rho(pp[facei], pT[facei],prho[facei]);
-                //pkappa[facei] = mixture_.kappa_rho(pp[facei], pT[facei],prho[facei]);
+                pmu[facei] = mixture_.mu_rho(pp[facei], pT[facei],prho[facei]);
+                pkappa[facei] = mixture_.kappa_rho(pp[facei], pT[facei],prho[facei]);
             }
         }
     }

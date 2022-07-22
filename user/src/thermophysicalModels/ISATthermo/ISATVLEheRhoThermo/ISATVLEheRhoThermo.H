@@ -56,9 +56,7 @@ namespace Foam
 
         volScalarField vaporfrac_;
         volScalarField soundspeed_;
-        //volScalarField rho_;
         volScalarField kappa_;
-        //volScalarField rho_;
 
         //- Store list of mass diffusion coefficients
         PtrList<volScalarField> Dimix_; //

@@ -169,11 +169,11 @@ Foam::VLE<ThermoMixture>::S(scalar p, scalar T) const
 {
     autoPtr<solution> sol(TPN(p, T));
     // label pfg = 1, pfl = 0;
-    scalar mw_gas = this->W(&(sol().X_gas())); // kg/mol
+    scalar mw_gas = this->W(sol().X_gas()); // kg/mol
     scalar mw_mixture = this->W();
     scalar ygas = sol().vaporfra * mw_gas / mw_mixture;
-    return this->ThermoMixture::S(p, T, 1, &(sol().X_gas())) * ygas +
-        this->ThermoMixture::S(p, T, 0, &(sol().X_liq())) * (1.0 - ygas);
+    return this->ThermoMixture::S(p, T, sol().X_gas(), 1) * ygas +
+        this->ThermoMixture::S(p, T,sol().X_liq(), 0) * (1.0 - ygas);
 }
 
 // * * * * * * * * * * * * * * * * Partial Derivative  * * * * * * * * * * * * *

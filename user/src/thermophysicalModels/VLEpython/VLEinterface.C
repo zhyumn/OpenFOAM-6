@@ -200,7 +200,7 @@ double solver_new::Z(int flag)
             comp_of[i] = comp_liq[i];
     }
 
-    return ((PengRobinsonMixture<multispecie<Stype>>*)thermo)->Z(P, T, flag, &comp_of);
+    return ((PengRobinsonMixture<multispecie<Stype>>*)thermo)->Z(P, T, comp_of, flag);
 }
 
 double solver_new::dZdT(int flag)
@@ -213,7 +213,7 @@ double solver_new::dZdT(int flag)
         comp_of[i] = comp[i];
     }
 
-    return ((PengRobinsonMixture<multispecie<Stype>>*)thermo)->dZdT(P, T, flag, &comp_of);
+    return ((PengRobinsonMixture<multispecie<Stype>>*)thermo)->dZdT(P, T, comp_of, flag);
 }
 void solver_new::setT(double Tout)
 {
@@ -339,7 +339,7 @@ double solver_new::A()
         comp_of[i] = comp[i];
     }
 
-    return ((PengRobinsonMixture<multispecie<Stype>>*)thermo)->A(P, T, &comp_of);
+    return ((PengRobinsonMixture<multispecie<Stype>>*)thermo)->A(P, T, comp_of);
 }
 double solver_new::dAdT()
 {
@@ -349,7 +349,7 @@ double solver_new::dAdT()
         comp_of[i] = comp[i];
     }
 
-    return ((PengRobinsonMixture<multispecie<Stype>>*)thermo)->dAdT(P, T, &comp_of);
+    return ((PengRobinsonMixture<multispecie<Stype>>*)thermo)->dAdT(P, T, comp_of);
 }
 
 double solver_new::B()
@@ -360,7 +360,7 @@ double solver_new::B()
         comp_of[i] = comp[i];
     }
 
-    return ((PengRobinsonMixture<multispecie<Stype>>*)thermo)->B(P, T, &comp_of);
+    return ((PengRobinsonMixture<multispecie<Stype>>*)thermo)->B(P, T, comp_of);
 }
 double solver_new::dBdT()
 {
@@ -370,7 +370,7 @@ double solver_new::dBdT()
         comp_of[i] = comp[i];
     }
 
-    return ((PengRobinsonMixture<multispecie<Stype>>*)thermo)->dBdT(P, T, &comp_of);
+    return ((PengRobinsonMixture<multispecie<Stype>>*)thermo)->dBdT(P, T, comp_of);
 }
 double solver_new::W()
 {
@@ -379,7 +379,7 @@ double solver_new::W()
     {
         comp_of[i] = comp[i];
     }
-    return thermo->W(&comp_of);
+    return thermo->W(comp_of);
 }
 double solver_new::W(std::vector<double>& in)
 {
@@ -388,7 +388,7 @@ double solver_new::W(std::vector<double>& in)
     {
         comp_of[i] = in[i];
     }
-    return thermo->W(&comp_of);
+    return thermo->W(comp_of);
 }
 
 void solver_new::fugacityCoefficient(int flag, std::vector<double>& in)
@@ -398,7 +398,7 @@ void solver_new::fugacityCoefficient(int flag, std::vector<double>& in)
     {
         comp_of[i] = in[i];
     }
-    Foam::autoPtr<scalarList> pret(thermo->PengRobinsonMixture<multispecie<Stype>>::fugacityCoefficient(P, T, flag, &comp_of));
+    Foam::autoPtr<scalarList> pret(thermo->PengRobinsonMixture<multispecie<Stype>>::fugacityCoefficient(P, T,comp_of, flag));
     ret.resize(comp.size());
     for (unsigned int i = 0;i < comp.size();i++)
     {
@@ -448,7 +448,7 @@ double solver_new::Ha_singlePhase(int flag, std::vector<double>& in)
     {
         comp_of[i] = in[i];
     }
-    return thermo->PengRobinsonMixture<multispecie<Stype>>::Ha(P, T, flag, &(comp_of));
+    return thermo->PengRobinsonMixture<multispecie<Stype>>::Ha(P, T, comp_of, flag);
 }
 double solver_new::dHadT_singlePhase(int flag, std::vector<double>& in)
 {
@@ -457,7 +457,7 @@ double solver_new::dHadT_singlePhase(int flag, std::vector<double>& in)
     {
         comp_of[i] = in[i];
     }
-    return thermo->PengRobinsonMixture<multispecie<Stype>>::dHadT(P, T, flag, &(comp_of));
+    return thermo->PengRobinsonMixture<multispecie<Stype>>::dHadT(P, T, comp_of, flag);
 }
 
 double solver_new::Hideal(std::vector<double>& in)
@@ -467,7 +467,7 @@ double solver_new::Hideal(std::vector<double>& in)
     {
         comp_of[i] = in[i];
     }
-    return thermo->PengRobinsonMixture<multispecie<Stype>>::Hideal(P, T, &(comp_of));
+    return thermo->PengRobinsonMixture<multispecie<Stype>>::Hideal(P, T, comp_of);
 }
 double solver_new::dHidealdT(std::vector<double>& in)
 {
@@ -476,7 +476,7 @@ double solver_new::dHidealdT(std::vector<double>& in)
     {
         comp_of[i] = in[i];
     }
-    return thermo->PengRobinsonMixture<multispecie<Stype>>::dHidealdT(P, T, &(comp_of));
+    return thermo->PengRobinsonMixture<multispecie<Stype>>::dHidealdT(P, T, comp_of);
 }
 
 double solver_new::Cp()
@@ -527,8 +527,8 @@ void solver_new::Ln_fugacityCoefficient()
     {
         comp_of[i] = comp[i];
     }
-    double z = thermo->Z_gibbs(P, T, &comp_of);
-    fugcoef.reset((thermo->ln_fugacityCoefficient(P, T, z, &comp_of)).ptr());
+    double z = thermo->Z_gibbs(P, T, comp_of);
+    fugcoef.reset((thermo->ln_fugacityCoefficient(P, T, z, comp_of)).ptr());
     ret.resize(comp.size());
     for (unsigned int i = 0;i < comp.size();i++)
     {
@@ -543,7 +543,7 @@ void solver_new::Ln_fugacityCoefficient(int flag)
     {
         comp_of[i] = comp[i];
     }
-    fugcoef.reset((thermo->fugacityCoefficient(P, T, flag, &comp_of)).ptr());
+    fugcoef.reset((thermo->fugacityCoefficient(P, T,comp_of, flag)).ptr());
     ret.resize(comp.size());
     for (unsigned int i = 0;i < comp.size();i++)
     {
@@ -560,7 +560,7 @@ void solver_new::ddT_Ln_fugacityCoefficient(int flag)
     {
         comp_of[i] = comp[i];
     }
-    ddT_Ln_fugcoef.reset((thermo->ddT_Ln_fugacityCoefficient(P, T, flag, &comp_of)).ptr());
+    ddT_Ln_fugcoef.reset((thermo->ddT_Ln_fugacityCoefficient(P, T, comp_of, flag)).ptr());
     ret.resize(comp.size());
     for (unsigned int i = 0;i < comp.size();i++)
     {
@@ -576,7 +576,7 @@ void solver_new::ddxi_Ln_fugacityCoefficient(int di, int flag)
     {
         comp_of[i] = comp[i];
     }
-    ddT_Ln_fugcoef.reset((thermo->ddxi_Ln_fugacityCoefficient(P, T, di, flag, &comp_of)).ptr());
+    ddT_Ln_fugcoef.reset((thermo->ddxi_Ln_fugacityCoefficient(P, T, di,comp_of, flag)).ptr());
     ret.resize(comp.size());
     for (unsigned int i = 0;i < comp.size();i++)
     {
@@ -661,7 +661,7 @@ double solver_new::Gideal()
     {
         comp_of[i] = comp[i];
     }
-    return  thermo->Gideal(P, T, &comp_of);
+    return  thermo->Gideal(P, T, comp_of);
 }
 
 double solver_new::Gideal_Mole()
@@ -671,7 +671,7 @@ double solver_new::Gideal_Mole()
     {
         comp_of[i] = comp[i];
     }
-    return  thermo->Gideal_Mole(P, T, &comp_of);
+    return  thermo->Gideal_Mole(P, T, comp_of);
 }
 
 double solver_new::G_Mole()
@@ -681,7 +681,7 @@ double solver_new::G_Mole()
     {
         comp_of[i] = comp[i];
     }
-    return  thermo->G_Mole(P, T, &comp_of);
+    return  thermo->G_Mole(P, T, comp_of);
 }
 
 double solver_new::G()
@@ -714,7 +714,7 @@ double solver_new::G_departure_Mole()
     {
         comp_of[i] = comp[i];
     }
-    return  thermo->G_departure_Mole(P, T, &comp_of);
+    return  thermo->G_departure_Mole(P, T, comp_of);
 }
 
 double solver_new::Gibbs_single()
@@ -724,7 +724,7 @@ double solver_new::Gibbs_single()
     {
         comp_of[i] = comp[i];
     }
-    return  thermo->G_TPD(P, T, &comp_of);
+    return  thermo->G_TPD(P, T, comp_of);
 }
 
 
@@ -735,7 +735,7 @@ double solver_new::A_single()
     {
         comp_of[i] = comp[i];
     }
-    return  thermo->A_TPD(P, T, &comp_of);
+    return  thermo->A_TPD(P, T, comp_of);
 }
 double solver_new::z_single()
 {
@@ -744,7 +744,7 @@ double solver_new::z_single()
     {
         comp_of[i] = comp[i];
     }
-    return  thermo->Z_gibbs(P, T, &comp_of);
+    return  thermo->Z_gibbs(P, T, comp_of);
 }
 void solver_new::dvidP()
 {
@@ -1471,7 +1471,7 @@ double solver_new::S(int flag)
             comp_of[i] = comp_liq[i];
     }
 
-    return ((PengRobinsonMixture<multispecie<Stype>>*)thermo)->S(P, T, flag, &comp_of);
+    return ((PengRobinsonMixture<multispecie<Stype>>*)thermo)->S(P, T, comp_of, flag);
 }
 
 double solver_new::dSdT(int flag)
@@ -1487,7 +1487,7 @@ double solver_new::dSdT(int flag)
             comp_of[i] = comp_liq[i];
     }
 
-    return ((PengRobinsonMixture<multispecie<Stype>>*)thermo)->dSdT(P, T, flag, &comp_of);
+    return ((PengRobinsonMixture<multispecie<Stype>>*)thermo)->dSdT(P, T, comp_of, flag);
 }
 
 double solver_new::dSdP(int flag)
@@ -1503,7 +1503,7 @@ double solver_new::dSdP(int flag)
             comp_of[i] = comp_liq[i];
     }
 
-    return ((PengRobinsonMixture<multispecie<Stype>>*)thermo)->dSdP(P, T, flag, &comp_of);
+    return ((PengRobinsonMixture<multispecie<Stype>>*)thermo)->dSdP(P, T,comp_of, flag);
 }
 
 

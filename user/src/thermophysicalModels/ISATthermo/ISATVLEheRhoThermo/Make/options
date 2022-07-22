@@ -1,6 +1,6 @@
 EXE_INC = \
     -Wno-deprecated-copy \
-    -Wno-unused-variable\
+    -Wno-unused-variable \
     -I$(LIB_SRC)/finiteVolume/lnInclude \
     -I$(LIB_SRC)/thermophysicalModels/specie/lnInclude \
     -I$(LIB_SRC)/thermophysicalModels/reactionThermo/lnInclude \

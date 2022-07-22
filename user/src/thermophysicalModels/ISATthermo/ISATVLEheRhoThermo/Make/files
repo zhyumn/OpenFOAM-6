@@ -4,4 +4,4 @@
 ../ISATNode.C
 ISATVLERhoThermos.C
 
-LIB = $(FOAM_USER_LIBBIN)/libISATVLERhoThermoDEV
+LIB = $(FOAM_USER_LIBBIN)/libISATVLERhoThermo

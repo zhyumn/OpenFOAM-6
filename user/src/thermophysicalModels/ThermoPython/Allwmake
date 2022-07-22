@@ -1,4 +1,0 @@
-swig3.0 -python -c++ -o thermoInterface_wrap.C thermoInterface.i
-wmake
-mv thermo.py $FOAM_USER_PY/thermo.py
-#rm thermoInterface_wrap.C
