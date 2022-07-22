@@ -67,7 +67,7 @@ namespace Foam
         double epsilon_;
         double relepsilon_;
         scalarRectangularMatrix scaleFactor_;
-        
+
         scalarRectangularMatrix scaleIn_;
         scalarRectangularMatrix toleranceOut_;
         scalarRectangularMatrix initToleranceIn_;
@@ -282,21 +282,22 @@ namespace Foam
         void newTimeStep()
         {
             timeSteps_++;
+            if (timeSteps_ % checkInterval_ == 0)
+            {
+                showPreformance();
+            }
             tableTree_.timeTagList().newTimeStep();
-            if(timeSteps_%checkInterval_==0)
+
+            if (tableTree_.size() == 0 || tableTree_.size() == 1)
             {
-                showPreformance();      
+
+                return;
             }
-            if(tableTree_.size()==0||tableTree_.size()==1)
-            {
-                
-                return ;
-            }
-            if(timeSteps_%checkInterval_==0&&tableTree_.depth()*1.0/ceil(log2(tableTree_.size()))>maxDepthFactor_)
+            if (timeSteps_ % checkInterval_ == 0 && tableTree_.depth() * 1.0 / ceil(log2(tableTree_.size())) > maxDepthFactor_)
             {
                 tableTree_.balance(scaleIn_);
                 //showPreformance();
-            }    
+            }
         }
 
         label treesize()

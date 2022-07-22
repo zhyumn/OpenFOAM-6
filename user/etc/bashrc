@@ -36,3 +36,5 @@ export PATH=$FOAM_USER_APPBIN:$PATH
 export LD_LIBRARY_PATH=$FOAM_USER_LIBBIN:$LD_LIBRARY_PATH
 
 alias opr="cd $WM_PROJECT_DIR"
+
+[ "$BASH" ] && . $FOAM_USER_DIR/etc/bash_completion

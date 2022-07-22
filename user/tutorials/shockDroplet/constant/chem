@@ -7,34 +7,12 @@ C
 )
 ;
 
-//species         3(C12H26 O2 N2);
+
 species        3(C6H14 N2 H2O);
 
-/*reactions
-{
-    un-named-reaction-0
-    {
-        type            irreversibleArrheniusReaction;
-        reaction        "C12H26^0.25 + 11O2^1.5 = C12H26 + 11O2";
-        A               2811706.626;
-        beta            0;
-        Ta              7940.357749;
-    }
-}
 
-*/
 reactions
 {
-/*
-    un-named-reaction-0
-    {
-        type            irreversibleArrheniusReaction;
-        reaction        "H2O = CO2";
-        A               2811706.626;
-        beta            0;
-        Ta              7940.357749;
-    }
-    */
 }
 
 Tlow            200;

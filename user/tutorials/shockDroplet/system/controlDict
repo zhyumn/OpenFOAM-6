@@ -15,9 +15,9 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-libs            ("libISATVLERhoThermoDEV.so");
+libs            ("libISATVLERhoThermo.so");
 
-application     PRpuresprayFoam;
+application     rhoCentralRealgasFoam;
 
 startFrom       startTime;
 
@@ -79,11 +79,12 @@ functions
     }
    
 }
-*/
+
 functions
 {
     #includeFunc internalProbes
 }
+*/
 
 
 // ************************************************************************* //
