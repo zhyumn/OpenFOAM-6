@@ -82,8 +82,8 @@ struct solver_new
     dictionary thermoDictM;
     Mtype* thermo;
     PtrList<Stype> speciesData;
-    double P;
-    double T;
+    double P_;
+    double T_;
 
     
     void setY();
@@ -97,6 +97,7 @@ struct solver_new
     public:
     solver_new(std::string file);
     void reset_specie(std::vector<std::string>);
+
     ~solver_new();
 
     // settings 
@@ -106,16 +107,20 @@ struct solver_new
     void setTPn_flag(int);
 
     // output
+    double P();
+    double T();
     double vaporfra();
     double rho();
     double Cp();
-
+    const std::vector<double>& X();
+    const std::vector<double>& K();
+    void setKinit(const std::vector<double>&);
+    const std::vector<std::string>& specie();
 
     private:
     //void solve(bool flag);
     
     //double density();
-    
     double drhodT();
     double drhodP();
     double dSdT();
@@ -219,10 +224,6 @@ struct solver_new
     std::vector<double> comp_gas;
     std::vector<double> comp;
     std::vector<double> ret;
+    std::vector<double> X_;
+    std::vector<std::string> specie_;
 };
-
-
-
-
-
-int fun_my(int n);

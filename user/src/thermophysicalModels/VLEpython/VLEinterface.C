@@ -44,7 +44,7 @@ void solver::solve(bool flag)
         comp_of[i] = X[i];
         equalconstant_of[i] = equalconstant[i];
     }
-    PR->TPn_flash(P, T, comp_of, comp_liq_of, comp_gas_of, vaporfra, equalconstant_of, flag);
+    PR->TPn_flash(P_, T_, comp_of, comp_liq_of, comp_gas_of, vaporfra, equalconstant_of, flag);
     for (int i = 0;i < X.size();i++)
     {
         comp_liq[i] = comp_liq_of[i];
@@ -64,9 +64,9 @@ double solver::Z()
         comp_gas_of[i] = comp_gas[i];
         comp_of[i] = X[i];
     }
-    double alphagas = PR->Evaluate_alpha(P, T, vaporfra, comp_liq_of, comp_gas_of, comp_of);
-    double VspecificGas = PR->volmmix_phase(0, P, T, comp_gas_of); //m3/mol
-    double VspecificLiq = PR->volmmix_phase(1, P, T, comp_liq_of);
+    double alphagas = PR->Evaluate_alpha(P_, T_, vaporfra, comp_liq_of, comp_gas_of, comp_of);
+    double VspecificGas = PR->volmmix_phase(0, P_, T_, comp_gas_of); //m3/mol
+    double VspecificLiq = PR->volmmix_phase(1, P_, T_, comp_liq_of);
     double ZGas = P * VspecificGas / (RR * 1.0e-03 * T);
     double ZLiq = P * VspecificLiq / (RR * 1.0e-03 * T);
     double ZMixture = ZGas * alphagas + ZLiq * (1.0 - alphagas);
@@ -133,7 +133,7 @@ solver_new::solver_new(std::string path_i) :path(path_i), dict(IFstream(path + "
     TPn_flag = 0;
     wordList s(dict.lookup("species"));
     species.transfer(s);
-    Info << species << endl;
+    //Info << species << endl;
     HashPtrTable<Stype> speciesThermo(thermoDict);
     speciesData.resize(species.size());
     updated = false;
@@ -159,7 +159,7 @@ void solver_new::reset_specie(std::vector<std::string> m_specie)
         s[i] = m_specie[i];
     }
     species.transfer(s);
-    Info << species << endl;
+    //Info << species << endl;
     HashPtrTable<Stype> speciesThermo(thermoDict);
     speciesData.resize(species.size());
     forAll(species, i)
@@ -171,6 +171,17 @@ void solver_new::reset_specie(std::vector<std::string> m_specie)
     thermo = new Mtype("test", speciesData, species, thermoDictM);
     updated = false;
     n_species = species.size();
+}
+
+const std::vector<std::string>& solver_new::specie()
+{
+    const speciesTable& table = thermo->species();
+    specie_.resize(n_species);
+    for (unsigned int i = 0;i < n_species;i++)
+    {
+        specie_[i] = table[i];
+    }
+    return specie_;
 }
 /*
 void solver_new::update()
@@ -200,7 +211,7 @@ double solver_new::Z(int flag)
             comp_of[i] = comp_liq[i];
     }
 
-    return ((PengRobinsonMixture<multispecie<Stype>>*)thermo)->Z(P, T, comp_of, flag);
+    return ((PengRobinsonMixture<multispecie<Stype>>*)thermo)->Z(P_, T_, comp_of, flag);
 }
 
 double solver_new::dZdT(int flag)
@@ -213,16 +224,16 @@ double solver_new::dZdT(int flag)
         comp_of[i] = comp[i];
     }
 
-    return ((PengRobinsonMixture<multispecie<Stype>>*)thermo)->dZdT(P, T, comp_of, flag);
+    return ((PengRobinsonMixture<multispecie<Stype>>*)thermo)->dZdT(P_, T_, comp_of, flag);
 }
 void solver_new::setT(double Tout)
 {
-    T = Tout;
+    T_ = Tout;
     updated = false;
 }
 void solver_new::setP(double Pout)
 {
-    P = Pout;
+    P_ = Pout;
     updated = false;
 }
 void solver_new::setX(std::vector<double> Xout)
@@ -250,7 +261,7 @@ void solver_new::TPn_flash_old()
     //    comp_of[i] = comp[i];
     //}
     //thermo->setX(comp_of);
-    Mtype::solution ret(thermo->Mtype::TPn_flash(P, T)());
+    Mtype::solution ret(thermo->Mtype::TPn_flash(P_, T_)());
     comp_liq.resize(comp.size());
     comp_gas.resize(comp.size());
     equalconstant.resize(comp.size());
@@ -271,14 +282,14 @@ void solver_new::TPn_flash_update()
 void solver_new::TPn_flash(int flag)
 {
     if (flag == TPN_old)
-        //Mtype::solution ret(thermo->Mtype::TPn_flash(P, T)());
-        sol = thermo->Mtype::TPn_flash(P, T)();
+        //Mtype::solution ret(thermo->Mtype::TPn_flash(P_, T_)());
+        sol = thermo->Mtype::TPn_flash(P_, T_)();
     else if (flag == TPN_v2)
-        sol = thermo->Mtype::TPn_flash_New(P, T)();
+        sol = thermo->Mtype::TPn_flash_New(P_, T_)();
     else if (flag == TPN_TPD)
-        sol = thermo->Mtype::TPn_flash_New_TPD(P, T)();
+        sol = thermo->Mtype::TPn_flash_New_TPD(P_, T_)();
     else if (flag == TPN_TPD_Tud)
-        sol = thermo->Mtype::TPn_flash_New_TPD_Tudisco(P, T)();
+        sol = thermo->Mtype::TPn_flash_New_TPD_Tudisco(P_, T_)();
     if (flag == TPn_flag)
         updated = true;
     else
@@ -295,7 +306,7 @@ void solver_new::TPn_flash_New_TPD()
         comp_of[i] = comp[i];
     }
     thermo->setX(comp_of);
-    Mtype::solution ret(thermo->Mtype::TPn_flash_New_TPD(P, T)());
+    Mtype::solution ret(thermo->Mtype::TPn_flash_New_TPD(P_, T_)());
     comp_liq.resize(comp.size());
     comp_gas.resize(comp.size());
     equalconstant.resize(comp.size());
@@ -318,7 +329,7 @@ void solver_new::TPn_flash_New()
         comp_of[i] = comp[i];
     }
     thermo->setX(comp_of);
-    Mtype::solution ret(thermo->Mtype::TPn_flash_New(P, T)());
+    Mtype::solution ret(thermo->Mtype::TPn_flash_New(P_, T_)());
     comp_liq.resize(comp.size());
     comp_gas.resize(comp.size());
     equalconstant.resize(comp.size());
@@ -339,7 +350,7 @@ double solver_new::A()
         comp_of[i] = comp[i];
     }
 
-    return ((PengRobinsonMixture<multispecie<Stype>>*)thermo)->A(P, T, comp_of);
+    return ((PengRobinsonMixture<multispecie<Stype>>*)thermo)->A(P_, T_, comp_of);
 }
 double solver_new::dAdT()
 {
@@ -349,7 +360,7 @@ double solver_new::dAdT()
         comp_of[i] = comp[i];
     }
 
-    return ((PengRobinsonMixture<multispecie<Stype>>*)thermo)->dAdT(P, T, comp_of);
+    return ((PengRobinsonMixture<multispecie<Stype>>*)thermo)->dAdT(P_, T_, comp_of);
 }
 
 double solver_new::B()
@@ -360,7 +371,7 @@ double solver_new::B()
         comp_of[i] = comp[i];
     }
 
-    return ((PengRobinsonMixture<multispecie<Stype>>*)thermo)->B(P, T, comp_of);
+    return ((PengRobinsonMixture<multispecie<Stype>>*)thermo)->B(P_, T_, comp_of);
 }
 double solver_new::dBdT()
 {
@@ -370,7 +381,7 @@ double solver_new::dBdT()
         comp_of[i] = comp[i];
     }
 
-    return ((PengRobinsonMixture<multispecie<Stype>>*)thermo)->dBdT(P, T, comp_of);
+    return ((PengRobinsonMixture<multispecie<Stype>>*)thermo)->dBdT(P_, T_, comp_of);
 }
 double solver_new::W()
 {
@@ -398,7 +409,7 @@ void solver_new::fugacityCoefficient(int flag, std::vector<double>& in)
     {
         comp_of[i] = in[i];
     }
-    Foam::autoPtr<scalarList> pret(thermo->PengRobinsonMixture<multispecie<Stype>>::fugacityCoefficient(P, T,comp_of, flag));
+    Foam::autoPtr<scalarList> pret(thermo->PengRobinsonMixture<multispecie<Stype>>::fugacityCoefficient(P_, T_, comp_of, flag));
     ret.resize(comp.size());
     for (unsigned int i = 0;i < comp.size();i++)
     {
@@ -414,7 +425,7 @@ double solver_new::Ha()
     }
     thermo->setX(comp_of);
 
-    return thermo->Ha(P, T);
+    return thermo->Ha(P_, T_);
 }
 
 double solver_new::Hs()
@@ -425,7 +436,7 @@ double solver_new::Hs()
         comp_of[i] = comp[i];
     }
     thermo->setX(comp_of);
-    return thermo->Hs(P, T);
+    return thermo->Hs(P_, T_);
 }
 
 double solver_new::Es()
@@ -437,9 +448,9 @@ double solver_new::Es()
         comp_of[i] = comp[i];
     }
     thermo->setX(comp_of);
-    return thermo->Es(P, T);
+    return thermo->Es(P_, T_);
     */
-    return Hs() - P / rho();
+    return Hs() - P_ / rho();
 }
 double solver_new::Ha_singlePhase(int flag, std::vector<double>& in)
 {
@@ -448,7 +459,7 @@ double solver_new::Ha_singlePhase(int flag, std::vector<double>& in)
     {
         comp_of[i] = in[i];
     }
-    return thermo->PengRobinsonMixture<multispecie<Stype>>::Ha(P, T, comp_of, flag);
+    return thermo->PengRobinsonMixture<multispecie<Stype>>::Ha(P_, T_, comp_of, flag);
 }
 double solver_new::dHadT_singlePhase(int flag, std::vector<double>& in)
 {
@@ -457,7 +468,7 @@ double solver_new::dHadT_singlePhase(int flag, std::vector<double>& in)
     {
         comp_of[i] = in[i];
     }
-    return thermo->PengRobinsonMixture<multispecie<Stype>>::dHadT(P, T, comp_of, flag);
+    return thermo->PengRobinsonMixture<multispecie<Stype>>::dHadT(P_, T_, comp_of, flag);
 }
 
 double solver_new::Hideal(std::vector<double>& in)
@@ -467,7 +478,7 @@ double solver_new::Hideal(std::vector<double>& in)
     {
         comp_of[i] = in[i];
     }
-    return thermo->PengRobinsonMixture<multispecie<Stype>>::Hideal(P, T, comp_of);
+    return thermo->PengRobinsonMixture<multispecie<Stype>>::Hideal(P_, T_, comp_of);
 }
 double solver_new::dHidealdT(std::vector<double>& in)
 {
@@ -476,13 +487,43 @@ double solver_new::dHidealdT(std::vector<double>& in)
     {
         comp_of[i] = in[i];
     }
-    return thermo->PengRobinsonMixture<multispecie<Stype>>::dHidealdT(P, T, comp_of);
+    return thermo->PengRobinsonMixture<multispecie<Stype>>::dHidealdT(P_, T_, comp_of);
 }
 
 double solver_new::Cp()
 {
     TPn_flash_update();
-    return thermo->Cp(P, T, sol);
+    return thermo->Cp(P_, T_, sol);
+}
+void solver_new::setKinit(const std::vector<double>& Kinit)
+{
+    if (Kinit.size() != n_species)
+    {
+        WarningInFunction
+            << "Kinit size = "
+            << Kinit.size()
+            << ", which is not equal to number of species: "
+            << n_species
+            << ". \'inputK\' is reset to false."
+            << endl;
+    }
+    else {
+        thermo->inputK = true;
+        for (unsigned int i = 0;i < n_species;i++)
+        {
+            thermo->Kinit[i] = Kinit[i];
+        }
+    }
+}
+const std::vector<double>& solver_new::K()
+{
+    TPn_flash_update();
+    equalconstant.resize(n_species);
+    for (unsigned int i = 0;i < n_species;i++)
+    {
+        equalconstant[i] = sol.equalconstant()[i];
+    }
+    return equalconstant;
 }
 double solver_new::dHadP()
 {
@@ -492,8 +533,8 @@ double solver_new::dHadP()
         comp_of[i] = comp[i];
     }
     thermo->setX(comp_of);
-    Mtype::solution ret(thermo->Mtype::TPn_flash(P, T)());
-    return thermo->dHadP(P, T, ret);
+    Mtype::solution ret(thermo->Mtype::TPn_flash(P_, T_)());
+    return thermo->dHadP(P_, T_, ret);
 }
 
 double solver_new::dHadXi(int di)
@@ -504,8 +545,8 @@ double solver_new::dHadXi(int di)
         comp_of[i] = comp[i];
     }
     thermo->setX(comp_of);
-    Mtype::solution ret(thermo->Mtype::TPn_flash(P, T)());
-    return thermo->dHadXi(P, T, di, ret);
+    Mtype::solution ret(thermo->Mtype::TPn_flash(P_, T_)());
+    return thermo->dHadXi(P_, T_, di, ret);
 }
 
 double solver_new::dHsdXi(int di)
@@ -516,8 +557,8 @@ double solver_new::dHsdXi(int di)
         comp_of[i] = comp[i];
     }
     thermo->setX(comp_of);
-    Mtype::solution ret(thermo->Mtype::TPn_flash(P, T)());
-    return thermo->dHsdXi(P, T, di, ret);
+    Mtype::solution ret(thermo->Mtype::TPn_flash(P_, T_)());
+    return thermo->dHsdXi(P_, T_, di, ret);
 }
 void solver_new::Ln_fugacityCoefficient()
 {
@@ -527,8 +568,8 @@ void solver_new::Ln_fugacityCoefficient()
     {
         comp_of[i] = comp[i];
     }
-    double z = thermo->Z_gibbs(P, T, comp_of);
-    fugcoef.reset((thermo->ln_fugacityCoefficient(P, T, z, comp_of)).ptr());
+    double z = thermo->Z_gibbs(P_, T_, comp_of);
+    fugcoef.reset((thermo->ln_fugacityCoefficient(P_, T_, z, comp_of)).ptr());
     ret.resize(comp.size());
     for (unsigned int i = 0;i < comp.size();i++)
     {
@@ -543,7 +584,7 @@ void solver_new::Ln_fugacityCoefficient(int flag)
     {
         comp_of[i] = comp[i];
     }
-    fugcoef.reset((thermo->fugacityCoefficient(P, T,comp_of, flag)).ptr());
+    fugcoef.reset((thermo->fugacityCoefficient(P_, T_, comp_of, flag)).ptr());
     ret.resize(comp.size());
     for (unsigned int i = 0;i < comp.size();i++)
     {
@@ -560,7 +601,7 @@ void solver_new::ddT_Ln_fugacityCoefficient(int flag)
     {
         comp_of[i] = comp[i];
     }
-    ddT_Ln_fugcoef.reset((thermo->ddT_Ln_fugacityCoefficient(P, T, comp_of, flag)).ptr());
+    ddT_Ln_fugcoef.reset((thermo->ddT_Ln_fugacityCoefficient(P_, T_, comp_of, flag)).ptr());
     ret.resize(comp.size());
     for (unsigned int i = 0;i < comp.size();i++)
     {
@@ -576,7 +617,7 @@ void solver_new::ddxi_Ln_fugacityCoefficient(int di, int flag)
     {
         comp_of[i] = comp[i];
     }
-    ddT_Ln_fugcoef.reset((thermo->ddxi_Ln_fugacityCoefficient(P, T, di,comp_of, flag)).ptr());
+    ddT_Ln_fugcoef.reset((thermo->ddxi_Ln_fugacityCoefficient(P_, T_, di, comp_of, flag)).ptr());
     ret.resize(comp.size());
     for (unsigned int i = 0;i < comp.size();i++)
     {
@@ -615,12 +656,12 @@ void solver_new::dvidT()
     //}
     //std::cout << std::endl;
     thermo->setX(comp_of);
-    Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
+    Mtype::solution so(thermo->Mtype::TPn_flash(P_, T_)());
     //for (unsigned int i = 0;i < comp.size();i++)
     //{
     //    std::cout << "liq=" << so.X_liq()[i] << ",gas=" << so.X_gas()[i] << std::endl;
     //}
-    solu.reset((thermo->dvidT(P, T, so)).ptr());
+    solu.reset((thermo->dvidT(P_, T_, so)).ptr());
 
     ret.resize(comp.size());
     for (unsigned int i = 0;i < comp.size();i++)
@@ -637,7 +678,7 @@ double solver_new::muideal_Mole(int di)
     {
         comp_of[i] = comp[i];
     }
-    return  thermo->muideal_Mole(P, T, di, &comp_of);
+    return  thermo->muideal_Mole(P_, T_, di, &comp_of);
 }
 
 bool solver_new::solveTPD_BFGS()
@@ -650,7 +691,7 @@ bool solver_new::solveTPD_BFGS()
     thermo->setX(comp_of);
     bool rb, isVapor;
     Foam::autoPtr<Foam::scalarList> rl;
-    std::tie(rb, rl, isVapor) = thermo->solveTPD_BFGS(P, T);
+    std::tie(rb, rl, isVapor) = thermo->solveTPD_BFGS(P_, T_);
     return  rb;
 }
 
@@ -661,7 +702,7 @@ double solver_new::Gideal()
     {
         comp_of[i] = comp[i];
     }
-    return  thermo->Gideal(P, T, comp_of);
+    return  thermo->Gideal(P_, T_, comp_of);
 }
 
 double solver_new::Gideal_Mole()
@@ -671,7 +712,7 @@ double solver_new::Gideal_Mole()
     {
         comp_of[i] = comp[i];
     }
-    return  thermo->Gideal_Mole(P, T, comp_of);
+    return  thermo->Gideal_Mole(P_, T_, comp_of);
 }
 
 double solver_new::G_Mole()
@@ -681,7 +722,7 @@ double solver_new::G_Mole()
     {
         comp_of[i] = comp[i];
     }
-    return  thermo->G_Mole(P, T, comp_of);
+    return  thermo->G_Mole(P_, T_, comp_of);
 }
 
 double solver_new::G()
@@ -692,7 +733,7 @@ double solver_new::G()
         comp_of[i] = comp[i];
     }
     thermo->setX(comp_of);
-    return  thermo->G(P, T);
+    return  thermo->G(P_, T_);
 }
 
 double solver_new::S()
@@ -703,7 +744,7 @@ double solver_new::S()
         comp_of[i] = comp[i];
     }
     thermo->setX(comp_of);
-    return  thermo->S(P, T);
+    return  thermo->S(P_, T_);
 }
 
 
@@ -714,7 +755,7 @@ double solver_new::G_departure_Mole()
     {
         comp_of[i] = comp[i];
     }
-    return  thermo->G_departure_Mole(P, T, comp_of);
+    return  thermo->G_departure_Mole(P_, T_, comp_of);
 }
 
 double solver_new::Gibbs_single()
@@ -724,7 +765,7 @@ double solver_new::Gibbs_single()
     {
         comp_of[i] = comp[i];
     }
-    return  thermo->G_TPD(P, T, comp_of);
+    return  thermo->G_TPD(P_, T_, comp_of);
 }
 
 
@@ -735,7 +776,7 @@ double solver_new::A_single()
     {
         comp_of[i] = comp[i];
     }
-    return  thermo->A_TPD(P, T, comp_of);
+    return  thermo->A_TPD(P_, T_, comp_of);
 }
 double solver_new::z_single()
 {
@@ -744,7 +785,7 @@ double solver_new::z_single()
     {
         comp_of[i] = comp[i];
     }
-    return  thermo->Z_gibbs(P, T, comp_of);
+    return  thermo->Z_gibbs(P_, T_, comp_of);
 }
 void solver_new::dvidP()
 {
@@ -765,12 +806,12 @@ void solver_new::dvidP()
     //}
     //std::cout << std::endl;
     thermo->setX(comp_of);
-    Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
+    Mtype::solution so(thermo->Mtype::TPn_flash(P_, T_)());
     //for (unsigned int i = 0;i < comp.size();i++)
     //{
     //    std::cout << "liq=" << so.X_liq()[i] << ",gas=" << so.X_gas()[i] << std::endl;
     //}
-    solu.reset((thermo->dvidP(P, T, so)).ptr());
+    solu.reset((thermo->dvidP(P_, T_, so)).ptr());
 
     ret.resize(comp.size());
     for (unsigned int i = 0;i < comp.size();i++)
@@ -792,9 +833,9 @@ void solver_new::dvidXi(int di)
         comp_of[i] = comp[i];
     }
     thermo->setX(comp_of);
-    Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
+    Mtype::solution so(thermo->Mtype::TPn_flash(P_, T_)());
 
-    solu.reset((thermo->dvidXi(P, T, di, so)).ptr());
+    solu.reset((thermo->dvidXi(P_, T_, di, so)).ptr());
 
     ret.resize(comp.size());
     for (unsigned int i = 0;i < comp.size();i++)
@@ -814,8 +855,8 @@ double  solver_new::dTdP_HP()
         comp_of[i] = comp[i];
     }
     thermo->setX(comp_of);
-    Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
-    return thermo->dTdP_HP(P, T, so);
+    Mtype::solution so(thermo->Mtype::TPn_flash(P_, T_)());
+    return thermo->dTdP_HP(P_, T_, so);
 }
 double  solver_new::dEdT()
 {
@@ -827,8 +868,8 @@ double  solver_new::dEdT()
         comp_of[i] = comp[i];
     }
     thermo->setX(comp_of);
-    Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
-    return thermo->dEdT(P, T, so);
+    Mtype::solution so(thermo->Mtype::TPn_flash(P_, T_)());
+    return thermo->dEdT(P_, T_, so);
 }
 
 double  solver_new::dEdP()
@@ -841,8 +882,8 @@ double  solver_new::dEdP()
         comp_of[i] = comp[i];
     }
     thermo->setX(comp_of);
-    Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
-    return thermo->dEdP(P, T, so);
+    Mtype::solution so(thermo->Mtype::TPn_flash(P_, T_)());
+    return thermo->dEdP(P_, T_, so);
 }
 
 double  solver_new::dEdXi(int di)
@@ -855,8 +896,8 @@ double  solver_new::dEdXi(int di)
         comp_of[i] = comp[i];
     }
     thermo->setX(comp_of);
-    Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
-    return thermo->dEdXi(P, T, di, so);
+    Mtype::solution so(thermo->Mtype::TPn_flash(P_, T_)());
+    return thermo->dEdXi(P_, T_, di, so);
 }
 
 
@@ -871,8 +912,8 @@ double  solver_new::dTdE_rhoX()
         comp_of[i] = comp[i];
     }
     thermo->setX(comp_of);
-    Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
-    return thermo->dTdE_rhoX(P, T, so);
+    Mtype::solution so(thermo->Mtype::TPn_flash(P_, T_)());
+    return thermo->dTdE_rhoX(P_, T_, so);
 }
 
 double  solver_new::dTdrho_EX()
@@ -885,8 +926,8 @@ double  solver_new::dTdrho_EX()
         comp_of[i] = comp[i];
     }
     thermo->setX(comp_of);
-    Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
-    return thermo->dTdrho_EX(P, T, so);
+    Mtype::solution so(thermo->Mtype::TPn_flash(P_, T_)());
+    return thermo->dTdrho_EX(P_, T_, so);
 }
 
 double  solver_new::dPdE_rhoX()
@@ -899,8 +940,8 @@ double  solver_new::dPdE_rhoX()
         comp_of[i] = comp[i];
     }
     thermo->setX(comp_of);
-    Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
-    return thermo->dPdE_rhoX(P, T, so);
+    Mtype::solution so(thermo->Mtype::TPn_flash(P_, T_)());
+    return thermo->dPdE_rhoX(P_, T_, so);
 }
 
 double  solver_new::dPdrho_EX()
@@ -913,8 +954,8 @@ double  solver_new::dPdrho_EX()
         comp_of[i] = comp[i];
     }
     thermo->setX(comp_of);
-    Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
-    return thermo->dPdrho_EX(P, T, so);
+    Mtype::solution so(thermo->Mtype::TPn_flash(P_, T_)());
+    return thermo->dPdrho_EX(P_, T_, so);
 }
 
 double  solver_new::dvfdE_rhoX()
@@ -927,8 +968,8 @@ double  solver_new::dvfdE_rhoX()
         comp_of[i] = comp[i];
     }
     thermo->setX(comp_of);
-    Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
-    return thermo->dvfdE_rhoX(P, T, so);
+    Mtype::solution so(thermo->Mtype::TPn_flash(P_, T_)());
+    return thermo->dvfdE_rhoX(P_, T_, so);
 }
 
 double  solver_new::dvfdrho_EX()
@@ -941,8 +982,8 @@ double  solver_new::dvfdrho_EX()
         comp_of[i] = comp[i];
     }
     thermo->setX(comp_of);
-    Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
-    return thermo->dvfdrho_EX(P, T, so);
+    Mtype::solution so(thermo->Mtype::TPn_flash(P_, T_)());
+    return thermo->dvfdrho_EX(P_, T_, so);
 }
 
 
@@ -956,8 +997,8 @@ double  solver_new::c()
         comp_of[i] = comp[i];
     }
     thermo->setX(comp_of);
-    Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
-    return thermo->c(P, T, so);
+    Mtype::solution so(thermo->Mtype::TPn_flash(P_, T_)());
+    return thermo->c(P_, T_, so);
 }
 double  solver_new::dTdH_HP()
 {
@@ -969,8 +1010,8 @@ double  solver_new::dTdH_HP()
         comp_of[i] = comp[i];
     }
     thermo->setX(comp_of);
-    Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
-    return thermo->dTdH_HP(P, T, so);
+    Mtype::solution so(thermo->Mtype::TPn_flash(P_, T_)());
+    return thermo->dTdH_HP(P_, T_, so);
 
 }
 double  solver_new::dTdXi_HP(int di)
@@ -983,8 +1024,8 @@ double  solver_new::dTdXi_HP(int di)
         comp_of[i] = comp[i];
     }
     thermo->setX(comp_of);
-    Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
-    return thermo->dTdXi_HP(P, T, di, so);
+    Mtype::solution so(thermo->Mtype::TPn_flash(P_, T_)());
+    return thermo->dTdXi_HP(P_, T_, di, so);
 }
 
 double  solver_new::dTdXi_Erho(int di)
@@ -997,8 +1038,8 @@ double  solver_new::dTdXi_Erho(int di)
         comp_of[i] = comp[i];
     }
     thermo->setX(comp_of);
-    Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
-    return thermo->dTdXi_Erho(P, T, di, so);
+    Mtype::solution so(thermo->Mtype::TPn_flash(P_, T_)());
+    return thermo->dTdXi_Erho(P_, T_, di, so);
 }
 
 double  solver_new::dPdXi_Erho(int di)
@@ -1011,8 +1052,8 @@ double  solver_new::dPdXi_Erho(int di)
         comp_of[i] = comp[i];
     }
     thermo->setX(comp_of);
-    Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
-    return thermo->dPdXi_Erho(P, T, di, so);
+    Mtype::solution so(thermo->Mtype::TPn_flash(P_, T_)());
+    return thermo->dPdXi_Erho(P_, T_, di, so);
 }
 
 double  solver_new::dvfdXi_Erho(int di)
@@ -1025,8 +1066,8 @@ double  solver_new::dvfdXi_Erho(int di)
         comp_of[i] = comp[i];
     }
     thermo->setX(comp_of);
-    Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
-    return thermo->dvfdXi_Erho(P, T, di, so);
+    Mtype::solution so(thermo->Mtype::TPn_flash(P_, T_)());
+    return thermo->dvfdXi_Erho(P_, T_, di, so);
 }
 
 double  solver_new::vaporfra()
@@ -1038,7 +1079,7 @@ double  solver_new::vaporfra()
 double  solver_new::rho()
 {
     TPn_flash_update();
-    return thermo->rho(P, T, sol);
+    return thermo->rho(P_, T_, sol);
     /*
     Foam::scalarList comp_of(comp.size(), Foam::Zero);
     autoPtr<scalarList> solu;
@@ -1048,8 +1089,8 @@ double  solver_new::rho()
         comp_of[i] = comp[i];
     }
     thermo->setX(comp_of);
-    Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
-    return thermo->rho(P, T);
+    Mtype::solution so(thermo->Mtype::TPn_flash(P_, T_)());
+    return thermo->rho(P_, T_);
     */
 
 }
@@ -1064,8 +1105,8 @@ double  solver_new::alphah_dev()
         comp_of[i] = comp[i];
     }
     thermo->setX(comp_of);
-    //Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
-    return thermo->alphah_dev(P, T);
+    //Mtype::solution so(thermo->Mtype::TPn_flash(P_, T_)());
+    return thermo->alphah_dev(P_, T_);
 
 }
 
@@ -1079,8 +1120,8 @@ double  solver_new::mu_dev()
         comp_of[i] = comp[i];
     }
     thermo->setX(comp_of);
-    //Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
-    return thermo->mu_dev(P, T);
+    //Mtype::solution so(thermo->Mtype::TPn_flash(P_, T_)());
+    return thermo->mu_dev(P_, T_);
 
 }
 
@@ -1094,8 +1135,8 @@ double  solver_new::Dimix(int di)
         comp_of[i] = comp[i];
     }
     thermo->setX(comp_of);
-    //Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
-    return thermo->Dimix(P, T, di);
+    //Mtype::solution so(thermo->Mtype::TPn_flash(P_, T_)());
+    return thermo->Dimix(P_, T_, di);
 
 }
 
@@ -1109,8 +1150,8 @@ double  solver_new::dZdT()
         comp_of[i] = comp[i];
     }
     thermo->setX(comp_of);
-    Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
-    return thermo->dZdT(P, T, so);
+    Mtype::solution so(thermo->Mtype::TPn_flash(P_, T_)());
+    return thermo->dZdT(P_, T_, so);
 
 }
 double  solver_new::dSdT()
@@ -1123,8 +1164,8 @@ double  solver_new::dSdT()
         comp_of[i] = comp[i];
     }
     thermo->setX(comp_of);
-    Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
-    return thermo->dSdT(P, T, so);
+    Mtype::solution so(thermo->Mtype::TPn_flash(P_, T_)());
+    return thermo->dSdT(P_, T_, so);
 }
 double  solver_new::dSdP()
 {
@@ -1136,8 +1177,8 @@ double  solver_new::dSdP()
         comp_of[i] = comp[i];
     }
     thermo->setX(comp_of);
-    Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
-    return thermo->dSdP(P, T, so);
+    Mtype::solution so(thermo->Mtype::TPn_flash(P_, T_)());
+    return thermo->dSdP(P_, T_, so);
 }
 
 double  solver_new::Z()
@@ -1150,8 +1191,8 @@ double  solver_new::Z()
         comp_of[i] = comp[i];
     }
     thermo->setX(comp_of);
-    Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
-    return thermo->Z(P, T, so);
+    Mtype::solution so(thermo->Mtype::TPn_flash(P_, T_)());
+    return thermo->Z(P_, T_, so);
 
 }
 double  solver_new::drhodT()
@@ -1164,8 +1205,8 @@ double  solver_new::drhodT()
         comp_of[i] = comp[i];
     }
     thermo->setX(comp_of);
-    Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
-    return thermo->drhodT(P, T, so);
+    Mtype::solution so(thermo->Mtype::TPn_flash(P_, T_)());
+    return thermo->drhodT(P_, T_, so);
 
 }
 
@@ -1179,8 +1220,8 @@ double  solver_new::drhodP()
         comp_of[i] = comp[i];
     }
     thermo->setX(comp_of);
-    Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
-    return thermo->drhodP(P, T, so);
+    Mtype::solution so(thermo->Mtype::TPn_flash(P_, T_)());
+    return thermo->drhodP(P_, T_, so);
 
 }
 
@@ -1194,8 +1235,8 @@ double  solver_new::drhodXi(int di)
         comp_of[i] = comp[i];
     }
     thermo->setX(comp_of);
-    Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
-    return thermo->drhodXi(P, T, di, so);
+    Mtype::solution so(thermo->Mtype::TPn_flash(P_, T_)());
+    return thermo->drhodXi(P_, T_, di, so);
 }
 
 double  solver_new::dZdXi(int di)
@@ -1208,8 +1249,8 @@ double  solver_new::dZdXi(int di)
         comp_of[i] = comp[i];
     }
     thermo->setX(comp_of);
-    Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
-    return thermo->dZdXi(P, T, di, so);
+    Mtype::solution so(thermo->Mtype::TPn_flash(P_, T_)());
+    return thermo->dZdXi(P_, T_, di, so);
 }
 
 double  solver_new::drhoPdH_HP()
@@ -1222,8 +1263,8 @@ double  solver_new::drhoPdH_HP()
         comp_of[i] = comp[i];
     }
     thermo->setX(comp_of);
-    Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
-    return thermo->drhoPdH_HP(P, T, so);
+    Mtype::solution so(thermo->Mtype::TPn_flash(P_, T_)());
+    return thermo->drhoPdH_HP(P_, T_, so);
 }
 double  solver_new::drhoPdP_HP()
 {
@@ -1235,8 +1276,8 @@ double  solver_new::drhoPdP_HP()
         comp_of[i] = comp[i];
     }
     thermo->setX(comp_of);
-    Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
-    return thermo->drhoPdP_HP(P, T, so);
+    Mtype::solution so(thermo->Mtype::TPn_flash(P_, T_)());
+    return thermo->drhoPdP_HP(P_, T_, so);
 }
 
 double  solver_new::drhoPdH_HsP()
@@ -1249,8 +1290,8 @@ double  solver_new::drhoPdH_HsP()
         comp_of[i] = comp[i];
     }
     thermo->setX(comp_of);
-    Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
-    return thermo->drhoPdH_HsP(P, T, so);
+    Mtype::solution so(thermo->Mtype::TPn_flash(P_, T_)());
+    return thermo->drhoPdH_HsP(P_, T_, so);
 }
 
 double  solver_new::dTdXi_HsP(int di)
@@ -1263,8 +1304,8 @@ double  solver_new::dTdXi_HsP(int di)
         comp_of[i] = comp[i];
     }
     thermo->setX(comp_of);
-    Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
-    return thermo->dTdXi_HsP(P, T, di, so);
+    Mtype::solution so(thermo->Mtype::TPn_flash(P_, T_)());
+    return thermo->dTdXi_HsP(P_, T_, di, so);
 }
 double  solver_new::drhoPdP_HsP()
 {
@@ -1276,8 +1317,8 @@ double  solver_new::drhoPdP_HsP()
         comp_of[i] = comp[i];
     }
     thermo->setX(comp_of);
-    Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
-    return thermo->drhoPdP_HsP(P, T, so);
+    Mtype::solution so(thermo->Mtype::TPn_flash(P_, T_)());
+    return thermo->drhoPdP_HsP(P_, T_, so);
 }
 
 double  solver_new::drhodP_HP()
@@ -1290,8 +1331,8 @@ double  solver_new::drhodP_HP()
         comp_of[i] = comp[i];
     }
     thermo->setX(comp_of);
-    Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
-    return thermo->drhodP_HP(P, T, so);
+    Mtype::solution so(thermo->Mtype::TPn_flash(P_, T_)());
+    return thermo->drhodP_HP(P_, T_, so);
 }
 double  solver_new::drhoPdXi_HP(int di)
 {
@@ -1303,8 +1344,8 @@ double  solver_new::drhoPdXi_HP(int di)
         comp_of[i] = comp[i];
     }
     thermo->setX(comp_of);
-    Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
-    return thermo->drhoPdXi_HP(P, T, di, so);
+    Mtype::solution so(thermo->Mtype::TPn_flash(P_, T_)());
+    return thermo->drhoPdXi_HP(P_, T_, di, so);
 }
 double  solver_new::drhoPdXi_HsP(int di)
 {
@@ -1316,8 +1357,8 @@ double  solver_new::drhoPdXi_HsP(int di)
         comp_of[i] = comp[i];
     }
     thermo->setX(comp_of);
-    Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
-    return thermo->drhoPdXi_HsP(P, T, di, so);
+    Mtype::solution so(thermo->Mtype::TPn_flash(P_, T_)());
+    return thermo->drhoPdXi_HsP(P_, T_, di, so);
 }
 double  solver_new::drhodXi_HP(int di)
 {
@@ -1329,8 +1370,8 @@ double  solver_new::drhodXi_HP(int di)
         comp_of[i] = comp[i];
     }
     thermo->setX(comp_of);
-    Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
-    return thermo->drhodXi_HP(P, T, di, so);
+    Mtype::solution so(thermo->Mtype::TPn_flash(P_, T_)());
+    return thermo->drhodXi_HP(P_, T_, di, so);
 }
 
 double  solver_new::dvfdP_HP()
@@ -1343,8 +1384,8 @@ double  solver_new::dvfdP_HP()
         comp_of[i] = comp[i];
     }
     thermo->setX(comp_of);
-    Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
-    return thermo->dvfdP_HP(P, T, so);
+    Mtype::solution so(thermo->Mtype::TPn_flash(P_, T_)());
+    return thermo->dvfdP_HP(P_, T_, so);
 }
 double  solver_new::dvfdH_HP()
 {
@@ -1356,8 +1397,8 @@ double  solver_new::dvfdH_HP()
         comp_of[i] = comp[i];
     }
     thermo->setX(comp_of);
-    Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
-    return thermo->dvfdH_HP(P, T, so);
+    Mtype::solution so(thermo->Mtype::TPn_flash(P_, T_)());
+    return thermo->dvfdH_HP(P_, T_, so);
 }
 
 double solver_new::dvfdXi_HP(int di)
@@ -1370,8 +1411,8 @@ double solver_new::dvfdXi_HP(int di)
         comp_of[i] = comp[i];
     }
     thermo->setX(comp_of);
-    Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
-    return thermo->dvfdXi_HP(P, T, di, so);
+    Mtype::solution so(thermo->Mtype::TPn_flash(P_, T_)());
+    return thermo->dvfdXi_HP(P_, T_, di, so);
 }
 
 
@@ -1385,8 +1426,8 @@ double  solver_new::dvfdP_HsP()
         comp_of[i] = comp[i];
     }
     thermo->setX(comp_of);
-    Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
-    return thermo->dvfdP_HsP(P, T, so);
+    Mtype::solution so(thermo->Mtype::TPn_flash(P_, T_)());
+    return thermo->dvfdP_HsP(P_, T_, so);
 }
 double  solver_new::dvfdH_HsP()
 {
@@ -1398,8 +1439,8 @@ double  solver_new::dvfdH_HsP()
         comp_of[i] = comp[i];
     }
     thermo->setX(comp_of);
-    Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
-    return thermo->dvfdH_HsP(P, T, so);
+    Mtype::solution so(thermo->Mtype::TPn_flash(P_, T_)());
+    return thermo->dvfdH_HsP(P_, T_, so);
 }
 
 double solver_new::dvfdXi_HsP(int di)
@@ -1412,8 +1453,8 @@ double solver_new::dvfdXi_HsP(int di)
         comp_of[i] = comp[i];
     }
     thermo->setX(comp_of);
-    Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
-    return thermo->dvfdXi_HsP(P, T, di, so);
+    Mtype::solution so(thermo->Mtype::TPn_flash(P_, T_)());
+    return thermo->dvfdXi_HsP(P_, T_, di, so);
 }
 
 double solver_new::T_HsP(double h, double P, double T0)
@@ -1426,16 +1467,33 @@ double solver_new::T_HsP(double h, double P, double T0)
     thermo->setX(comp_of);
 
     double Ttemp = T0;
-    double htemp = thermo->Hs(P, Ttemp);
+    double htemp = thermo->Hs(P_, Ttemp);
     while (fabs(htemp - h) > 1e-5)
     {
         //cout << Ttemp << "," << htemp << std::endl;
-        Mtype::solution so(thermo->Mtype::TPn_flash(P, Ttemp)());
-        cout << thermo->Cp(P, Ttemp) << "," << thermo->Cp_Hs(P, Ttemp, so) << std::endl;
-        Ttemp -= (htemp - h) / thermo->Cp_Hs(P, Ttemp, so);
-        htemp = thermo->Hs(P, Ttemp);
+        Mtype::solution so(thermo->Mtype::TPn_flash(P_, Ttemp)());
+        cout << thermo->Cp(P_, Ttemp) << "," << thermo->Cp_Hs(P_, Ttemp, so) << std::endl;
+        Ttemp -= (htemp - h) / thermo->Cp_Hs(P_, Ttemp, so);
+        htemp = thermo->Hs(P_, Ttemp);
     }
     return Ttemp;
+}
+double solver_new::P()
+{
+    return P_;
+}
+double solver_new::T()
+{
+    return T_;
+}
+const std::vector<double>& solver_new::X()
+{
+    X_.resize(n_species);
+    for (unsigned int i = 0;i < n_species;i++)
+    {
+        X_[i] = thermo->X_[i];
+    }
+    return X_;
 }
 
 void solver_new::drhoPdXHP_HsP()
@@ -1448,8 +1506,8 @@ void solver_new::drhoPdXHP_HsP()
         comp_of[i] = comp[i];
     }
     thermo->setX(comp_of);
-    Mtype::solution so(thermo->Mtype::TPn_flash(P, T)());
-    autoPtr<scalarList> grad = thermo->drhoPdXHP_HsP(P, T, so);
+    Mtype::solution so(thermo->Mtype::TPn_flash(P_, T_)());
+    autoPtr<scalarList> grad = thermo->drhoPdXHP_HsP(P_, T_, so);
     ret.resize(grad().size());
     for (unsigned int i = 0;i < ret.size();i++)
     {
@@ -1471,7 +1529,7 @@ double solver_new::S(int flag)
             comp_of[i] = comp_liq[i];
     }
 
-    return ((PengRobinsonMixture<multispecie<Stype>>*)thermo)->S(P, T, comp_of, flag);
+    return ((PengRobinsonMixture<multispecie<Stype>>*)thermo)->S(P_, T_, comp_of, flag);
 }
 
 double solver_new::dSdT(int flag)
@@ -1487,7 +1545,7 @@ double solver_new::dSdT(int flag)
             comp_of[i] = comp_liq[i];
     }
 
-    return ((PengRobinsonMixture<multispecie<Stype>>*)thermo)->dSdT(P, T, comp_of, flag);
+    return ((PengRobinsonMixture<multispecie<Stype>>*)thermo)->dSdT(P_, T_, comp_of, flag);
 }
 
 double solver_new::dSdP(int flag)
@@ -1503,13 +1561,5 @@ double solver_new::dSdP(int flag)
             comp_of[i] = comp_liq[i];
     }
 
-    return ((PengRobinsonMixture<multispecie<Stype>>*)thermo)->dSdP(P, T,comp_of, flag);
-}
-
-
-int fun_my(int n)
-{
-    if (n == 0)
-        return 1;
-    return n * fun_my(n - 1);
+    return ((PengRobinsonMixture<multispecie<Stype>>*)thermo)->dSdP(P_, T_, comp_of, flag);
 }

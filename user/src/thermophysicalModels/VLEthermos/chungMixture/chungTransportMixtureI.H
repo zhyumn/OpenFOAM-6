@@ -868,11 +868,11 @@ inline Foam::scalar Foam::chungTransportMixture<Specie>::kappa_rho(
 
     //2, heat conductivity,W/m.K
     scalar beta = 0.78620 - 0.71090 * w_mix + 1.31680 * sqr(w_mix);
-    scalar mw_binary0 = mw_binary / 1.0e+3;
+    //scalar mw_binary0 = mw_binary / 1.0e+3;
     scalar zeta = 2.00 + 10.50 * sqr(tempr);
     scalar psi = 1.0 + alpha * ((0.2150 + 0.282880 * alpha - 1.0610 * beta + 0.266650 * zeta) / (0.63660 + beta * zeta + 1.0610 * alpha * beta));
 
-    scalar qq = 3.5860 * 1e-03 * sqrt(tempc_mix / mw_binary0) / pow(volu_mix, 2.0 / 3.0);
+    //scalar qq = 3.5860 * 1e-03 * sqrt(tempc_mix / mw_binary0) / pow(volu_mix, 2.0 / 3.0);
     //scalar yy = volu_mix / (6.0e+06 * sv_phase);
     scalar yy = rho * volu_mix/ 6.0e+06;
     scalar G1 = (1.0 - 0.50 * yy) / pow3(1.0 - yy);
