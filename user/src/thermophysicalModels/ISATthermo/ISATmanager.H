@@ -284,7 +284,9 @@ namespace Foam
             timeSteps_++;
             if (timeSteps_ % checkInterval_ == 0)
             {
-                showPreformance();
+                tableTree_.updateMaxNLeaf();
+                showPerformance();
+
             }
             tableTree_.timeTagList().newTimeStep();
 
@@ -296,8 +298,9 @@ namespace Foam
             if (timeSteps_ % checkInterval_ == 0 && tableTree_.depth() * 1.0 / ceil(log2(tableTree_.size())) > maxDepthFactor_)
             {
                 tableTree_.balance(scaleIn_);
-                //showPreformance();
+                //showPerformance();
             }
+
         }
 
         label treesize()
@@ -325,7 +328,7 @@ namespace Foam
             return scaleIn_;
         }
 
-        void showPreformance() const;
+        void showPerformance() const;
         const word& treename() const
         {
             return treename_;

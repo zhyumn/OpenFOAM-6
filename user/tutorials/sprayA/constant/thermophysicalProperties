@@ -51,7 +51,7 @@ tableName "ThermoTable_O2.txt";//"ThermoTable.txt";
 newFormat       yes;
 
 inertSpecie     N2;
-
+noVLE false;
 inputK true;
 Kinit (0.0256056208368 3.19624756212);
 

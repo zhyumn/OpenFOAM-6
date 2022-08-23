@@ -48,43 +48,43 @@ geometry
     {
         type            searchableCylinder;
         point1          (0 0 0);
-        point2          (2e-3 0 0);
+        point2          (0.5e-3 0 0);
         radius          0.1e-3;
     }
     layer1_2
     {
         type            searchableCylinder;
         point1          (0 0 0);
-        point2          (3e-3 0 0);
+        point2          (1e-3 0 0);
         radius          0.2e-3;
     }
     layer1_3
     {
         type            searchableCylinder;
         point1          (0 0 0);
-        point2          (4e-3 0 0);
-        radius          0.5e-3;
+        point2          (1.5e-3 0 0);
+        radius          0.3e-3;
     }
     layer1_4
     {
         type            searchableCylinder;
         point1          (0 0 0);
-        point2          (5e-3 0 0);
-        radius          1e-3;
+        point2          (2e-3 0 0);
+        radius          0.5e-3;
     }
     layer1_5
     {
         type            searchableCylinder;
         point1          (0 0 0);
-        point2          (6e-3 0 0);
-        radius          2e-3;
+        point2          (2.5e-3 0 0);
+        radius          0.8e-3;
     }
     layer1_6
     {
         type            searchableCylinder;
         point1          (0 0 0);
-        point2          (7e-3 0 0);
-        radius          4e-3;
+        point2          (3e-3 0 0);
+        radius          1.0e-3;
     }
     
     injector
@@ -219,35 +219,35 @@ castellatedMeshControls
         layer1_1
         {
             mode inside;
-            levels ((3 5));
+            levels ((3 6));
         }
         layer1_2
         {
             mode inside;
-            levels ((3 4));
+            levels ((3 5));
         }
 
         layer1_3
         {
             mode inside;
-            levels ((2 3));
+            levels ((2 4));
         }
         
         layer1_4
         {
             mode inside;
-            levels ((3 2));
+            levels ((3 3));
         }
         layer1_5
         {
             mode inside;
+            levels ((3 2));
+        }
+        layer1_6
+        {
+            mode inside;
             levels ((3 1));
         }
-        //layer1_6
-        //{
-        //    mode inside;
-        //    levels ((3 1));
-        //}
         
         /*
 
@@ -279,7 +279,7 @@ castellatedMeshControls
     // section reachable from the locationInMesh is kept.
     // NOTE: This point should never be on a face, always inside a cell, even
     // after refinement.
-    locationInMesh (9e-3 0 0);
+    locationInMesh (2e-3 0 0);
 
 
     // Whether any faceZones (as specified in the refinementSurfaces)

@@ -110,6 +110,12 @@ namespace Foam
         label n_in_;
         label n_out_;
 
+        bool constNLeafs_;
+        label NLeafBase_;
+        scalar NLeafRatio_;
+        label NLeafRange_;
+        label NLeafMax_;
+
         //- Reference to the chemistryModel
        // TDACChemistryModel<CompType, ThermoType>& chemistry_;
 
@@ -179,9 +185,46 @@ namespace Foam
             //dictionary coeffsDict
             label in_n,
             label out_n,
-            label maxNLeafs,
-            label timeTagList
-        ) :n_in_(in_n), n_out_(out_n), root_(nullptr), maxNLeafs_(maxNLeafs), size_(0), timeTagList_(timeTagList) {};
+            dictionary ISATDict
+            //label maxNLeafs,
+            //label timeTagList
+        ) :n_in_(in_n), n_out_(out_n), root_(nullptr), size_(0), timeTagList_(readLabel(ISATDict.lookup("NtimeTag")))
+        {
+            label timeTagList = readLabel(ISATDict.lookup("NtimeTag"));
+            dictionary& NleafDcit = ISATDict.subDict("maxNLeafs");
+            if (word(NleafDcit.lookup("type")) == word("const"))
+            {
+                constNLeafs_ = true;
+                maxNLeafs_ = readLabel(NleafDcit.lookup("value"));
+            }
+            else if (word(NleafDcit.lookup("type")) == word("adaptive"))
+            {
+                constNLeafs_ = false;
+                NLeafBase_ = readLabel(NleafDcit.lookup("base"));
+                NLeafRatio_ = readScalar(NleafDcit.lookup("ratio"));
+                NLeafRange_ = readLabel(NleafDcit.lookup("range"));
+                NLeafRange_ = min(NLeafRange_, timeTagList - 1);
+                NLeafMax_ = readLabel(NleafDcit.lookup("max"));
+                maxNLeafs_ = NLeafMax_;
+
+            }
+            else
+            {
+                FatalErrorInFunction
+                    << "maxNLeafs type can only be const and adaptive."
+                    << exit(FatalError);
+            }
+        };
+
+        inline void updateMaxNLeaf()
+        {
+            if (constNLeafs_ == false)
+            {
+                label sum = timeTagList_.sizeSum(NLeafRange_);
+                maxNLeafs_ = min(max(NLeafBase_, sum * NLeafRatio_), NLeafMax_);
+            }
+        }
+
 
 
 
@@ -228,7 +271,7 @@ namespace Foam
         }
 
         void deleteSubTree_Node(ISATNode* subTreeRoot);
-        
+
         inline label size() const
         {
             return size_;
@@ -248,6 +291,10 @@ namespace Foam
 
 
         inline label maxNLeafs()
+        {
+            return maxNLeafs_;
+        }
+        inline label maxNLeafs() const
         {
             return maxNLeafs_;
         }

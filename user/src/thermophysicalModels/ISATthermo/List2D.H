@@ -21,9 +21,11 @@ private:
     std::vector<Node> list_;
     //std::vector<Node*> listtail;
     int start_, end_;
+    mutable std::vector<int> sum;
+    mutable bool sumflag;
 
 public:
-    inline List2D(int n) : timeSteps_(0), size_(0), NtimeSteps_(n), list_(n), start_(0), end_(n - 1)
+    inline List2D(int n) : timeSteps_(0), size_(0), NtimeSteps_(n), list_(n), start_(0), end_(n - 1), sum(n)
     {
         for (int i = 0;i < NtimeSteps_;i++)
         {
@@ -32,6 +34,7 @@ public:
             list_[i].data = nullptr;
             list_[i].timetag = -1;
         }
+        sumflag = false;
     }
     inline const int& NtimeSteps()const
     {
@@ -101,6 +104,7 @@ public:
     }
     inline void newTimeStep()
     {
+        sumflag = false;
         timeSteps_++;
         int newend_ = (end_ + NtimeSteps_ - 1) % NtimeSteps_;
         if (list_[end_].next != list_[end_].prev)
@@ -133,22 +137,45 @@ public:
     }
     inline void print_simple() const
     {
-        int sum;
+
         int j;
+        calcSum();
         std::cout << "size_:" << size_ << std::endl;
         for (int i = 0;i < NtimeSteps_;i++)
         {
-            sum = 0;
             std::cout << i << " :";
-            j = (i + start_) % NtimeSteps_;
-            for (const Node* p = &list_[j];p->next != &list_[j];p = p->next)
-            {
-                sum++;
-                //std::cout << "("<<p->next->data->value()[0]<<","<< p->next->data->value()[1]<<")"<< "->";
-            }
-            std::cout << sum << std::endl;
+            std::cout << sum[i] << std::endl;
         }
+    }
 
+    inline int sizeSum(int x) const
+    {
+        int s = 0;
+        int j;
+        calcSum();
+        for (int i = 0;i < x - 1;i++)
+        {
+            s += sum[i];
+        }
+        return s;
+    }
+
+    inline void calcSum() const
+    {
+        if (sumflag == false)
+        {
+            int j;
+            for (int i = 0;i < NtimeSteps_;i++)
+            {
+                sum[i] = 0;
+                j = (i + start_) % NtimeSteps_;
+                for (const Node* p = &list_[j];p->next != &list_[j];p = p->next)
+                {
+                    sum[i]++;
+                }
+            }
+            sumflag = true;
+        }
     }
 
     inline void leaflist(T* retlist[])

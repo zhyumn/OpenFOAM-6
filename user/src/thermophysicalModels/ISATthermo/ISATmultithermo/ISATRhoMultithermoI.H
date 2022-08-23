@@ -101,6 +101,8 @@ inline Foam::scalar Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::T(
     scalar T1 = T0;
     scalar F1 = (this->*F)(p, T1), F2 = F1;
     scalar T2 = (this->*limit)(T0 + 1);
+    if (T2 == T1)
+        T2 = (this->*limit)(T0 - 1);
     // if(F1>f)
     //     T2=(this->*limit)(T0-30);
      //scalar F1=(this->*F)(p, T1);

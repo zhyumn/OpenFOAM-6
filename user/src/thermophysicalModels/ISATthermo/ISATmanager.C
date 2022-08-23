@@ -30,7 +30,7 @@ License
 template<class FuncType>
 Foam::ISATmanager<FuncType>::ISATmanager(label in_n, label out_n, FuncType& func, const word& name_in, const dictionary& ISATDict)
     :ISATDict_(ISATDict.subDict(name_in)),
-    tableTree_(in_n, out_n, readLabel(ISATDict_.lookup("maxNLeafs")), readLabel(ISATDict_.lookup("NtimeTag"))),
+    tableTree_(in_n, out_n, ISATDict_),// readLabel(ISATDict_.lookup("maxNLeafs")), readLabel(ISATDict_.lookup("NtimeTag"))),
     pfunc(&func),
     epsilon_(1e-3),
     relepsilon_(0.0),
@@ -75,7 +75,7 @@ Foam::ISATmanager<FuncType>::ISATmanager(label in_n, label out_n, FuncType& func
     scalarList toleranceOut_temp(out_n);
     scalarList initToleranceIn_temp(in_n);
     scalarList scaleIn_temp(in_n);
-    FuncType::read(ISATDict_,maxLeafsize_, toleranceOut_temp,initToleranceIn_temp,scaleIn_temp);
+    FuncType::read(ISATDict_, maxLeafsize_, toleranceOut_temp, initToleranceIn_temp, scaleIn_temp);
     for (int i = 0;i < out_n;i++)
     {
         toleranceOut_[i][i] = 1.0 / toleranceOut_temp[i];
@@ -101,9 +101,9 @@ template<class FuncType>
 Foam::ISATmanager<FuncType>::~ISATmanager()
 {
     if (tableTree_.size() > 0)
-        showPreformance();
+        showPerformance();
     //tableTree_.balance(scaleIn_);
-    //showPreformance();
+    //showPerformance();
     //tableTree_.balance();
     //word Tname = "vaporfratree";// "vaporfratree";
 /*
@@ -136,7 +136,7 @@ void Foam::ISATmanager<FuncType>::add(const scalarList& value, Args... arg)
 
     ISATbinaryTree& T = tableTree_;
     ISATleaf* pleaf;
-    if (T.size() == T.maxNLeafs())
+    while (T.size() >= T.maxNLeafs())
     {
         //        Info<<"Deleting"<<endl;
         T.deleteLeaf(T.timeTagList().pop());
@@ -185,7 +185,7 @@ void Foam::ISATmanager<FuncType>::call
 )
 {
     ISATleaf* pleaf;
-    if(noISAT_)
+    if (noISAT_)
     {
         pfunc->value(value, out, arg...);
         return;
@@ -267,7 +267,7 @@ void Foam::ISATmanager<FuncType>::call
     nCall_++;
     /*if (nCall_ % 1000 == 0)
     {
-        showPreformance();
+        showPerformance();
     }*/
 }
 
@@ -456,11 +456,12 @@ double Foam::ISATmanager<FuncType>::norm(const scalarList& l)
     return sqrt(sum);
 }
 template<class FuncType>
-void Foam::ISATmanager<FuncType>::showPreformance() const
+void Foam::ISATmanager<FuncType>::showPerformance() const
 {
-    Info << treename_ << ", ISAT performance: nCall=" << nCall_ << ", notCall=" << notCall << ", nRetrieved=" << nRetrieved_ << ", nGrowth=" << nGrowth_ << ", nAdd=" << nAdd_ << endl;
+    Info << treename_ << ", ISAT performance: nCall = " << nCall_ << ", notCall = " << notCall << ", nRetrieved = " << nRetrieved_ << ", nGrowth = " << nGrowth_ << ", nAdd = " << nAdd_ << endl;
     //Info <<"tree size = "<< tableTree_.size()<< endl;
-    Info << "NtimeSteps:" << timeSteps_ << ",Treedepth:" << tableTree_.depth() << ",Mindepth:" << ceil(log2(tableTree_.size() + 1)) << endl;
+    Info << "NtimeSteps: " << timeSteps_ << ", Treedepth: " << tableTree_.depth() << ", Mindepth: " << ceil(log2(tableTree_.size() + 1)) << endl;
+    Info << "maxNLeafs: " << tableTree_.maxNLeafs() << endl;
     if (tableTree_.size() > 0)
         tableTree_.timeTagList().print_simple();
 }

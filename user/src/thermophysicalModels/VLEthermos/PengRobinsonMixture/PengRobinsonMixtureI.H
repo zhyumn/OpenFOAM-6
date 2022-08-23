@@ -155,7 +155,7 @@ inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::drhodP  // PY:phas
     scalar T,
     const scalarList& Xinp,
     const label pf
-    ) const {
+) const {
     scalar z = Z(p, T, Xinp, pf);
     //RR: 10e+03*m3 Pa K-1 mol-1
     return W(Xinp) / (RR * 1.0e-03 * T) * (z - p * dZdP(p, T, Xinp, pf)) / (z * z);  // kg/m3
@@ -693,7 +693,7 @@ inline Foam::autoPtr<scalarList> Foam::PengRobinsonMixture<ThermoMixture>::fugac
     scalar T,
     const scalarList& Xinp,
     const label pf
-    ) const {
+) const {
     label pflag = this->phaseFlag;
     if (pf != 2)
         pflag = pf;
@@ -711,7 +711,7 @@ inline Foam::autoPtr<scalarList> Foam::PengRobinsonMixture<ThermoMixture>::fugac
 
     Zmix = this->Z(p, T, Xinp, pf);
 
-    scalar Zmix0 = this->Z(p, T,Xinp, 1);
+    scalar Zmix0 = this->Z(p, T, Xinp, 1);
 
     scalar comptrifile = 0.7;
     scalarList Xs(this->X_.size());
@@ -722,7 +722,7 @@ inline Foam::autoPtr<scalarList> Foam::PengRobinsonMixture<ThermoMixture>::fugac
             Xs[0] = comptrifile;
             for (int i = 1; i < this->X_.size(); i++)
                 Xs[i] = (1.0 - comptrifile) / (Xs.size() - 1);
-            Zmix = this->Z(p, T,Xs, pflag);
+            Zmix = this->Z(p, T, Xs, pflag);
             comptrifile = comptrifile + 0.01;
             if (comptrifile >= 1.0) {
                 Zmix = Zmix0;
@@ -762,6 +762,11 @@ inline Foam::autoPtr<scalarList> Foam::PengRobinsonMixture<ThermoMixture>::Ln_fu
     scalarList& fugcoef = *(new scalarList(this->N_));
     scalar Amixz = this->A(p, T, Xinp);
     scalar Bmixz = this->B(p, T, Xinp);
+    if (Bmixz < 0)
+    {
+        Info << "Bmixz= " << Bmixz << endl;
+        Info << "p=" << p << ",T=" << T << "\nX=" << Xinp << endl;
+    }
     scalar Zmix = 0.0;
     autoPtr<scalarList> pAmix2(A2(p, T, Xinp));
     const scalarList& Amix2 = pAmix2();
@@ -878,7 +883,7 @@ inline Foam::autoPtr<scalarList> Foam::PengRobinsonMixture<ThermoMixture>::ddT_L
 
     if (pflag == 0) {
         while (Zmix < 0.0) {  //TODO fix Zmix<0
-            FatalErrorInFunction << "Zmix < 0.0" << exit(FatalError);
+            FatalErrorInFunction << "Zmix < 0.0" <<"\np="<<p<<"\nT="<<T<< exit(FatalError);
             Xs[0] = comptrifile;
             for (int i = 1; i < this->X_.size(); i++)
                 Xs[i] = (1.0 - comptrifile) / (Xs.size() - 1);
@@ -1228,7 +1233,7 @@ inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::dHsdP  // internal
     scalar T,
     const scalarList& Xinp,
     const label pf
-    ) const {
+) const {
     return dHadP(p, T, Xinp, pf);  //+11990129.829480369 +3991.2*1000;
 }
 template <class ThermoMixture>
@@ -1791,9 +1796,9 @@ template <class ThermoMixture>
 inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::S(
     scalar p,
     scalar T,
-     const scalarList& Xinp,
+    const scalarList& Xinp,
     const label pf
-   ) const  //species entropy
+) const  //species entropy
 {
     const scalar cc1 = 1.0 + sqrt(2.0);
     const scalar cc2 = 1.0 - sqrt(2.0);
@@ -1825,7 +1830,7 @@ inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::dSdT(
     scalar T,
     const scalarList& Xinp,
     const label pf
-    ) const  //species entropy
+) const  //species entropy
 {
     const scalar cc1 = 1.0 + sqrt(2.0);
     const scalar cc2 = 1.0 - sqrt(2.0);
@@ -1863,7 +1868,7 @@ inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::dSdP(
     scalar T,
     const scalarList& Xinp,
     const label pf
-    ) const  //species entropy
+) const  //species entropy
 {
     const scalar cc1 = 1.0 + sqrt(2.0);
     const scalar cc2 = 1.0 - sqrt(2.0);
@@ -1902,7 +1907,7 @@ inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::dSdxi  // internal
     label di,
     const scalarList& Xinp,
     const label pf
-    ) const {
+) const {
     scalar bmix = this->b(p, T, Xinp);
     const PengRobinsonMixture<ThermoMixture>& This = *this;
     scalar dbmixdxi = This[di].b(p, T);
