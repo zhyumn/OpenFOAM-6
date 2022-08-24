@@ -17,7 +17,7 @@ file_exists = exists("0/U.table")
 if file_exists:
     os.system("mv 0/U.table 0/U.table.back")
 
-stringout = ["("+"%.7f"% l[0] + " (" +"%.7f"% l[1]+" 0 0)\n"  for l in data]
+stringout = ["("+"%.7f"% l[0] + " (" +"%.7f"% l[1]+" 0 0))\n"  for l in data]
 with open("0/U.table", "w") as file:
     for i in range(7501):
         file.write(stringout[i])
