@@ -1,0 +1,9 @@
+cd autoconf-2.71
+./configure --prefix=$FOAM_USER_PF
+make
+make install
+
+cd automake-1.11.6
+./configure --prefix=$FOAM_USER_PF
+make
+make install
