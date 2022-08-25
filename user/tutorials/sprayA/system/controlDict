@@ -17,19 +17,19 @@ FoamFile
 libs            ("libISATVLERhoThermo.so");
 application     PRpuresprayFoam;
 
-startFrom       latestTime;
+startFrom       startTime;
 
 startTime       0;
 
 stopAt          endTime;
 
-endTime         5e-6;//0.002;
+endTime         5e-5;//0.002;
 
 deltaT          2.0e-11;
 
 writeControl    adjustableRunTime;//timeStep;//adjustableRunTime;
 
-writeInterval   1.e-8;//1;//1e-7;//1.e-7;
+writeInterval   1.e-7;//1;//1e-7;//1.e-7;
 
 purgeWrite      0;
 

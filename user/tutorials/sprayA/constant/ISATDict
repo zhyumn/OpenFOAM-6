@@ -30,7 +30,7 @@ THvfctree_XrhoP
         value 10000;
         base 100;
         ratio 1.5;
-        range 9;
+        range 4;
         max 100000;
     }
     NtimeTag 10;
