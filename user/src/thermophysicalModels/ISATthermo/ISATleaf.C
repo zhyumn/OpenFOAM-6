@@ -45,7 +45,7 @@ Foam::ISATleaf::ISATleaf(int n_in, int n_out,
     ISATNode* node) :
     node_(node), value_(n_in),
     data_(n_out), A_(n_in, n_out),
-    EOA_(n_in, n_in), numRetrieve_(0),pTimeTagList_(nullptr)
+    EOA_(n_in, n_in), numRetrieve_(0), pTimeTagList_(nullptr)
 {
     forAll(value_, i)
     {
@@ -53,7 +53,7 @@ Foam::ISATleaf::ISATleaf(int n_in, int n_out,
     }
 }
 Foam::ISATleaf::ISATleaf(int n_in, int n_out, const scalarList& v, ISATNode* node, const scalarList& data_in
-) : node_(node), value_(n_in), data_(n_out), A_(n_in, n_out), EOA_(n_in, n_in),numRetrieve_(0),pTimeTagList_(nullptr)
+) : node_(node), value_(n_in), data_(n_out), A_(n_in, n_out), EOA_(n_in, n_in), numRetrieve_(0), pTimeTagList_(nullptr)
 {
     forAll(value_, i)
     {
@@ -65,14 +65,23 @@ Foam::ISATleaf::ISATleaf(int n_in, int n_out, const scalarList& v, ISATNode* nod
     }
 
 }
-bool Foam::ISATleaf::inEOA(const scalarList& point,const scalarRectangularMatrix& scaleIn)
+bool Foam::ISATleaf::inEOA(const scalarList& point, const scalarRectangularMatrix& scaleIn)
 {
     scalarRectangularMatrix dx(value_.size(), 1);
     forAll(value_, i)
-    { 
-        dx[i][0] = (point[i] - value_[i])/scaleIn[i][i];
+    {
+        dx[i][0] = (point[i] - value_[i]) / scaleIn[i][i];
     }
-    scalar debug_=((dx.T()) * EOA_ * dx)[0][0];
+    if (dx[4][0] > 1e100)
+    {
+
+        Info << "EOA=" << EOA_ << endl;
+        Info << "dx=" << dx << endl;
+        Info << "scaleIn=" << scaleIn << endl;
+        Info << "point=" << point << endl;
+        Info << "value=" << value_ << endl;
+    }
+    //scalar debug_ = ((dx.T()) * EOA_ * dx)[0][0];
     //scalarRectangularMatrix a=EOA_ * dx;
     return ((dx.T()) * EOA_ * dx)[0][0] <= 1.0;
     //return true;
@@ -90,12 +99,12 @@ void Foam::ISATleaf::eval(const scalarList& value, scalarList& ret)
         ret[i] += retm[0][i];
 }
 
-void Foam::ISATleaf::grow(const scalarList& point,const scalarRectangularMatrix& scaleIn)
+void Foam::ISATleaf::grow(const scalarList& point, const scalarRectangularMatrix& scaleIn)
 {
     scalarRectangularMatrix dx(value_.size(), 1);
     double pbp;
     for (int i = 0;i < value_.size();i++)
-        dx[i][0] = (point[i] - value_[i])/scaleIn[i][i];
+        dx[i][0] = (point[i] - value_[i]) / scaleIn[i][i];
     pbp = (dx.T() * EOA_ * dx)[0][0];
     EOA_ = EOA_ + EOA_ * dx * (dx.T()) * EOA_ * (1 - pbp) / sqr(pbp);
 }

@@ -253,26 +253,39 @@ int main(int argc, char* argv[])
                 )
             & (a_pos * U_pos + a_neg * U_neg)
         );
+        
+        fvScalarMatrix rhoEEqn
+        (
+            fvm::ddt(rhoE)
+        );
+
         if (divScheme == "Doubleflux")
         {
-            solve
+            rhoEEqn += fvc::div_doubleflux(phiEp_pos, phiEp_neg);
+            /*solve
             (
                 fvm::ddt(rhoE)
                 //+ fvc::div(phiEp)
                 + fvc::div_doubleflux(phiEp_pos, phiEp_neg)
                 - fvc::div(sigmaDotU)
-            );
+            );*/
         }
         else if (divScheme == "Conservativeflux")
         {
-            solve
+            rhoEEqn += fvc::div(phiEp);
+            /*solve
             (
                 fvm::ddt(rhoE)
                 + fvc::div(phiEp)
                 //+ fvc::div_doubleflux(phiEp_pos, phiEp_neg)
                 - fvc::div(sigmaDotU)
-            );
+            );*/
         }
+        if (!inviscid)
+        {
+            rhoEEqn -= fvc::div(sigmaDotU);
+        }
+        solve(rhoEEqn);
 
         e = rhoE / rho - 0.5 * magSqr(U);
         e.correctBoundaryConditions();
@@ -339,7 +352,7 @@ int main(int argc, char* argv[])
             //hei[i] = thermo.hei(i);
         }
         //U*=0.1;
-        rho_write=rho;
+        rho_write = rho;
         runTime.write();
 
         Info << "ExecutionTime = " << runTime.elapsedCpuTime() << " s"
