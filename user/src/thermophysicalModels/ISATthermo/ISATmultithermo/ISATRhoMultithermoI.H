@@ -954,6 +954,13 @@ inline void Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::newTimeStep(
     //mutree_XTP.newTimeStep();
     //alphahtree_XTP.newTimeStep();
 }
+
+template <class ThermoMixture, template <class> class Type>
+inline void Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::mute_show()
+{
+    Erhovfctree_XTP.showPerformance();
+    Erhovfctree_XTP.mute();
+}
 /*
 template <class ThermoMixture, template <class> class Type>
 inline Foam::scalar

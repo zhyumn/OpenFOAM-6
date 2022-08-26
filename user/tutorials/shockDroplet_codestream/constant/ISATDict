@@ -1,0 +1,61 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  6
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      ISATDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+
+
+THvfctree_XrhoP
+{
+    noISAT false;
+    checkInterval  20;
+    maxDepthFactor   2;
+
+    //maxNLeafs 10000; //tuning using activated leafs
+    maxNLeafs
+    {
+        type adaptive;//const; //adaptive 
+        value 10000;
+        base 100;
+        ratio 1.5;
+        range 4;
+        max 100000;
+    }
+    NtimeTag 10;
+    maxLeafsize (0.3 2 1e5);
+    toleranceOut (1e-2 10 1e-2 5);//(1e-0 1e-1 1e-3 1e-1);//BUG input!!(1e-10 1e-10 1e-10);//(1e-0 1e-0 1e-3);//(1e-1 1e-8 1e-3);
+    initToleranceIn (1e-5 1e-2 10);
+    scaleIn (1  800 1e7);//(1 1 1 1);//(1 1 2.3e+07 500);
+}
+Erhovfctree_XTP
+{
+    noISAT true;
+    checkInterval  20;
+    maxDepthFactor   2;
+
+    //maxNLeafs 1000; //tuning using activated leafs
+
+    maxNLeafs
+    {
+        type const; //adaptive 
+        value 1000;
+    }
+    NtimeTag 10;
+    maxLeafsize (0.3 1e6 50);
+    toleranceOut (1e-0 1e-5 1e-2 5);//BUG input!!(1e-10 1e-10 1e-10);//(1e-0 1e-0 1e-3);//(1e-1 1e-8 1e-3);
+    initToleranceIn (1e-4 1e-1 1);
+    scaleIn (1 100 100000);//(1 1 1 1);//(1 1 2.3e+07 500);
+}
+

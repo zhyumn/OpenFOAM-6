@@ -180,6 +180,12 @@ inline void Foam::nonlinearMixture<ThermoType, ThermoMixtureType>::newTimeStep()
 }
 
 template<class ThermoType, template<class> class ThermoMixtureType>
+inline void Foam::nonlinearMixture<ThermoType, ThermoMixtureType>::mute_show()
+{
+    mixture_.mute_show();
+}
+
+template<class ThermoType, template<class> class ThermoMixtureType>
 const ThermoMixtureType<ThermoType>& Foam::nonlinearMixture<ThermoType, ThermoMixtureType>::cellMixture
 (
     const label celli

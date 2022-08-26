@@ -48,7 +48,8 @@ Foam::ISATmanager<FuncType>::ISATmanager(label in_n, label out_n, FuncType& func
     nGrowth_(0),
     nAdd_(0),
     nCall_(0),
-    treename_(name_in)
+    treename_(name_in),
+    muted_(false)
 {
     for (int i = 0;i < out_n;i++)
         for (int j = 0;j < out_n;j++)
@@ -458,6 +459,8 @@ double Foam::ISATmanager<FuncType>::norm(const scalarList& l)
 template<class FuncType>
 void Foam::ISATmanager<FuncType>::showPerformance() const
 {
+    if (muted_)
+        return;
     Info << treename_ << ", ISAT performance: nCall = " << nCall_ << ", notCall = " << notCall << ", nRetrieved = " << nRetrieved_ << ", nGrowth = " << nGrowth_ << ", nAdd = " << nAdd_ << endl;
     //Info <<"tree size = "<< tableTree_.size()<< endl;
     Info << "NtimeSteps: " << timeSteps_ << ", Treedepth: " << tableTree_.depth() << ", Mindepth: " << ceil(log2(tableTree_.size() + 1)) << endl;

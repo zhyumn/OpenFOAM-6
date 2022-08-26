@@ -85,6 +85,7 @@ namespace Foam
         label nAdd_;
         label nCall_;
         word treename_;
+        bool muted_;
 
         /*
                 //- List of scale factors for species, temperature and pressure
@@ -223,6 +224,14 @@ namespace Foam
         }
         template <class ...Args>
         void add(const scalarList& value, Args... arg);
+        inline void mute()
+        {
+            muted_ = true;
+        }
+        inline void unmute()
+        {
+            muted_ = false;
+        }
 
         inline scalar& epsilon()
         {

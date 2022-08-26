@@ -272,6 +272,7 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate_init()
             }
         }
     }
+    this->mute_show();
     
 }
 

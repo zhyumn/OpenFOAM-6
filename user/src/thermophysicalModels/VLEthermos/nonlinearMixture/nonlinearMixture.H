@@ -135,6 +135,8 @@ public:
 
         inline void newTimeStep();
 
+        inline void mute_show();
+
         const ThermoMixtureType<ThermoType>& patchFaceVolMixture
         (
             const scalar p,

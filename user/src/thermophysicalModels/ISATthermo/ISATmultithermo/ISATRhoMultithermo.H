@@ -276,6 +276,8 @@ namespace Foam
             inline scalar kappa(const scalar p, const scalar T) const;
             inline scalar vaporfra(const scalar p, const scalar T) const;
             inline void psi_vf(const scalar p, const scalar T, scalar& psi_out, scalar& vf_out) const;
+
+            inline void mute_show();
             //inline scalar psi(const scalar p, const scalar T) const;
 
             // Mass specific derived properties
