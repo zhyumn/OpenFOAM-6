@@ -109,17 +109,22 @@ inline Foam::scalar Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::T(
      //scalar F2=(this->*F)(p, T2);
      //scalar Tnew = T0;
     scalar Ttol = T0 * tol_;
-    scalar dF = 0, dfdt = 0;
+    scalar dF = 0, dfdt = 0, dFold = 1e100;
     int iter = 0;
     scalar relax = 1;
     do
     {
-        if (fabs(F2) > fabs(F1))
-            relax *= 0.5;
+
         F1 = F2;
         F2 = (this->*F)(p, T2);
 
         dF = (F2 - f);
+
+        if (fabs(dF) > fabs(dFold))
+            relax *= 0.85;
+
+        dFold = dF;
+
         dfdt = (F2 - F1) / (T2 - T1);//(this->*dFdT)(p, Test);
         T1 = T2;
         if (mag(relax * dF / dfdt) > 30)
