@@ -142,7 +142,6 @@ inline Foam::scalar Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::T(
         else
         {
             do {
-                dT = T2 - T1;
                 dfdt = (F2 - F1) / (T2 - T1);
                 if (bisec)
                 {
