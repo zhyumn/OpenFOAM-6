@@ -112,25 +112,75 @@ inline Foam::scalar Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::T(
     scalar dF = 0, dfdt = 0, dFold = 1e100;
     int iter = 0;
     scalar relax = 1;
+    bool inSection = false;
+    bool bisec = false;
+    double Tm, Fm;
     do
     {
 
         F1 = F2;
         F2 = (this->*F)(p, T2);
-
         dF = (F2 - f);
 
         if (fabs(dF) > fabs(dFold))
             relax *= 0.85;
 
         dFold = dF;
+        inSection = ((F2 - f) * (F1 - f) < 0);
 
         dfdt = (F2 - F1) / (T2 - T1);//(this->*dFdT)(p, Test);
-        T1 = T2;
-        if (mag(relax * dF / dfdt) > 30)
-            T2 = (this->*limit)(T1 - sign(relax * dF / dfdt) * 30);
+
+        if (!inSection)
+        {
+            T1 = T2;
+            if (mag(relax * dF / dfdt) > 30)
+                T2 = (this->*limit)(T1 - sign(relax * dF / dfdt) * 30);
+            else
+                T2 = (this->*limit)(T1 - relax * dF / dfdt);
+
+        }
         else
-            T2 = (this->*limit)(T1 - relax * dF / dfdt);
+        {
+            do {
+                dT = T2 - T1;
+                dfdt = (F2 - F1) / (T2 - T1);
+                if (bisec)
+                {
+                    Tm = (T2 + T1) / 2;
+                }
+                else
+                {
+                    Tm = T2 - (F2 - f) / dfdt;
+                }
+                Fm = (this->*F)(p, Tm);
+                if ((Fm - f) * (F1 - f) < 0)
+                {
+                    bisec = ((T2 - Tm) / (T2 - T1) < 0.1);
+                    T2 = Tm;
+                    F2 = Fm;
+
+                }
+                else
+                {
+                    bisec = ((T1 - Tm) / (T1 - T2) < 0.1);
+                    T1 = Tm;
+                    F1 = Fm;
+                }
+                if (iter++ > maxIter_)
+                {
+                    FatalErrorInFunction << setprecision(50)
+                        << "Maximum number of iterations exceeded: " << maxIter_
+                        << " f: " << f
+                        << " p: " << p
+                        << " T0: " << T0
+                        << "  Tg: " << T2
+                        << " X: " << this->X_
+                        << abort(FatalError);
+                }
+            } while (mag(T2 - T1) > Ttol && mag(f - Fm) > 0.0001);
+            T2 = Tm;
+
+        }
         //Tnew =
          //   (this->*limit)(Test - ((this->*F)(p, Test) - f) / (this->*dFdT)(p, Test));
 
@@ -161,6 +211,8 @@ inline Foam::scalar Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::T(
     return T2;
 
 }
+
+
 
 template <class ThermoMixture, template <class> class Type>
 inline std::tuple<Foam::scalar, Foam::scalar> Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::TrhoEs(
