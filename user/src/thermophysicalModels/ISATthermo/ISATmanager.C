@@ -461,10 +461,10 @@ void Foam::ISATmanager<FuncType>::showPerformance() const
 {
     if (muted_)
         return;
-    Info << treename_ << ", ISAT performance: nCall = " << nCall_ << ", notCall = " << notCall << ", nRetrieved = " << nRetrieved_ << ", nGrowth = " << nGrowth_ << ", nAdd = " << nAdd_ << endl;
+    std::cout << treename_ << ", ISAT performance: nCall = " << nCall_ << ", notCall = " << notCall << ", nRetrieved = " << nRetrieved_ << ", nGrowth = " << nGrowth_ << ", nAdd = " << nAdd_ << std::endl;
     //Info <<"tree size = "<< tableTree_.size()<< endl;
-    Info << "NtimeSteps: " << timeSteps_ << ", Treedepth: " << tableTree_.depth() << ", Mindepth: " << ceil(log2(tableTree_.size() + 1)) << endl;
-    Info << "maxNLeafs: " << tableTree_.maxNLeafs() << endl;
+    std::cout << "NtimeSteps: " << timeSteps_ << ", Treedepth: " << tableTree_.depth() << ", Mindepth: " << ceil(log2(tableTree_.size() + 1)) << std::endl;
+    std::cout << "maxNLeafs: " << tableTree_.maxNLeafs() << std::endl;
     if (tableTree_.size() > 0)
         tableTree_.timeTagList().print_simple();
 }
