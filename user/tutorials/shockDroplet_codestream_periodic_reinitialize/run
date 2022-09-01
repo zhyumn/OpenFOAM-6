@@ -1,0 +1,13 @@
+blockMesh
+decomposePar 
+mpirun -np 4 rhoCentralRealgasFoam  -parallel
+reconstructPar -latestTime
+mv 0.orig
+mv 1e-5/ 0
+setFields
+decompose -force
+sed -i 's/endTime         0.0003;/endTime         0.002;/' system/controlDict 
+
+mpirun -np 4 rhoCentralRealgasFoam  -parallel
+reconstructPar
+foamToVTK

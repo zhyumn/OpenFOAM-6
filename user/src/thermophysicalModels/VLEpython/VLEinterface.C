@@ -1197,32 +1197,14 @@ double  solver_new::Z()
 }
 double  solver_new::drhodT()
 {
-    Foam::scalarList comp_of(comp.size(), Foam::Zero);
-    autoPtr<scalarList> solu;
-
-    for (unsigned int i = 0;i < comp.size();i++)
-    {
-        comp_of[i] = comp[i];
-    }
-    thermo->setX(comp_of);
-    Mtype::solution so(thermo->Mtype::TPn_flash(P_, T_)());
-    return thermo->drhodT(P_, T_, so);
-
+    TPn_flash_update();
+    return thermo->drhodT(P_, T_, sol);
 }
 
 double  solver_new::drhodP()
 {
-    Foam::scalarList comp_of(comp.size(), Foam::Zero);
-    autoPtr<scalarList> solu;
-
-    for (unsigned int i = 0;i < comp.size();i++)
-    {
-        comp_of[i] = comp[i];
-    }
-    thermo->setX(comp_of);
-    Mtype::solution so(thermo->Mtype::TPn_flash(P_, T_)());
-    return thermo->drhodP(P_, T_, so);
-
+    TPn_flash_update();
+    return thermo->drhodP(P_, T_, sol);
 }
 
 double  solver_new::drhodXi(int di)

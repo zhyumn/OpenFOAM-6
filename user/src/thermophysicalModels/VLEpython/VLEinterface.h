@@ -112,6 +112,9 @@ struct solver_new
     double vaporfra();
     double rho();
     double Cp();
+
+    double drhodP();
+    double drhodT();
     const std::vector<double>& X();
     const std::vector<double>& K();
     void setKinit(const std::vector<double>&);
@@ -121,8 +124,8 @@ struct solver_new
     //void solve(bool flag);
     
     //double density();
-    double drhodT();
-    double drhodP();
+
+    
     double dSdT();
     double dSdP();
     double drhodXi(int);
