@@ -119,7 +119,7 @@ volScalarField kappa
         runTime.timeName(),
         mesh,
         IOobject::NO_READ,//IOobject::MUST_READ,
-        IOobject::AUTO_WRITE
+        IOobject::NO_WRITE
     ),
     kappa_t
 );
@@ -296,7 +296,7 @@ volScalarField Qdot
         runTime.timeName(),
         mesh,
         IOobject::READ_IF_PRESENT,
-        IOobject::AUTO_WRITE
+        IOobject::NO_WRITE
     ),
     mesh,
     dimensionedScalar("Qdot", dimEnergy / dimVolume / dimTime, 0.0)
