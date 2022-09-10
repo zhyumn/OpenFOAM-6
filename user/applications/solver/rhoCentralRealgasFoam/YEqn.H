@@ -11,8 +11,6 @@ tmp<fv::convectionScheme<scalar>> mvConvection
 );
 */
 
-
-
 /*
 PtrList<volVectorField> Dm =
 dynamic_cast<const reactingMixture<gasHThermoPhysics>&>
@@ -101,27 +99,20 @@ forAll(Y, i)
 }
 */
 
-
 PtrList<volScalarField> tempY(Y.size());
 
 {
     forAll(Y, i)
     {
-        tempY.set
-        (
+        tempY.set(
             i,
-            new volScalarField
-            (
-                IOobject
-                (
+            new volScalarField(
+                IOobject(
                     "tempY",
                     mesh.time().timeName(),
-                    mesh
-                ),
+                    mesh),
                 mesh,
-                scalar(0.0)
-            )
-        );
+                scalar(0.0)));
     }
 
     forAll(YVi, i)
@@ -140,8 +131,7 @@ PtrList<volScalarField> tempY(Y.size());
     }
     //- Reset diffusion velocity to zero for each time step
 
-
-//-Calculate diffusion velocity of inert species
+    //-Calculate diffusion velocity of inert species
     volVectorField YVt(0.0 * YVi[0]);
     forAll(YVi, i)
     {
@@ -159,7 +149,6 @@ PtrList<volScalarField> tempY(Y.size());
         << "\n97:" << YVi[0][97] << endl;*/
     YVi[inertIndex] = -YVt;
 
-
     //reaction->correct();
     //Qdot = reaction->Qdot();
     //volScalarField Yt(0.0 * Y[0]);
@@ -176,57 +165,65 @@ PtrList<volScalarField> tempY(Y.size());
             sumDiffusionCorrections2 += fvc::laplacian(Y[i] * rho * Dimix[k] * Y[k] / Wmix, Wmix);
         }
 
-
         if (i != inertIndex && composition.active(i))
         {
-            volScalarField& Yi = Y[i];
-            volScalarField& rhoYi = rhoY[i];
+            volScalarField &Yi = Y[i];
+            volScalarField &rhoYi = rhoY[i];
             // Central upwind scheme
-                // interpolation of Yi to cell faces
+            // interpolation of Yi to cell faces
             surfaceScalarField Yi_pos = interpolate(Yi, pos, T.name());
             surfaceScalarField Yi_neg = interpolate(Yi, neg, T.name());
-            surfaceScalarField phiYi
-            (
+            surfaceScalarField phiYi(
                 "phiYi",
-                aphiv_pos * rho_pos * Yi_pos + aphiv_neg * rho_neg * Yi_neg
-            );
+                aphiv_pos * rho_pos * Yi_pos + aphiv_neg * rho_neg * Yi_neg);
 
-            solve(fvm::ddt(rhoYi) + fvc::div(phiYi));
+            surfaceScalarField phiYi_pos(
+                "phiYi_pos",
+                aphiv_pos_pos * rho_pos * Yi_pos + aphiv_pos_neg * rho_neg * Yi_neg);
+
+            surfaceScalarField phiYi_neg(
+                "phiYi_neg",
+                aphiv_neg_pos * rho_pos * Yi_pos + aphiv_neg_neg * rho_neg * Yi_neg);
+
+            if (divScheme == "Doubleflux")
+            {
+                solve(fvm::ddt(rhoYi) + fvc::div_doubleflux(phiYi_pos, phiYi_neg));
+            }
+            else if (divScheme == "Conservativeflux")
+            {
+
+                solve(fvm::ddt(rhoYi) + fvc::div(phiYi));
+            }
 
             Yi = rhoYi / rho;
             Yi.correctBoundaryConditions();
             Yi.max(0.0);
 
             rhoYi.boundaryFieldRef() = rho.boundaryField() * Yi.boundaryField();
-        if (!inviscid)
-        {
-            fvScalarMatrix YiEqn
-            (
-                fvm::ddt(rho, Yi) - fvc::ddt(rho, Yi)
-                + fvm::div(phi, Yi) - fvc::div(phi, Yi)
-                //- fvm::laplacian(rho * D[i], Yi)
-                //+ fvc::div(rho*YVi[i])
-                
-                // - fvm::laplacian(turbulence->muEff(), Yi)
-                ==
-                //reaction->R(Yi)
-                fvm::laplacian(rho * Dimix[i], Yi)
-                + fvc::laplacian(rho * Dimix[i] * Yi / Wmix, Wmix)
-                - sumDiffusionCorrections1
-                - sumDiffusionCorrections2
-                //+ fvOptions(rho, Yi)
-            );
+            if (!inviscid)
+            {
+                fvScalarMatrix YiEqn(
+                    fvm::ddt(rho, Yi) - fvc::ddt(rho, Yi) + fvm::div(phi, Yi) - fvc::div(phi, Yi)
+                    //- fvm::laplacian(rho * D[i], Yi)
+                    //+ fvc::div(rho*YVi[i])
 
-            YiEqn.relax();
+                    // - fvm::laplacian(turbulence->muEff(), Yi)
+                    ==
+                    //reaction->R(Yi)
+                    fvm::laplacian(rho * Dimix[i], Yi) + fvc::laplacian(rho * Dimix[i] * Yi / Wmix, Wmix) - sumDiffusionCorrections1 - sumDiffusionCorrections2
+                    //+ fvOptions(rho, Yi)
+                );
 
-            //fvOptions.constrain(YiEqn);
+                YiEqn.relax();
 
-            YiEqn.solve(mesh.solver("Yi"));
+                //fvOptions.constrain(YiEqn);
 
-            //fvOptions.correct(Yi);
+                YiEqn.solve(mesh.solver("Yi"));
 
-            Yi.correctBoundaryConditions();
-        }
+                //fvOptions.correct(Yi);
+
+                Yi.correctBoundaryConditions();
+            }
             Yi.max(0.0);
             Yi.min(1.0);
 
@@ -238,6 +235,4 @@ PtrList<volScalarField> tempY(Y.size());
     Y[inertIndex].max(0.0);
     // update oldY here for CoDAC
     //oldY = tempY;
-
-
 }
