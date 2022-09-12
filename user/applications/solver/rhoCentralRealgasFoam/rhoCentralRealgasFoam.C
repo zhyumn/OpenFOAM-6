@@ -389,31 +389,28 @@ int main(int argc, char *argv[])
             EEqn.solve();
             // fvOptions.correct(e);
             // thermo.correct();
-            
         }
 
         if (divScheme == "Doubleflux")
         {
             p.ref() = (e() - eStar()) * rho() * (gammaStar() - 1);
         }
-
-        forAll(p, i)
-        {
-            if (p[i] < 0)
-            {
-                FatalErrorInFunction << "i= " << i << "\n p[i]" << p[i] << exit(FatalError);
-            }
-        }
-        thermo.correct();
-        rhoE = rho * (e + 0.5 * magSqr(U));
-
-        if (divScheme == "Conservativeflux")
+        else if (divScheme == "Conservativeflux")
         {
             p.ref() =
                 rho() / psi();
         }
+        else
+        {
+            FatalErrorInFunction << "divScheme must be Doubleflux or Conservativeflux." << exit(FatalError);
+        }
         p.correctBoundaryConditions();
+        thermo.correct();
+        T.correctBoundaryConditions();
+        thermo.correct();
         rho.boundaryFieldRef() == psi.boundaryField() * p.boundaryField();
+
+        rhoE = rho * (e + 0.5 * magSqr(U));
 
         turbulence->correct();
         gammaStar = rho * c * c / p;
