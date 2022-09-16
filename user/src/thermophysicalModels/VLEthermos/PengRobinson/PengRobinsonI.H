@@ -41,34 +41,55 @@ License
 
 template <class Specie>
 inline Foam::PengRobinson<Specie>::PengRobinson(
-    const Specie& sp,
-    const scalar& Tc,
-    const scalar& Vc,
-    const scalar& Pc,
-    const scalar& omega)
+    const Specie &sp,
+    const scalar &Tc,
+    const scalar &Vc,
+    const scalar &Pc,
+    const scalar &omega)
     : Specie(sp),
-    Tc_(Tc),
-    Vc_(Vc),
-    Pc_(Pc),
-    omega_(omega),
-    phaseFlag(1)
+      Tc_(Tc),
+      Vc_(Vc),
+      Pc_(Pc),
+      omega_(omega),
+      phaseFlag(1)
 {
     Zc_ = Pc_ * Vc_ / (RR * Tc_);
+    sqrt_rPc_ = sqrt(1 / Pc_);
+
+    if (omega_ > 0.49)
+    {
+        kappa_ = omega_ * (omega_ * (omega_ * (0.016666) - 0.164423) + 1.48503) + 0.379642;
+    }
+    else
+    {
+        kappa_ = omega_ * (omega_ * (-0.26992) + 1.54226) + 0.37464;
+    }
+
+    sqrt_rTc_ = sqrt(1 / Tc_);
+    coef_ = sqrt(0.45724) * sqrt_rPc_ * Tc_;
+    Aa_ = coef_ * (1.0 + kappa_);
+    Ab_ = -coef_ * kappa_ * sqrt_rTc_;
 }
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 template <class Specie>
 inline Foam::PengRobinson<Specie>::PengRobinson(
-    const word& name,
-    const PengRobinson& pg)
+    const word &name,
+    const PengRobinson &pg)
     : Specie(name, pg),
-    Tc_(pg.Tc_),
-    Vc_(pg.Vc_),
-    Zc_(pg.Zc_),
-    Pc_(pg.Pc_),
-    omega_(pg.omega_)
+      Tc_(pg.Tc_),
+      Vc_(pg.Vc_),
+      Zc_(pg.Zc_),
+      Pc_(pg.Pc_),
+      omega_(pg.omega_)
 {
+    sqrt_rPc_ = pg.sqrt_rPc_;
+    sqrt_rTc_ = pg.sqrt_rTc_;
+    kappa_ = pg.kappa_;
+    coef_ = pg.coef_;
+    Aa_=pg.Aa_;
+    Ab_=pg.Ab_;
 }
 
 template <class Specie>
@@ -82,7 +103,7 @@ Foam::PengRobinson<Specie>::clone() const
 template <class Specie>
 inline Foam::autoPtr<Foam::PengRobinson<Specie>>
 Foam::PengRobinson<Specie>::New(
-    const dictionary& dict)
+    const dictionary &dict)
 {
     return autoPtr<PengRobinson<Specie>>(
         new PengRobinson<Specie>(dict));
@@ -114,6 +135,46 @@ inline Foam::scalar Foam::PengRobinson<Specie>::A(
     }
     alpha = sqr(1.0 + kappa * (1.0 - sqrt(T / Tc_)));
     return 0.45724 * alpha * P / Pc_ / sqr(T / Tc_);
+}
+template <class Specie>
+inline Foam::scalar Foam::PengRobinson<Specie>::Tsqrt_AbyP(
+    scalar sqrtT) const
+{
+    //scalar kappa;
+    //scalar sqrtalpha;
+    /*if (omega_ > 0.49)
+    {
+        kappa = omega_ * (omega_ * (omega_ * (0.016666) - 0.164423) + 1.48503) + 0.379642;
+    }
+    else
+    {
+        kappa = omega_ * (omega_ * (-0.26992) + 1.54226) + 0.37464;
+    }
+    */
+    //sqrtalpha = 1.0 + kappa_ * (1.0 - sqrtT * sqrt_rTc_);
+    
+    //return coef_ * sqrtalpha;
+    return Aa_+Ab_*sqrtT;
+}
+template <class Specie>
+inline Foam::scalar Foam::PengRobinson<Specie>::sqrt_ATbyP_M(
+    scalar T) const
+{
+    //scalar kappa;
+    scalar sqrtalpha;
+    /*
+    if (omega_ > 0.49)
+    {
+        kappa = omega_ * (omega_ * (omega_ * (0.016666) - 0.164423) + 1.48503) + 0.379642;
+    }
+    else
+    {
+        kappa = omega_ * (omega_ * (-0.26992) + 1.54226) + 0.37464;
+    }
+    */
+    sqrtalpha = 1.0 + kappa_ * (1.0 - sqrt(T) / sqrt(Tc_));
+    //scalar ce=sqrt(0.45724)*sqrt_rPc_*Tc_;
+    return sqrt_rPc_ * Tc_ * sqrtalpha;
 }
 
 template <class Specie>
@@ -380,13 +441,13 @@ inline Foam::scalar Foam::PengRobinson<Specie>::Cp(scalar p, scalar T) const // 
 template <class Specie>
 inline Foam::scalar Foam::PengRobinson<Specie>::S(scalar p, scalar T) const // ideal gas
 {
-    return -this->R()*log(p/Pstd);
+    return -this->R() * log(p / Pstd);
 }
 
 template <class Specie>
 inline Foam::scalar Foam::PengRobinson<Specie>::dSdP(scalar p, scalar T) const // ideal gas
 {
-    return -this->R()/p;
+    return -this->R() / p;
 }
 
 template <class Specie>
@@ -407,9 +468,9 @@ inline Foam::scalar Foam::PengRobinson<Specie>::psi(
 
 template <class Specie>
 inline Foam::scalar Foam::PengRobinson<Specie>::CpMCv //Todo
-(
-    scalar p,
-    scalar T) const
+    (
+        scalar p,
+        scalar T) const
 {
     const scalar Tr = T / Tc_;
     const scalar a = 0.45724 * sqr(RR * Tc_) / Pc_;
@@ -433,7 +494,7 @@ inline Foam::scalar Foam::PengRobinson<Specie>::CpMCv //Todo
 
 template <class Specie>
 inline void Foam::PengRobinson<Specie>::operator+=(
-    const PengRobinson<Specie>& pg)
+    const PengRobinson<Specie> &pg)
 {
     scalar Y1 = this->Y();  //YP: Y() is mole number of component in mixture
     Specie::operator+=(pg); //YP: is it mean that sum all Y?  pg means all species Y, so after this, Y() means sumY
@@ -461,11 +522,11 @@ inline void Foam::PengRobinson<Specie>::operator*=(const scalar s)
 
 template <class Specie>
 Foam::PengRobinson<Specie> Foam::operator+(
-    const PengRobinson<Specie>& pg1,
-    const PengRobinson<Specie>& pg2)
+    const PengRobinson<Specie> &pg1,
+    const PengRobinson<Specie> &pg2)
 {
     Specie sp(
-        static_cast<const Specie&>(pg1) + static_cast<const Specie&>(pg2));
+        static_cast<const Specie &>(pg1) + static_cast<const Specie &>(pg2));
 
     if (mag(sp.Y()) < small)
     {
@@ -477,7 +538,7 @@ Foam::PengRobinson<Specie> Foam::operator+(
             pg1.Pc_,
             pg1.omega_
 
-            );
+        );
     }
     else
     {
@@ -501,10 +562,10 @@ Foam::PengRobinson<Specie> Foam::operator+(
 template <class Specie>
 Foam::PengRobinson<Specie> Foam::operator*(
     const scalar s,
-    const PengRobinson<Specie>& pg)
+    const PengRobinson<Specie> &pg)
 {
     return PengRobinson<Specie>(
-        s * static_cast<const Specie&>(pg),
+        s * static_cast<const Specie &>(pg),
         pg.Tc_,
         pg.Vc_,
         pg.Zc_,
@@ -514,11 +575,11 @@ Foam::PengRobinson<Specie> Foam::operator*(
 
 template <class Specie>
 Foam::PengRobinson<Specie> Foam::operator==(
-    const PengRobinson<Specie>& pg1,
-    const PengRobinson<Specie>& pg2)
+    const PengRobinson<Specie> &pg1,
+    const PengRobinson<Specie> &pg2)
 {
     Specie sp(
-        static_cast<const Specie&>(pg1) == static_cast<const Specie&>(pg2));
+        static_cast<const Specie &>(pg1) == static_cast<const Specie &>(pg2));
 
     const scalar Y1 = pg1.Y() / sp.Y();
     const scalar Y2 = pg2.Y() / sp.Y();

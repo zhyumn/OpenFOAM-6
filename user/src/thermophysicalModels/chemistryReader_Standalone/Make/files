@@ -1,0 +1,7 @@
+chemistryReaders/chemistryReaderS/makeChemistryReadersS.C
+BasicChemistryModels.C
+makeChemistrySolvers.C
+
+
+LIB = $(FOAM_USER_LIBBIN)/libChemistryReaders
+

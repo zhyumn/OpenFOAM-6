@@ -27,48 +27,48 @@ License
 #include "LUscalarMatrix.H"
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
-template<class FuncType>
-Foam::ISATmanager<FuncType>::ISATmanager(label in_n, label out_n, FuncType& func, const word& name_in, const dictionary& ISATDict)
-    :ISATDict_(ISATDict.subDict(name_in)),
-    tableTree_(in_n, out_n, ISATDict_),// readLabel(ISATDict_.lookup("maxNLeafs")), readLabel(ISATDict_.lookup("NtimeTag"))),
-    pfunc(&func),
-    epsilon_(1e-3),
-    relepsilon_(0.0),
-    scaleFactor_(out_n, out_n),
-    scaleIn_(in_n, in_n),
-    toleranceOut_(out_n, out_n),
-    initToleranceIn_(in_n, in_n),
-    init_elp_(in_n, in_n),
-    timeSteps_(0),
-    noISAT_(ISATDict_.lookupOrDefault<bool>("noISAT", false)),
-    checkInterval_(readLabel(ISATDict_.lookup("checkInterval"))),
-    maxDepthFactor_(readScalar(ISATDict_.lookup("maxDepthFactor"))),
-    maxLeafsize_(in_n),
-    nRetrieved_(0),
-    nGrowth_(0),
-    nAdd_(0),
-    nCall_(0),
-    treename_(name_in),
-    muted_(false)
+template <class FuncType>
+Foam::ISATmanager<FuncType>::ISATmanager(label in_n, label out_n, FuncType &func, const word &name_in, const dictionary &ISATDict)
+    : ISATDict_(ISATDict.subDict(name_in)),
+      tableTree_(in_n, out_n, ISATDict_), // readLabel(ISATDict_.lookup("maxNLeafs")), readLabel(ISATDict_.lookup("NtimeTag"))),
+      pfunc(&func),
+      epsilon_(1e-3),
+      relepsilon_(0.0),
+      scaleFactor_(out_n, out_n),
+      scaleIn_(in_n, in_n),
+      toleranceOut_(out_n, out_n),
+      initToleranceIn_(in_n, in_n),
+      init_elp_(in_n, in_n),
+      timeSteps_(0),
+      noISAT_(ISATDict_.lookupOrDefault<bool>("noISAT", false)),
+      checkInterval_(readLabel(ISATDict_.lookup("checkInterval"))),
+      maxDepthFactor_(readScalar(ISATDict_.lookup("maxDepthFactor"))),
+      maxLeafsize_(in_n),
+      nRetrieved_(0),
+      nGrowth_(0),
+      nAdd_(0),
+      nCall_(0),
+      treename_(name_in),
+      muted_(false)
 {
-    for (int i = 0;i < out_n;i++)
-        for (int j = 0;j < out_n;j++)
+    for (int i = 0; i < out_n; i++)
+        for (int j = 0; j < out_n; j++)
         {
             scaleFactor_[i][j] = 0;
             toleranceOut_[i][j] = 0;
         }
-    for (int i = 0;i < in_n;i++)
-        for (int j = 0;j < in_n;j++)
+    for (int i = 0; i < in_n; i++)
+        for (int j = 0; j < in_n; j++)
         {
             init_elp_[i][j] = 0;
             scaleIn_[i][j] = 0;
             initToleranceIn_[i][j] = 0;
         }
-    for (int i = 0;i < out_n;i++)
+    for (int i = 0; i < out_n; i++)
     {
         scaleFactor_[i][i] = 1.0;
     }
-    for (int i = 0;i < in_n;i++)
+    for (int i = 0; i < in_n; i++)
         scaleIn_[i][i] = 1.0;
     //scalarList toleranceOut_temp(ISATDict_.lookup("toleranceOut"));
     //scalarList initToleranceIn_temp(ISATDict_.lookup("initToleranceIn"));
@@ -77,11 +77,11 @@ Foam::ISATmanager<FuncType>::ISATmanager(label in_n, label out_n, FuncType& func
     scalarList initToleranceIn_temp(in_n);
     scalarList scaleIn_temp(in_n);
     FuncType::read(ISATDict_, maxLeafsize_, toleranceOut_temp, initToleranceIn_temp, scaleIn_temp);
-    for (int i = 0;i < out_n;i++)
+    for (int i = 0; i < out_n; i++)
     {
         toleranceOut_[i][i] = 1.0 / toleranceOut_temp[i];
     }
-    for (int i = 0;i < in_n;i++)
+    for (int i = 0; i < in_n; i++)
     {
         initToleranceIn_[i][i] = 1.0 / initToleranceIn_temp[i];
         scaleIn_[i][i] = scaleIn_temp[i];
@@ -93,12 +93,12 @@ if (Tname == treename_)
     scaleFactor_[0][0] = 0;
 }
 */
-//scaleFactor_[0][0] = 1/10000.0;
+    //scaleFactor_[0][0] = 1/10000.0;
 
-//Info << "haha" << endl;
+    //Info << "haha" << endl;
 }
 
-template<class FuncType>
+template <class FuncType>
 Foam::ISATmanager<FuncType>::~ISATmanager()
 {
     if (tableTree_.size() > 0)
@@ -107,7 +107,7 @@ Foam::ISATmanager<FuncType>::~ISATmanager()
     //showPerformance();
     //tableTree_.balance();
     //word Tname = "vaporfratree";// "vaporfratree";
-/*
+    /*
     if (Tname == treename_)
         //if (tableTree_.size_ > 0)
     {
@@ -127,32 +127,31 @@ Foam::ISATmanager<FuncType>::~ISATmanager()
 
     }
     */
-
 }
-template<class FuncType>
-template <class ...Args>
-void Foam::ISATmanager<FuncType>::add(const scalarList& value, Args... arg)
+template <class FuncType>
+template <class... Args>
+void Foam::ISATmanager<FuncType>::add(const scalarList &value, scalarList &out, Args... arg)
 {
     //word Tname = "vaporfratree";
 
-    ISATbinaryTree& T = tableTree_;
-    ISATleaf* pleaf;
+    ISATbinaryTree &T = tableTree_;
+    ISATleaf *pleaf;
     while (T.size() >= T.maxNLeafs())
     {
         //        Info<<"Deleting"<<endl;
         T.deleteLeaf(T.timeTagList().pop());
     }
     scalarList R(tableTree_.n_out());
-    pfunc->value(value, R, arg...);
-    pleaf = T.insertNewLeaf(value, R);
-    pfunc->derive(value, pleaf->A(), arg...);
+    //pfunc->value(value, R, arg...);
+    pleaf = T.insertNewLeaf(value, out);
+    pfunc->derive(value, out, pleaf->A(), arg...);
     scalarRectangularMatrix At(tableTree_.n_in_, tableTree_.n_in_);
     /*for (int i = 0;i < tableTree_.n_in_;i++)
         for (int j = 0;j < tableTree_.n_in_;j++)
         {
             At[i][j] = 100;
         }*/
-        //Info<<pleaf->A()<<endl;
+    //Info<<pleaf->A()<<endl;
 
     //pleaf->EOA() = ((pleaf->A()) * scaleFactor_ * scaleFactor_ * (pleaf->A().T()) + init_elp_ * init_elp_) / (epsilon_ * epsilon_);//+ init_elp_
     pleaf->EOA() = scaleIn_ * initToleranceIn_ * initToleranceIn_ * scaleIn_ + scaleIn_ * (pleaf->A()) * toleranceOut_ * toleranceOut_ * (pleaf->A().T()) * scaleIn_;
@@ -168,24 +167,22 @@ void Foam::ISATmanager<FuncType>::add(const scalarList& value, Args... arg)
     }
     */
     // pleaf->EOA() = pleaf->EOA() + init_elp_ / (epsilon_ * epsilon_);
-     //Info<<pleaf->EOA()<<endl;
+    //Info<<pleaf->EOA()<<endl;
     nAdd_++;
 }
-template<class FuncType>
-Foam::ISATleaf* Foam::ISATmanager<FuncType>::search(const scalarList& value)
+template <class FuncType>
+Foam::ISATleaf *Foam::ISATmanager<FuncType>::search(const scalarList &value)
 {
-    ISATleaf* p;
+    ISATleaf *p;
     tableTree_.binaryTreeSearch(value, tableTree_.root_, p);
     return p;
 }
-template<class FuncType>
-template <class ...Args>
-void Foam::ISATmanager<FuncType>::call
-(
-    const Foam::scalarList& value, scalarList& out, Args... arg
-)
+template <class FuncType>
+template <class... Args>
+void Foam::ISATmanager<FuncType>::call(
+    const Foam::scalarList &value, scalarList &out, Args... arg)
 {
-    ISATleaf* pleaf;
+    ISATleaf *pleaf;
     if (noISAT_)
     {
         pfunc->value(value, out, arg...);
@@ -202,7 +199,7 @@ void Foam::ISATmanager<FuncType>::call
         if (pleaf == nullptr)
         {
             pfunc->value(value, out, arg...);
-            add(value, arg...);
+            add(value, out, arg...);
         }
         else
         {
@@ -210,12 +207,12 @@ void Foam::ISATmanager<FuncType>::call
             //    aaa = 5;
             scalarList dvalue(value.size(), Zero);
             scalarList leafvalue(value.size(), Zero);
-            for (int i = 0;i < tableTree_.n_in_;i++)
+            for (int i = 0; i < tableTree_.n_in_; i++)
             {
                 leafvalue[i] = pleaf->value()[i];
                 dvalue[i] = value[i] - leafvalue[i];
             }
-            for (int i = tableTree_.n_in_;i < value.size();i++)
+            for (int i = tableTree_.n_in_; i < value.size(); i++)
             {
                 leafvalue[i] = value[i];
             }
@@ -223,7 +220,7 @@ void Foam::ISATmanager<FuncType>::call
             scalarList out2(out.size());
             scalarList others = leafvalue - dvalue;
             bool flag_others = pfunc->valid_in(others);
-            for (int i = 0;i < others.size();i++)
+            for (int i = 0; i < others.size(); i++)
             {
                 flag_others = flag_others && mag(dvalue[i]) <= maxLeafsize_[i];
             }
@@ -233,14 +230,14 @@ void Foam::ISATmanager<FuncType>::call
                 flag_others = flag_others && others[i] >= 0;
             }*/
             scalar sumother = 0;
-            for (int i = 0;i < others.size() - 2;i++)
+            for (int i = 0; i < others.size() - 2; i++)
             {
                 sumother += others[i];
             }
             flag_others = flag_others && sumother <= 1;
             if (!flag_others)
             {
-                add(value, arg...);
+                add(value, out, arg...);
             }
             else
             {
@@ -252,10 +249,10 @@ void Foam::ISATmanager<FuncType>::call
                 //value2[0] = value[0];
                 //pfunc->value(value2, out2);
                 if (!grow(pleaf, dvalue, out, out2))
-                    add(value, arg...);
+                    add(value, out, arg...);
             }
         }
-    }/*
+    } /*
     else {
         scalarList out2;
         pfunc->value(value, out2);
@@ -272,24 +269,20 @@ void Foam::ISATmanager<FuncType>::call
     }*/
 }
 
-template<class FuncType>
-void Foam::ISATmanager<FuncType>::tablevalue
-(
-    const Foam::scalarList& value, scalarList& out
-)
+template <class FuncType>
+void Foam::ISATmanager<FuncType>::tablevalue(
+    const Foam::scalarList &value, scalarList &out)
 {
-    ISATleaf* pleaf;
+    ISATleaf *pleaf;
     pleaf = search(value);
     pleaf->eval(value, out);
 }
-template<class FuncType>
-bool Foam::ISATmanager<FuncType>::retrieve
-(
-    const Foam::scalarList& value, scalarList& out
-)
+template <class FuncType>
+bool Foam::ISATmanager<FuncType>::retrieve(
+    const Foam::scalarList &value, scalarList &out)
 {
     bool retrieved(false);
-    ISATleaf* plf;
+    ISATleaf *plf;
 
     // If the tree is not empty
     if (tableTree_.size())
@@ -371,14 +364,12 @@ bool Foam::ISATmanager<FuncType>::retrieve
     }
 }
 
-template<class FuncType>
-bool Foam::ISATmanager<FuncType>::grow
-(
-    ISATleaf* plf,
-    const scalarList& dvalue,
-    const scalarList& data1,
-    const scalarList& data2
-)
+template <class FuncType>
+bool Foam::ISATmanager<FuncType>::grow(
+    ISATleaf *plf,
+    const scalarList &dvalue,
+    const scalarList &data1,
+    const scalarList &data2)
 {
     // If the pointer to the chemPoint is nullptr, the function stops
     if (!plf)
@@ -400,9 +391,9 @@ bool Foam::ISATmanager<FuncType>::grow
     // If the solution RphiQ is still within the tolerance we try to grow it
     // in some cases this might result in a failure and the grow function of
     // the chemPoint returns false
-    scalarList ret1(data1.size()), ret2(data2.size());//, ret2(data.size());
+    scalarList ret1(data1.size()), ret2(data2.size()); //, ret2(data.size());
     scalarList dvalue_m(plf->value().size());
-    for (int i = 0;i < dvalue_m.size();i++)
+    for (int i = 0; i < dvalue_m.size(); i++)
     {
         dvalue_m[i] = dvalue[i];
     }
@@ -432,31 +423,31 @@ bool Foam::ISATmanager<FuncType>::grow
         return false;
     }
 }
-template<class FuncType>
-double Foam::ISATmanager<FuncType>::distance(const scalarList& l, const scalarList& r)
+template <class FuncType>
+double Foam::ISATmanager<FuncType>::distance(const scalarList &l, const scalarList &r)
 {
     double sum = 0;
-    for (int i = 0;i < l.size();i++)
+    for (int i = 0; i < l.size(); i++)
         sum += sqr((l[i] - r[i]) * scaleFactor_[i][i]);
     return sqrt(sum);
 }
-template<class FuncType>
-double Foam::ISATmanager<FuncType>::normalized_distance(const scalarList& l, const scalarList& r)
+template <class FuncType>
+double Foam::ISATmanager<FuncType>::normalized_distance(const scalarList &l, const scalarList &r)
 {
     double sum = 0;
-    for (int i = 0;i < l.size();i++)
+    for (int i = 0; i < l.size(); i++)
         sum += sqr((l[i] - r[i]) * toleranceOut_[i][i]);
     return sqrt(sum);
 }
-template<class FuncType>
-double Foam::ISATmanager<FuncType>::norm(const scalarList& l)
+template <class FuncType>
+double Foam::ISATmanager<FuncType>::norm(const scalarList &l)
 {
     double sum = 0;
-    for (int i = 0;i < l.size();i++)
+    for (int i = 0; i < l.size(); i++)
         sum += sqr(l[i] * scaleFactor_[i][i]);
     return sqrt(sum);
 }
-template<class FuncType>
+template <class FuncType>
 void Foam::ISATmanager<FuncType>::showPerformance() const
 {
     if (muted_)

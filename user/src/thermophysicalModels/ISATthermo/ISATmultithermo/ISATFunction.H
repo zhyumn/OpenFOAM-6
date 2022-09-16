@@ -402,7 +402,6 @@ namespace Foam
                                     << "\ndEsdx1_ AA: " << grad()[1][1]
                                     << exit(FatalError);
                                     */
-                                   
             }
 
             void derive(const scalarList &in, scalarRectangularMatrix &out, scalar T0, scalar P0)
@@ -449,15 +448,16 @@ namespace Foam
                 out[0] = T;
                 out[1] = p->Hs(P, T, sol());
                 out[2] = sol().vaporfra;
-                out[3] = p->c(P, T, sol());
+                out[3] = p->c_opt(P, T, rho, sol());
             }
 
-            void derive(const scalarList &in, scalarRectangularMatrix &out, scalar T0)
+            void derive(const scalarList &in, const scalarList &in2, scalarRectangularMatrix &out, scalar T0)
             {
                 scalar rho = in[in.size() - 2];
                 scalar P = in[in.size() - 1];
                 p->setX(in);
-                scalar T = p->T(rho, P, T0, &Type::rho, &Type::drhodT, &Type::limit);
+                scalar T = in2[0];
+                //scalar T = p->T(rho, P, T0, &Type::rho, &Type::drhodT, &Type::limit);
 
                 autoPtr<typename Type::solution> sol(p->TPN(P, T)); // sol(p->TPn_flash_New_TPD(P, T));//sol(p->TPn_flash(P, T));
                 autoPtr<scalarRectangularMatrix> grad(p->dTHvfcdXrhoP(P, T, sol()));
@@ -642,7 +642,7 @@ namespace Foam
                     */
             }
 
-            void derive(const scalarList &in, scalarRectangularMatrix &out)
+            void derive(const scalarList &in, scalarList &in2, scalarRectangularMatrix &out)
             {
                 scalar T = in[in.size() - 2];
                 scalar P = in[in.size() - 1];

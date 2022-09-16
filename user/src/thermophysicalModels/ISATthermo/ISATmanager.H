@@ -50,20 +50,19 @@ Description
 namespace Foam
 {
 
-
     /*---------------------------------------------------------------------------*\
                                 Class ISAT Declaration
     \*---------------------------------------------------------------------------*/
 
-    template<class FuncType>
+    template <class FuncType>
     class ISATmanager
     {
         // Private data
 
-            //- List of the stored 'points' organized in a binary tree
+        //- List of the stored 'points' organized in a binary tree
         dictionary ISATDict_;
         ISATbinaryTree tableTree_;
-        FuncType* pfunc;
+        FuncType *pfunc;
         double epsilon_;
         double relepsilon_;
         scalarRectangularMatrix scaleFactor_;
@@ -141,7 +140,7 @@ namespace Foam
         */
 
         // Private Member Functions
-    /*
+        /*
             //- Disallow default bitwise copy construct
             ISAT(const ISAT&);
 
@@ -206,24 +205,21 @@ namespace Foam
         //- Runtime type information
         //TypeName("ISAT");
 
-
         // Constructors
 
-            //- Construct from dictionary
-        ISATmanager(label in_n, label out_n, FuncType& func, const word& name_in, const dictionary& ISATDict);
-
+        //- Construct from dictionary
+        ISATmanager(label in_n, label out_n, FuncType &func, const word &name_in, const dictionary &ISATDict);
 
         // Destructor
         virtual ~ISATmanager();
 
-
         // Member Functions
-        inline ISATbinaryTree& tableTree()
+        inline ISATbinaryTree &tableTree()
         {
             return tableTree_;
         }
-        template <class ...Args>
-        void add(const scalarList& value, Args... arg);
+        template <class... Args>
+        void add(const scalarList &value, scalarList &out, Args... arg);
         inline void mute()
         {
             muted_ = true;
@@ -233,60 +229,59 @@ namespace Foam
             muted_ = false;
         }
 
-        inline scalar& epsilon()
+        inline scalar &epsilon()
         {
             return epsilon_;
         }
 
-        inline  const scalar& epsilon()const
+        inline const scalar &epsilon() const
         {
             return epsilon_;
         }
 
-        inline scalar& relepsilon()
+        inline scalar &relepsilon()
         {
             return relepsilon_;
         }
 
-        inline  const scalar& relepsilon()const
+        inline const scalar &relepsilon() const
         {
             return relepsilon_;
         }
 
-        inline scalarRectangularMatrix& toleranceOut()
+        inline scalarRectangularMatrix &toleranceOut()
         {
             return toleranceOut_;
         }
 
-        inline  const scalarRectangularMatrix& toleranceOut()const
+        inline const scalarRectangularMatrix &toleranceOut() const
         {
             return toleranceOut_;
         }
-        inline scalarRectangularMatrix& initToleranceIn()
+        inline scalarRectangularMatrix &initToleranceIn()
         {
             return initToleranceIn_;
         }
 
-        inline  const scalarRectangularMatrix& initToleranceIn()const
+        inline const scalarRectangularMatrix &initToleranceIn() const
         {
             return initToleranceIn_;
         }
 
+        ISATleaf *search(const scalarList &value);
+        template <class... Args>
+        void call(const Foam::scalarList &value, scalarList &out, Args... arg);
 
-        ISATleaf* search(const scalarList& value);
-        template <class ...Args>
-        void call(const Foam::scalarList& value, scalarList& out, Args... arg);
+        void tablevalue(const Foam::scalarList &value, scalarList &out);
 
-        void tablevalue(const Foam::scalarList& value, scalarList& out);
+        bool retrieve(const Foam::scalarList &value, scalarList &out);
 
-        bool retrieve(const Foam::scalarList& value, scalarList& out);
+        bool grow(ISATleaf *plf, const scalarList &dvalue, const scalarList &data1, const scalarList &data2);
 
-        bool grow(ISATleaf* plf, const scalarList& dvalue, const scalarList& data1, const scalarList& data2);
+        double distance(const scalarList &l, const scalarList &r);
+        double normalized_distance(const scalarList &l, const scalarList &r);
 
-        double distance(const scalarList& l, const scalarList& r);
-        double normalized_distance(const scalarList& l, const scalarList& r);
-
-        double norm(const scalarList& l);
+        double norm(const scalarList &l);
 
         void newTimeStep()
         {
@@ -295,7 +290,6 @@ namespace Foam
             {
                 tableTree_.updateMaxNLeaf();
                 showPerformance();
-
             }
             tableTree_.timeTagList().newTimeStep();
 
@@ -309,7 +303,6 @@ namespace Foam
                 tableTree_.balance(scaleIn_);
                 //showPerformance();
             }
-
         }
 
         label treesize()
@@ -317,36 +310,36 @@ namespace Foam
             return tableTree_.size_;
         }
 
-        inline const scalarRectangularMatrix& scaleFactor() const
+        inline const scalarRectangularMatrix &scaleFactor() const
         {
             return scaleFactor_;
         }
 
-        inline  scalarRectangularMatrix& scaleFactor()
+        inline scalarRectangularMatrix &scaleFactor()
         {
             return scaleFactor_;
         }
 
-        inline const scalarRectangularMatrix& scaleIn() const
+        inline const scalarRectangularMatrix &scaleIn() const
         {
             return scaleIn_;
         }
 
-        inline  scalarRectangularMatrix& scaleIn()
+        inline scalarRectangularMatrix &scaleIn()
         {
             return scaleIn_;
         }
 
         void showPerformance() const;
-        const word& treename() const
+        const word &treename() const
         {
             return treename_;
         }
-        inline const scalarRectangularMatrix& init_elp() const
+        inline const scalarRectangularMatrix &init_elp() const
         {
             return init_elp_;
         }
-        inline  scalarRectangularMatrix& init_elp()
+        inline scalarRectangularMatrix &init_elp()
         {
             return init_elp_;
         }
@@ -387,9 +380,7 @@ namespace Foam
                         */
     };
 
-
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
 
 } // End namespace Foam
 

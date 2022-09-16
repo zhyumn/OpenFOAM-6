@@ -32,6 +32,8 @@ export FOAM_PY_PATH=/home/zhy/anaconda3/envs/cantera/include/python3.8
 #source $FOAM_DIR/etc/bashrc
 #source $FOAM_DIR/user/etc/bashrc
 
+source $FOAM_DIR/etc/bashrc;source $FOAM_DIR/user/etc/bashrc
+
 alias ofo="source $FOAM_DIR/etc/bashrc;source $FOAM_DIR/user/etc/bashrc"
 alias ofd="source $FOAM_DIR/etc/bashrc WM_COMPILE_OPTION=Debug;source $FOAM_DIR/user/etc/bashrc"
 alias odwmake="source $FOAM_DIR/etc/bashrc;source $FOAM_DIR/user/etc/bashrc;wmake;source $FOAM_DIR/etc/bashrc WM_COMPILE_OPTION=Debug;source $FOAM_DIR/user/etc/bashrc;wmake"

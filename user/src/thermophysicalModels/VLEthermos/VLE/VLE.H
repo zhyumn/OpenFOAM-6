@@ -305,6 +305,7 @@ namespace Foam {
         inline scalar kappaT(scalar p, scalar T, solution& sol) const;
         inline scalar alphaP(scalar p, scalar T, solution& sol) const;
         inline scalar kappaS(scalar p, scalar T, solution& sol) const;
+        inline scalar c_opt(scalar p, scalar T, scalar rho, solution &sol) const;
         inline scalar c(scalar p, scalar T, solution& sol) const;
         inline scalar c(scalar p, scalar T) const;
 

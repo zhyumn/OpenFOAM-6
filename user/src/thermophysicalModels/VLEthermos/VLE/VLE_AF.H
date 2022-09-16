@@ -791,6 +791,30 @@ Foam::VLE<ThermoMixture>::c(scalar p, scalar T, solution &sol) const
     }
     return sqrt(1.0 / (kappaS_ * rho_));
 }
+
+template <class ThermoMixture>
+inline Foam::scalar
+Foam::VLE<ThermoMixture>::c_opt(scalar p, scalar T, scalar rho_, solution &sol) const
+{
+    scalar Z_M_ = Z(p, T, sol);
+    scalar dZdP_M_ = dZdP(p, T, sol);
+    scalar drhodP_ = this->W() / (Z_M_ * RR * 1.0e-03 * T) -
+                     p * this->W() / (Z_M_ * Z_M_ * RR * 1.0e-03 * T) * dZdP_M_;
+    scalar kappaT_ = drhodP_ / rho_;
+    scalar Cp_ = Cp(p, T, sol);
+    scalar dZdT_M_ = dZdT(p, T, sol);
+    scalar drhodT_ = -p * this->W() / (Z_M_ * Z_M_ * RR * 1.0e-03 * T * T) *
+                     (dZdT_M_ * T + Z_M_);
+    scalar alphaP_ = -drhodT_ / rho_;
+    scalar kappaS_ = kappaT_ - T * alphaP_ * alphaP_ / (rho_ * Cp_);
+    if (kappaS_ < 0)
+    {
+        FatalErrorInFunction << " kappaS_ =" << kappaS_ << exit(FatalError);
+    }
+    return sqrt(1.0 / (kappaS_ * rho_));
+}
+
+
 template <class ThermoMixture>
 inline Foam::scalar
 Foam::VLE<ThermoMixture>::c_noVLE(scalar p, scalar T, solution &sol) const

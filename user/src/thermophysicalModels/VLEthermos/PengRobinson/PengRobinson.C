@@ -41,6 +41,20 @@ Foam::PengRobinson<Specie>::PengRobinson(
       Hig2_phase_(dict.subDict("equationOfState").lookup("Hig2_phase"))
 {
     Zc_ = Pc_ * Vc_ / (RR * Tc_);
+    sqrt_rPc_ = sqrt(1 / Pc_);
+    sqrt_rTc_ = sqrt(1 / Tc_);
+    coef_ = sqrt(0.45724) * sqrt_rPc_ * Tc_;
+
+    if (omega_ > 0.49)
+    {
+        kappa_ = omega_ * (omega_ * (omega_ * (0.016666) - 0.164423) + 1.48503) + 0.379642;
+    }
+    else
+    {
+        kappa_ = omega_ * (omega_ * (-0.26992) + 1.54226) + 0.37464;
+    }
+    Aa_ = coef_ * (1.0 + kappa_);
+    Ab_ = -coef_ * kappa_ * sqrt_rTc_;
 }
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
@@ -58,7 +72,7 @@ void Foam::PengRobinson<Specie>::write(Ostream &os) const
     dict.add("Hig_coef", Hig_phase_);
     dict.add("Hig2_coef", Hig2_phase_);
 
-    os  << indent << dict.dictName() << dict;
+    os << indent << dict.dictName() << dict;
 }
 
 // * * * * * * * * * * * * * * * Ostream Operator  * * * * * * * * * * * * * //

@@ -145,7 +145,7 @@ template<class Thermo>
     template <class Thermo>
     inline const Thermo& Foam::multispecie<Thermo>::operator[](const label i) const
     {
-        return speciesData_[i];
+        return *speciesData_(i);
     }
     template <class Thermo>
     inline const PtrList<Thermo>& Foam::multispecie<Thermo>::speciesData() const
