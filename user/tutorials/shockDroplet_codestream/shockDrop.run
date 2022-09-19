@@ -20,6 +20,6 @@
 
 #decomposePar -latestTime
 mpirun -np 4 rhoCentralRealgasFoam  -parallel
-reconstructPar
+reconstructPar -newTimes
 foamToVTK
 

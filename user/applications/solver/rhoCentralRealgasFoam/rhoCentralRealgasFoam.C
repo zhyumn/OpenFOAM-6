@@ -300,7 +300,6 @@ int main(int argc, char *argv[])
         U.ref() =
             rhoU() / rho();
         U.correctBoundaryConditions();
-        rhoU.boundaryFieldRef() == rho.boundaryField() * U.boundaryField();
 
         if (!inviscid)
         {
@@ -363,9 +362,6 @@ int main(int argc, char *argv[])
         e.correctBoundaryConditions();
         // rho_thermo=rho;
         // thermo.correct();
-        rhoE.boundaryFieldRef() ==
-            rho.boundaryField() *
-                (e.boundaryField() + 0.5 * magSqr(U.boundaryField()));
 
         if (!inviscid)
         {
@@ -409,6 +405,30 @@ int main(int argc, char *argv[])
         T.correctBoundaryConditions();
         thermo.correct();
         rho.boundaryFieldRef() == psi.boundaryField() * p.boundaryField();
+        rhoU.boundaryFieldRef() == rho.boundaryField() * U.boundaryField();
+
+        volScalarField Yt(0.0 * Y[0]);
+        forAll(Y, i)
+        {
+            if (i != inertIndex && composition.active(i))
+            {
+                volScalarField &Yi = Y[i];
+                volScalarField &rhoYi = rhoY[i];
+
+                rhoYi.boundaryFieldRef() = rho.boundaryField() * Yi.boundaryField();
+
+                Yi.max(0.0);
+                Yi.min(1.0);
+
+                Yt += Yi;
+            }
+        }
+        Y[inertIndex] = scalar(1) - Yt;
+        Y[inertIndex].max(0.0);
+
+        rhoE.boundaryFieldRef() ==
+            rho.boundaryField() *
+                (e.boundaryField() + 0.5 * magSqr(U.boundaryField()));
 
         rhoE = rho * (e + 0.5 * magSqr(U));
 

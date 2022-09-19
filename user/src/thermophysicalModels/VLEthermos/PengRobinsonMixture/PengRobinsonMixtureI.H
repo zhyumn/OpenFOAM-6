@@ -937,9 +937,11 @@ inline Foam::autoPtr<scalarList> Foam::PengRobinsonMixture<ThermoMixture>::Ln_fu
 
     if (pflag == 0)
     {
+        int i = 0;
         while (Zmix < 0.0)
         {
-            //FatalErrorInFunction << "Zmix < 0.0" << exit(FatalError);
+            if (i > 1000)
+                FatalErrorInFunction << "Zmix < 0.0" << exit(FatalError);
             Xs[0] = comptrifile;
             for (int i = 1; i < this->X_.size(); i++)
                 Xs[i] = (1.0 - comptrifile) / (Xs.size() - 1);
@@ -949,6 +951,7 @@ inline Foam::autoPtr<scalarList> Foam::PengRobinsonMixture<ThermoMixture>::Ln_fu
             {
                 Zmix = Zmix0;
             }
+            i++;
         }
     }
 
