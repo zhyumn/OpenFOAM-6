@@ -65,8 +65,8 @@ namespace Foam
 
                 forAll(mesh.boundary()[patchi], facei)
                 {
-                    ivf[pFaceCells[facei]] += pssf_pos[facei] / 2;
-                    ivf[pFaceCells[facei]] += pssf_neg[facei] / 2;
+                    ivf[pFaceCells[facei]] += pssf_pos[facei];
+                    //ivf[pFaceCells[facei]] += pssf_neg[facei] / 2;
                 }
             }
 

@@ -426,9 +426,9 @@ int main(int argc, char *argv[])
         Y[inertIndex] = scalar(1) - Yt;
         Y[inertIndex].max(0.0);
 
-        rhoE.boundaryFieldRef() ==
-            rho.boundaryField() *
-                (e.boundaryField() + 0.5 * magSqr(U.boundaryField()));
+        //rhoE.boundaryFieldRef() ==
+        //    rho.boundaryField() *
+        //        (e.boundaryField() + 0.5 * magSqr(U.boundaryField()));
 
         rhoE = rho * (e + 0.5 * magSqr(U));
 
