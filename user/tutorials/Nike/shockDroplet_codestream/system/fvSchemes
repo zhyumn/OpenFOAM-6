@@ -43,9 +43,9 @@ interpolationSchemes
 {
     default         linear;
     //reconstruct(rho) vanLeer;
-    reconstruct(thermo:rho) upwind;//vanLeer;
-    reconstruct(U)  upwind;//vanLeerV;
-    reconstruct(T)  upwind;//vanLeer;
+    reconstruct(thermo:rho) vanLeer;
+    reconstruct(U)  vanLeerV;
+    reconstruct(T)  vanLeer;
     reconstruct(gammaStar)  upwind;
     reconstruct(eStar)  upwind;
 }
