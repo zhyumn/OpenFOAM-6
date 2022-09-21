@@ -61,7 +61,7 @@ namespace Foam
                     mesh.boundary()[patchi].faceCells();
 
                 const fvsPatchField<Type>& pssf_pos = ssf_pos.boundaryField()[patchi];
-                const fvsPatchField<Type>& pssf_neg = ssf_neg.boundaryField()[patchi];
+                //const fvsPatchField<Type>& pssf_neg = ssf_neg.boundaryField()[patchi];
 
                 forAll(mesh.boundary()[patchi], facei)
                 {

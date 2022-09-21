@@ -69,6 +69,20 @@ inline Foam::PengRobinson<Specie>::PengRobinson(
     coef_ = sqrt(0.45724) * sqrt_rPc_ * Tc_;
     Aa_ = coef_ * (1.0 + kappa_);
     Ab_ = -coef_ * kappa_ * sqrt_rTc_;
+
+    dAdTa_ = -0.45724 * Tc_ * sqr(kappa_) / Pc_;
+    dAdTb_ = 3 * 0.45724 * kappa_ * (1 + kappa_) / Pc_ * Tc_ * sqrt(Tc_);
+    dAdTc_ = -2 * 0.45724 * sqr(Tc_) * sqr(1 + kappa_) / Pc_;
+
+    dAdPa_ = 0.45724 * Tc_ * sqr(kappa_) / Pc_;
+    dAdPb_ = -2 * 0.45724 * kappa_ * (1 + kappa_) / Pc_ * Tc_ * sqrt(Tc_);
+    dAdPc_ = 0.45724 * sqr(Tc_) * sqr(1 + kappa_) / Pc_;
+
+    aa_ = RR * 1.0e-03 * Aa_;
+    ab_ = RR * 1.0e-03 * Ab_;
+
+    dadta_ = 0.45724 * sqr(RR * 1.0e-03) * Tc_ * sqr(kappa_) / Pc_;
+    dadtb_ = -0.45724 * sqr(RR * 1.0e-03) * kappa_ * (1 + kappa_) / Pc_ * Tc_ * sqrt(Tc_);
 }
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
@@ -88,8 +102,23 @@ inline Foam::PengRobinson<Specie>::PengRobinson(
     sqrt_rTc_ = pg.sqrt_rTc_;
     kappa_ = pg.kappa_;
     coef_ = pg.coef_;
-    Aa_=pg.Aa_;
-    Ab_=pg.Ab_;
+
+    Aa_ = pg.Aa_;
+    Ab_ = pg.Ab_;
+
+    dAdTa_ = pg.dAdTa_;
+    dAdTb_ = pg.dAdTb_;
+    dAdTc_ = pg.dAdTc_;
+
+    dAdPa_ = pg.dAdPa_;
+    dAdPb_ = pg.dAdPb_;
+    dAdPc_ = pg.dAdPc_;
+
+    aa_ = pg.aa_;
+    ab_ = pg.ab_;
+
+    dadta_ = pg.dadta_;
+    dadtb_ = pg.dadtb_;
 }
 
 template <class Specie>
@@ -152,9 +181,9 @@ inline Foam::scalar Foam::PengRobinson<Specie>::Tsqrt_AbyP(
     }
     */
     //sqrtalpha = 1.0 + kappa_ * (1.0 - sqrtT * sqrt_rTc_);
-    
+
     //return coef_ * sqrtalpha;
-    return Aa_+Ab_*sqrtT;
+    return Aa_ + Ab_ * sqrtT;
 }
 template <class Specie>
 inline Foam::scalar Foam::PengRobinson<Specie>::sqrt_ATbyP_M(
@@ -198,6 +227,14 @@ inline Foam::scalar Foam::PengRobinson<Specie>::dAdT(
 }
 
 template <class Specie>
+inline Foam::scalar Foam::PengRobinson<Specie>::sqrTdAdTbyP(
+    scalar rSqrtT,
+    scalar rT) const
+{
+    return dAdTa_ + dAdTb_ * rSqrtT + dAdTc_ * rT;
+}
+
+template <class Specie>
 inline Foam::scalar Foam::PengRobinson<Specie>::dAdP(
     scalar P,
     scalar T) const
@@ -214,6 +251,15 @@ inline Foam::scalar Foam::PengRobinson<Specie>::dAdP(
     }
     alpha = sqr(1.0 + kappa * (1.0 - sqrt(T / Tc_)));
     return 0.45724 * alpha / Pc_ / sqr(T / Tc_);
+}
+
+template <class Specie>
+inline Foam::scalar Foam::PengRobinson<Specie>::TdAdP(
+    scalar rSqrtT,
+    scalar rT) const
+{
+
+    return dAdPa_ + dAdPb_ * rSqrtT + dAdPc_ * rT;
 }
 
 template <class Specie>
@@ -263,6 +309,13 @@ inline Foam::scalar Foam::PengRobinson<Specie>::a(
 {
     return 0.45724 * EOSalpha(P, T) * sqr(RR * 1.0e-03 * Tc_) / Pc_;
 }
+
+template <class Specie>
+inline Foam::scalar Foam::PengRobinson<Specie>::sqrta(
+    scalar sqrtT) const
+{
+    return aa_ + ab_ * sqrtT;
+}
 template <class Specie>
 inline Foam::scalar Foam::PengRobinson<Specie>::dadt(
     scalar P,
@@ -278,6 +331,13 @@ inline Foam::scalar Foam::PengRobinson<Specie>::dadt(
         kappa = omega_ * (omega_ * (-0.26992) + 1.54226) + 0.37464;
     }
     return 0.45724 * (1.0 + kappa * (1.0 - sqrt(T / Tc_))) * sqr(RR * 1.0e-03 * Tc_) / Pc_ * (-kappa / sqrt(Tc_ * T));
+}
+
+template <class Specie>
+inline Foam::scalar Foam::PengRobinson<Specie>::dadt_opt(
+    scalar rSqrtT) const
+{
+    return dadta_ + dadtb_ * rSqrtT;
 }
 template <class Specie>
 inline Foam::scalar Foam::PengRobinson<Specie>::dadp(

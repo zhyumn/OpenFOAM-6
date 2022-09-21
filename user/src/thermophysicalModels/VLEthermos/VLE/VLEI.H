@@ -2267,15 +2267,48 @@ inline Foam::autoPtr<Foam::scalarList> Foam::VLE<ThermoMixture>::dXdT_gas(scalar
     }
     else
     {
+        scalar rvf = 1 / vf;
         for (int i = 0; i < this->X_.size(); i++)
         {
             dXdT[i] = 0;
             for (int j = 0; j < this->X_.size(); j++)
             {
                 if (i == j)
-                    dXdT[i] -= 1.0 / vf * (sol.X_gas()[i] - 1) * dvidt()[j];
+                    dXdT[i] -= rvf * (sol.X_gas()[i] - 1) * dvidt()[j];
                 else
-                    dXdT[i] -= 1.0 / vf * sol.X_gas()[i] * dvidt()[j];
+                    dXdT[i] -= rvf * sol.X_gas()[i] * dvidt()[j];
+            }
+        }
+    }
+    return autoPtr<scalarList>(&dXdT);
+}
+
+template <class ThermoMixture>
+inline Foam::autoPtr<Foam::scalarList> Foam::VLE<ThermoMixture>::dXdT_gas(scalar p, scalar T, solution &sol, autoPtr<scalarList> &dvidt) const
+{
+    scalarList &dXdT = *(new scalarList(this->X_.size()));
+    //autoPtr<scalarList> dvidt;
+    //dvidt.reset((this->dvidT(p, T, sol)).ptr());
+    scalar vf = sol.vaporfra;
+    if (vf <= 0.0)
+    {
+        for (int i = 0; i < this->X_.size(); i++)
+        {
+            dXdT[i] = 0;
+        }
+    }
+    else
+    {
+        scalar rvf = 1 / vf;
+        for (int i = 0; i < this->X_.size(); i++)
+        {
+            dXdT[i] = 0;
+            for (int j = 0; j < this->X_.size(); j++)
+            {
+                if (i == j)
+                    dXdT[i] -= rvf * (sol.X_gas()[i] - 1) * dvidt()[j];
+                else
+                    dXdT[i] -= rvf * sol.X_gas()[i] * dvidt()[j];
             }
         }
     }
@@ -2298,15 +2331,48 @@ inline Foam::autoPtr<Foam::scalarList> Foam::VLE<ThermoMixture>::dXdP_gas(scalar
     }
     else
     {
+        scalar rvf = 1 / vf;
         for (int i = 0; i < this->X_.size(); i++)
         {
             dXdT[i] = 0;
             for (int j = 0; j < this->X_.size(); j++)
             {
                 if (i == j)
-                    dXdT[i] -= 1.0 / vf * (sol.X_gas()[i] - 1) * dvidt()[j];
+                    dXdT[i] -= rvf * (sol.X_gas()[i] - 1) * dvidt()[j];
                 else
-                    dXdT[i] -= 1.0 / vf * sol.X_gas()[i] * dvidt()[j];
+                    dXdT[i] -= rvf * sol.X_gas()[i] * dvidt()[j];
+            }
+        }
+    }
+    return autoPtr<scalarList>(&dXdT);
+}
+
+template <class ThermoMixture>
+inline Foam::autoPtr<Foam::scalarList> Foam::VLE<ThermoMixture>::dXdP_gas(scalar p, scalar T, solution &sol, autoPtr<scalarList> &dvidt) const
+{
+    scalarList &dXdT = *(new scalarList(this->X_.size()));
+    //autoPtr<scalarList> dvidt;
+    //dvidt.reset((this->dvidP(p, T, sol)).ptr());
+    scalar vf = sol.vaporfra;
+    if (vf <= 0.0)
+    {
+        for (int i = 0; i < this->X_.size(); i++)
+        {
+            dXdT[i] = 0;
+        }
+    }
+    else
+    {
+        scalar rvf = 1 / vf;
+        for (int i = 0; i < this->X_.size(); i++)
+        {
+            dXdT[i] = 0;
+            for (int j = 0; j < this->X_.size(); j++)
+            {
+                if (i == j)
+                    dXdT[i] -= rvf * (sol.X_gas()[i] - 1) * dvidt()[j];
+                else
+                    dXdT[i] -= rvf * sol.X_gas()[i] * dvidt()[j];
             }
         }
     }
@@ -2379,6 +2445,37 @@ inline Foam::autoPtr<Foam::scalarList> Foam::VLE<ThermoMixture>::dXdT_liq(scalar
     }
     return autoPtr<scalarList>(&dXdT);
 }
+template <class ThermoMixture>
+inline Foam::autoPtr<Foam::scalarList> Foam::VLE<ThermoMixture>::dXdT_liq(scalar p, scalar T, solution &sol, autoPtr<scalarList> &dvidt) const
+{
+    scalarList &dXdT = *(new scalarList(this->X_.size()));
+    //autoPtr<scalarList> dvidt;
+    //dvidt.reset((this->dvidT(p, T, sol)).ptr());
+    scalar vf = sol.vaporfra;
+    if (vf >= 1.0)
+    {
+        for (int i = 0; i < this->X_.size(); i++)
+        {
+            dXdT[i] = 0;
+        }
+    }
+    else
+    {
+        for (int i = 0; i < this->X_.size(); i++)
+        {
+            dXdT[i] = 0;
+
+            for (int j = 0; j < this->X_.size(); j++)
+            {
+                if (i == j)
+                    dXdT[i] += 1.0 / (1 - vf) * (sol.X_liq()[i] - 1) * dvidt()[j];
+                else
+                    dXdT[i] += 1.0 / (1 - vf) * sol.X_liq()[i] * dvidt()[j];
+            }
+        }
+    }
+    return autoPtr<scalarList>(&dXdT);
+}
 
 // X: In liq phase, mole fraction of specie i, system (T,P,X(diff, frac in mixture))
 template <class ThermoMixture>
@@ -2396,6 +2493,36 @@ inline Foam::autoPtr<Foam::scalarList> Foam::VLE<ThermoMixture>::dXdP_liq(scalar
     }
     autoPtr<scalarList> dvidt;
     dvidt.reset((this->dvidP(p, T, sol)).ptr());
+    //scalar vf = sol.vaporfra;
+    for (int i = 0; i < this->X_.size(); i++)
+    {
+        dXdT[i] = 0;
+        for (int j = 0; j < this->X_.size(); j++)
+        {
+            if (i == j)
+                dXdT[i] += 1.0 / (1 - vf) * (sol.X_liq()[i] - 1) * dvidt()[j];
+            else
+                dXdT[i] += 1.0 / (1 - vf) * sol.X_liq()[i] * dvidt()[j];
+        }
+    }
+    return autoPtr<scalarList>(&dXdT);
+}
+
+template <class ThermoMixture>
+inline Foam::autoPtr<Foam::scalarList> Foam::VLE<ThermoMixture>::dXdP_liq(scalar p, scalar T, solution &sol, autoPtr<scalarList> &dvidt) const
+{
+    scalarList &dXdT = *(new scalarList(this->X_.size()));
+    scalar vf = sol.vaporfra;
+    if (vf == 1)
+    {
+        for (int i = 0; i < this->X_.size(); i++)
+        {
+            dXdT[i] = 0;
+        }
+        return autoPtr<scalarList>(&dXdT);
+    }
+    //autoPtr<scalarList> dvidt;
+    //dvidt.reset((this->dvidP(p, T, sol)).ptr());
     //scalar vf = sol.vaporfra;
     for (int i = 0; i < this->X_.size(); i++)
     {
@@ -2476,6 +2603,20 @@ inline Foam::scalar Foam::VLE<ThermoMixture>::dWdT_gas(scalar p, scalar T, solut
     const VLE<ThermoMixture> &This = *this;
     autoPtr<scalarList> dXdT;
     dXdT.reset((this->dXdT_gas(p, T, sol)).ptr());
+    for (int i = 0; i < this->X_.size(); i++)
+    {
+        dWdT += dXdT()[i] * This[i].W() * 1.0e-03;
+    }
+    return dWdT;
+}
+
+template <class ThermoMixture>
+inline Foam::scalar Foam::VLE<ThermoMixture>::dWdT_gas(scalar p, scalar T, solution &sol, autoPtr<scalarList> &dvidt) const
+{
+    scalar dWdT = 0;
+    const VLE<ThermoMixture> &This = *this;
+    autoPtr<scalarList> dXdT;
+    dXdT.reset((this->dXdT_gas(p, T, sol, dvidt)).ptr());
     for (int i = 0; i < this->X_.size(); i++)
     {
         dWdT += dXdT()[i] * This[i].W() * 1.0e-03;
@@ -2649,10 +2790,11 @@ inline Foam::scalar Foam::VLE<ThermoMixture>::Cp(scalar p, scalar T, solution &s
 {
 
     scalar mw_gas = this->W(sol.X_gas()); //kg/mol
-    scalar dmw_gasdT = this->dWdT_gas(p, T, sol);
+    autoPtr<scalarList> dvidt(this->dvidT(p, T, sol));
+    scalar dmw_gasdT = this->dWdT_gas(p, T, sol, dvidt);
     scalar mw_mixture = this->W();
     scalar ygas = sol.vaporfra * mw_gas / mw_mixture;
-    autoPtr<scalarList> dvidt(this->dvidT(p, T, sol));
+
     scalar dvfdT = 0;
     for (int i = 0; i < this->X_.size(); i++)
     {
@@ -2660,13 +2802,13 @@ inline Foam::scalar Foam::VLE<ThermoMixture>::Cp(scalar p, scalar T, solution &s
     }
     scalar dygasdT = (dvfdT * mw_gas + sol.vaporfra * dmw_gasdT) / mw_mixture;
     scalar dHadT_gas = this->dHadT(p, T, sol.X_gas(), 1);
-    autoPtr<scalarList> dXdt_gas(this->dXdT_gas(p, T, sol));
+    autoPtr<scalarList> dXdt_gas(this->dXdT_gas(p, T, sol, dvidt));
     for (int i = 0; i < this->X_.size(); i++)
     {
         dHadT_gas += this->dHadxi(p, T, i, sol.X_gas(), 1) * dXdt_gas()[i];
     }
     scalar dHadT_liq = this->dHadT(p, T, sol.X_liq(), 0);
-    autoPtr<scalarList> dXdt_liq(this->dXdT_liq(p, T, sol));
+    autoPtr<scalarList> dXdt_liq(this->dXdT_liq(p, T, sol, dvidt));
     for (int i = 0; i < this->X_.size(); i++)
     {
         dHadT_liq += this->dHadxi(p, T, i, sol.X_liq(), 0) * dXdt_liq()[i];
@@ -2695,15 +2837,16 @@ inline Foam::scalar Foam::VLE<ThermoMixture>::Cv_VLE(scalar p, scalar T, solutio
     }
     else
     {
+        scalar rvf = 1 / vf;
         for (int i = 0; i < this->X_.size(); i++)
         {
             dXdT[i] = 0;
             for (int j = 0; j < this->X_.size(); j++)
             {
                 if (i == j)
-                    dXdT[i] -= 1.0 / vf * (sol.X_gas()[i] - 1) * dvidt()[j];
+                    dXdT[i] -= rvf * (sol.X_gas()[i] - 1) * dvidt()[j];
                 else
-                    dXdT[i] -= 1.0 / vf * sol.X_gas()[i] * dvidt()[j];
+                    dXdT[i] -= rvf * sol.X_gas()[i] * dvidt()[j];
             }
         }
     }

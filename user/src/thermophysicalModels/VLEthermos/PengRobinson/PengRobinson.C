@@ -55,6 +55,20 @@ Foam::PengRobinson<Specie>::PengRobinson(
     }
     Aa_ = coef_ * (1.0 + kappa_);
     Ab_ = -coef_ * kappa_ * sqrt_rTc_;
+
+    dAdTa_ = -0.45724 * Tc_ * sqr(kappa_) / Pc_;
+    dAdTb_ = 3 * 0.45724 * kappa_ * (1 + kappa_) / Pc_ * Tc_ * sqrt(Tc_);
+    dAdTc_ = -2 * 0.45724 * sqr(Tc_) * sqr(1 + kappa_) / Pc_;
+
+    dAdPa_ = 0.45724 * Tc_ * sqr(kappa_) / Pc_;
+    dAdPb_ = -2 * 0.45724 * kappa_ * (1 + kappa_) / Pc_ * Tc_ * sqrt(Tc_);
+    dAdPc_ = 0.45724 * sqr(Tc_) * sqr(1 + kappa_) / Pc_;
+
+    aa_ = RR * 1.0e-03 * Aa_;
+    ab_ = RR * 1.0e-03 * Ab_;
+
+    dadta_ = 0.45724 * sqr(RR * 1.0e-03) * Tc_ * sqr(kappa_) / Pc_;
+    dadtb_ = -0.45724 * sqr(RR * 1.0e-03) * kappa_ * (1 + kappa_) / Pc_ * Tc_ * sqrt(Tc_);
 }
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //

@@ -93,20 +93,23 @@ int main(int argc, char *argv[])
         surfaceVectorField rhoU_neg(interpolate(rhoU, neg, U.name()));
 
         volScalarField rPsi("rPsi", 1.0 / psi);
-        surfaceScalarField rPsi_pos(interpolate(rPsi, pos, T.name()));
-        surfaceScalarField rPsi_neg(interpolate(rPsi, neg, T.name()));
+        surfaceScalarField rPsi_pos(interpolate(rPsi, pos));
+        surfaceScalarField rPsi_neg(interpolate(rPsi, neg));
 
-        surfaceScalarField gammaStar_pos(interpolate(gammaStar, pos));
-        surfaceScalarField gammaStar_neg(interpolate(gammaStar, neg));
+        surfaceScalarField gammaStar_pos(interpolate(gammaStar, pos, DF));
+        surfaceScalarField gammaStar_neg(interpolate(gammaStar, neg, DF));
 
-        surfaceScalarField eStar_pos(interpolate(eStar, pos));
-        surfaceScalarField eStar_neg(interpolate(eStar, neg));
+        surfaceScalarField eStar_pos(interpolate(eStar, pos, DF));
+        surfaceScalarField eStar_neg(interpolate(eStar, neg, DF));
 
-        surfaceScalarField e_pos(interpolate(e, pos, T.name()));
-        surfaceScalarField e_neg(interpolate(e, neg, T.name()));
+        surfaceScalarField e_pos(interpolate(e, pos));
+        surfaceScalarField e_neg(interpolate(e, neg));
 
         surfaceVectorField U_pos("U_pos", rhoU_pos / rho_pos);
         surfaceVectorField U_neg("U_neg", rhoU_neg / rho_neg);
+
+        //surfaceScalarField p_pos("p_pos", rho_pos * rPsi_pos); //??
+        //surfaceScalarField p_neg("p_neg", rho_neg * rPsi_neg);
 
         surfaceScalarField p_pos("p_pos", rho_pos * rPsi_pos);
         surfaceScalarField p_neg("p_neg", rho_neg * rPsi_neg);
@@ -132,10 +135,10 @@ int main(int argc, char *argv[])
         // FatalErrorInFunction << "break " << exit(FatalError);
         surfaceScalarField cSf_pos(
             "cSf_pos",
-            interpolate(c, pos, T.name()) * mesh.magSf());
+            interpolate(c, pos) * mesh.magSf());
         surfaceScalarField cSf_neg(
             "cSf_neg",
-            interpolate(c, neg, T.name()) * mesh.magSf());
+            interpolate(c, neg) * mesh.magSf());
 
         surfaceScalarField cSf_pos_pos(
             "cSf_pos_pos",
@@ -249,38 +252,23 @@ int main(int argc, char *argv[])
         runTime++;
 
         Info << "Time = " << runTime.timeName() << nl << endl;
-        scalar t = runTime.value();
-
-        phi = aphiv_pos * rho_pos + aphiv_neg * rho_neg;
-
-        surfaceScalarField phi_pos("phi_pos", aphiv_pos_pos * rho_pos + aphiv_pos_neg * rho_neg);
-        surfaceScalarField phi_neg("phi_neg", aphiv_neg_pos * rho_pos + aphiv_neg_neg * rho_neg);
-
-        surfaceVectorField phiUp(
-            (aphiv_pos * rhoU_pos + aphiv_neg * rhoU_neg) + (a_pos * p_pos + a_neg * p_neg) * mesh.Sf());
-
-        surfaceVectorField phiUp_pos(
-            (aphiv_pos_pos * rhoU_pos + aphiv_pos_neg * rhoU_neg) + (a_pos_pos * p_pos + a_pos_neg * p_neg) * mesh.Sf());
-
-        surfaceVectorField phiUp_neg(
-            (aphiv_neg_pos * rhoU_pos + aphiv_neg_neg * rhoU_neg) + (a_neg_pos * p_pos + a_neg_neg * p_neg) * mesh.Sf());
-
-        surfaceScalarField phiEp(
-            "phiEp",
-            aphiv_pos * (rho_pos * (e_pos + 0.5 * magSqr(U_pos)) + p_pos) + aphiv_neg * (rho_neg * (e_neg + 0.5 * magSqr(U_neg)) + p_neg) + aSf * p_pos - aSf * p_neg);
-        surfaceScalarField phiEp_pos(
-            "phiEp_pos",
-            aphiv_pos_pos * (rho_pos * (e_pos_pos + 0.5 * magSqr(U_pos)) + p_pos) + aphiv_pos_neg * (rho_neg * (e_pos_neg + 0.5 * magSqr(U_neg)) + p_neg) + aSf_pos * p_pos - aSf_pos * p_neg);
-
-        surfaceScalarField phiEp_neg(
-            "phiEp_pos",
-            aphiv_neg_pos * (rho_pos * (e_neg_pos + 0.5 * magSqr(U_pos)) + p_pos) + aphiv_neg_neg * (rho_neg * (e_neg_neg + 0.5 * magSqr(U_neg)) + p_neg) + aSf_neg * p_pos - aSf_neg * p_neg);
+        //scalar t = runTime.value();
 
         volScalarField muEff("muEff", turbulence->muEff());
         volTensorField tauMC("tauMC", muEff * dev2(Foam::T(fvc::grad(U))));
 
         if (divScheme == "Doubleflux")
         {
+            surfaceScalarField phi_pos("phi_pos", aphiv_pos_pos * rho_pos + aphiv_pos_neg * rho_neg);
+
+            surfaceScalarField phi_neg("phi_neg", aphiv_neg_pos * rho_pos + aphiv_neg_neg * rho_neg);
+
+            surfaceVectorField phiUp_pos(
+                (aphiv_pos_pos * rhoU_pos + aphiv_pos_neg * rhoU_neg) + (a_pos_pos * p_pos + a_pos_neg * p_neg) * mesh.Sf());
+
+            surfaceVectorField phiUp_neg(
+                (aphiv_neg_pos * rhoU_pos + aphiv_neg_neg * rhoU_neg) + (a_neg_pos * p_pos + a_neg_neg * p_neg) * mesh.Sf());
+
             // --- Solve density
             solve(fvm::ddt(rho) + fvc::div_doubleflux(phi_pos, phi_neg));
 
@@ -289,6 +277,9 @@ int main(int argc, char *argv[])
         }
         else if (divScheme == "Conservativeflux")
         {
+            phi = aphiv_pos * rho_pos + aphiv_neg * rho_neg;
+            surfaceVectorField phiUp(
+                (aphiv_pos * rhoU_pos + aphiv_neg * rhoU_neg) + (a_pos * p_pos + a_neg * p_neg) * mesh.Sf());
 
             // --- Solve density
             solve(fvm::ddt(rho) + fvc::div(phi));
@@ -326,12 +317,30 @@ int main(int argc, char *argv[])
             (
                 fvc::interpolate(muEff) * mesh.magSf() * fvc::snGrad(U) + fvc::dotInterpolate(mesh.Sf(), tauMC)) &
                 (a_pos * U_pos + a_neg * U_neg));
+        surfaceScalarField sigmaDotU_pos(
+            "sigmaDotU_pos",
+            (
+                fvc::interpolate(muEff) * mesh.magSf() * fvc::snGrad(U) + fvc::dotInterpolate(mesh.Sf(), tauMC)) &
+                (a_pos_pos * U_pos + a_pos_neg * U_neg));
+        surfaceScalarField sigmaDotU_neg(
+            "sigmaDotU_neg",
+            (
+                fvc::interpolate(muEff) * mesh.magSf() * fvc::snGrad(U) + fvc::dotInterpolate(mesh.Sf(), tauMC)) &
+                (a_neg_pos * U_pos + a_neg_neg * U_neg));
 
         fvScalarMatrix rhoEEqn(
             fvm::ddt(rhoE));
 
         if (divScheme == "Doubleflux")
         {
+            surfaceScalarField phiEp_pos(
+                "phiEp_pos",
+                aphiv_pos_pos * (rho_pos * (e_pos_pos + 0.5 * magSqr(U_pos)) + p_pos) + aphiv_pos_neg * (rho_neg * (e_pos_neg + 0.5 * magSqr(U_neg)) + p_neg) + aSf_pos * p_pos - aSf_pos * p_neg);
+
+            surfaceScalarField phiEp_neg(
+                "phiEp_pos",
+                aphiv_neg_pos * (rho_pos * (e_neg_pos + 0.5 * magSqr(U_pos)) + p_pos) + aphiv_neg_neg * (rho_neg * (e_neg_neg + 0.5 * magSqr(U_neg)) + p_neg) + aSf_neg * p_pos - aSf_neg * p_neg);
+
             rhoEEqn += fvc::div_doubleflux(phiEp_pos, phiEp_neg);
             /*solve
             (
@@ -343,6 +352,11 @@ int main(int argc, char *argv[])
         }
         else if (divScheme == "Conservativeflux")
         {
+
+            surfaceScalarField phiEp(
+                "phiEp",
+                aphiv_pos * (rho_pos * (e_pos + 0.5 * magSqr(U_pos)) + p_pos) + aphiv_neg * (rho_neg * (e_neg + 0.5 * magSqr(U_neg)) + p_neg) + aSf * p_pos - aSf * p_neg);
+
             rhoEEqn += fvc::div(phiEp);
             /*solve
             (
@@ -400,8 +414,9 @@ int main(int argc, char *argv[])
         {
             FatalErrorInFunction << "divScheme must be Doubleflux or Conservativeflux." << exit(FatalError);
         }
-        p.correctBoundaryConditions();
+
         thermo.correct();
+        p.correctBoundaryConditions();
         T.correctBoundaryConditions();
         thermo.correct();
         rho.boundaryFieldRef() == psi.boundaryField() * p.boundaryField();
@@ -444,7 +459,7 @@ int main(int argc, char *argv[])
             // hei[i] = thermo.hei(i);
         }
         // U*=0.1;
-        rho_write = rho;
+        //rho_write = rho;
         runTime.write();
 
         Info << "ExecutionTime = " << runTime.elapsedCpuTime() << " s"

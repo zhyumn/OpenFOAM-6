@@ -1,5 +1,6 @@
 #include "createRDeltaT.H"
 
+const word DF("DF");
 Info << "Reading thermophysical properties\n" << endl;
 
 autoPtr<rhoReactionThermo> pThermo
@@ -182,8 +183,9 @@ volVectorField U
     mesh
 );
 volScalarField& rho = mesh.objectRegistry::lookupObjectRef<volScalarField>("thermo:rho");
-//rho.writeOpt()=IOobject::AUTO_WRITE;
-volScalarField rho_write
+rho.rename("rho");
+rho.writeOpt()=IOobject::AUTO_WRITE;
+/*volScalarField rho_write
 (
     IOobject
     (
@@ -194,7 +196,7 @@ volScalarField rho_write
         IOobject::AUTO_WRITE
     ),
     rho
-);
+);*/
 //rho=thermo.rho();
 volVectorField rhoU
 (

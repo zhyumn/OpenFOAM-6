@@ -77,6 +77,25 @@ Foam::VLE<ThermoMixture>::rho(scalar p, scalar T) const
     return rho_M_;
 }
 
+template <class ThermoMixture>
+inline Foam::scalar
+Foam::VLE<ThermoMixture>::rrho(scalar p, scalar T) const
+{
+    // autoPtr<solution> sol(TPn_flash(p, T));
+
+    scalar rrho_M_ = (Z(p, T) * RR * 1.0e-03 * T) / (p * this->W());
+    return rrho_M_;
+}
+template <class ThermoMixture>
+inline Foam::scalar
+Foam::VLE<ThermoMixture>::rrho(scalar p, scalar T, solution &sol) const
+{
+    // autoPtr<solution> sol(TPn_flash(p, T));
+    scalar Z_ = Z(p, T, sol);
+    scalar rrho_M_ = (Z_ * RR * 1.0e-03 * T) / (p * this->W());
+    return rrho_M_;
+}
+
 // density kg/m^3
 template <class ThermoMixture>
 inline Foam::scalar
@@ -445,8 +464,10 @@ template <class ThermoMixture>
 inline Foam::scalar
 Foam::VLE<ThermoMixture>::dZdT(scalar p, scalar T, solution &sol) const
 {
-    autoPtr<scalarList> dXdT_G_(this->dXdT_gas(p, T, sol));
-    autoPtr<scalarList> dXdT_L_(this->dXdT_liq(p, T, sol));
+    autoPtr<scalarList> dvidt;
+    dvidt.reset((this->dvidT(p, T, sol)).ptr());
+    autoPtr<scalarList> dXdT_G_(this->dXdT_gas(p, T, sol, dvidt));
+    autoPtr<scalarList> dXdT_L_(this->dXdT_liq(p, T, sol, dvidt));
     scalar dvfdT_ = this->dvfdT(p, T, sol);
     scalar vf_ = sol.vaporfra;
     scalar Z_G_ = this->ThermoMixture::Z(p, T, sol.X_gas(), 1);
@@ -471,8 +492,10 @@ template <class ThermoMixture>
 inline Foam::scalar
 Foam::VLE<ThermoMixture>::dZdP(scalar p, scalar T, solution &sol) const
 {
-    autoPtr<scalarList> dXdP_G_(this->dXdP_gas(p, T, sol));
-    autoPtr<scalarList> dXdP_L_(this->dXdP_liq(p, T, sol));
+    autoPtr<scalarList> dvidp;
+    dvidp.reset((this->dvidP(p, T, sol)).ptr());
+    autoPtr<scalarList> dXdP_G_(this->dXdP_gas(p, T, sol, dvidp));
+    autoPtr<scalarList> dXdP_L_(this->dXdP_liq(p, T, sol, dvidp));
     scalar dvfdP_ = this->dvfdP(p, T, sol);
     scalar vf_ = sol.vaporfra;
     scalar Z_G_ = this->ThermoMixture::Z(p, T, sol.X_gas(), 1);
@@ -536,6 +559,18 @@ Foam::VLE<ThermoMixture>::drhodT(scalar p, scalar T) const
     scalar drhodT_M_ = -p * this->W() / (Z_M_ * Z_M_ * RR * 1.0e-03 * T * T) *
                        (dZdT_M_ * T + Z_M_);
     return drhodT_M_;
+}
+
+template <class ThermoMixture>
+inline Foam::scalar
+Foam::VLE<ThermoMixture>::drrhodT(scalar p, scalar T) const
+{
+    autoPtr<solution> sol(TPN(p, T));
+    scalar Z_M_ = Z(p, T, sol());
+    scalar dZdT_M_ = dZdT(p, T, sol());
+    scalar drhodT_M_ = -p * this->W() / (Z_M_ * Z_M_ * RR * 1.0e-03 * T * T) *
+                       (dZdT_M_ * T + Z_M_);
+    return -1 / sqr(rho(p, T)) * drhodT(p, T);
 }
 
 template <class ThermoMixture>
@@ -813,7 +848,6 @@ Foam::VLE<ThermoMixture>::c_opt(scalar p, scalar T, scalar rho_, solution &sol) 
     }
     return sqrt(1.0 / (kappaS_ * rho_));
 }
-
 
 template <class ThermoMixture>
 inline Foam::scalar

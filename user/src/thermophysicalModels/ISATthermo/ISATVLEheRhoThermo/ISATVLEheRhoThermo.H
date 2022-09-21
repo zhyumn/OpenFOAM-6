@@ -35,7 +35,7 @@ SourceFiles
 #ifndef ISATVLEheRhoThermo_H
 #define ISATVLEheRhoThermo_H
 
-#include "psiThermo.H"
+//#include "psiThermo.H"
 #include <tuple>
 #include "heThermo.H"
 

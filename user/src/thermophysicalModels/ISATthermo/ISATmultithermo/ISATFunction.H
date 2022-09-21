@@ -434,14 +434,17 @@ namespace Foam
         {
             Type *p;
             thermofunction_THvf(Type *pin) : p(pin) {}
-            void value(const scalarList &in, scalarList &out, scalar T0) const
+            void value(const scalarList &in, scalarList &out, scalar T0, autoPtr<typename Type::solution>& sol) const
             {
                 scalar rho = in[in.size() - 2];
                 scalar P = in[in.size() - 1];
                 p->setX(in);
-                scalar T = p->T(rho, P, T0, &Type::rho, &Type::drhodT, &Type::limit);
+                //scalar T = p->T(rho, P, T0, &Type::rho, &Type::drhodT, &Type::limit);
+                //scalar T = p->T(1 / rho, P, T0, &Type::rrho, &Type::drrhodT, &Type::limit);
+                scalar T = p->Tsol(1 / rho, P, T0, &Type::rrho, &Type::drrhodT, &Type::limit,sol);
 
-                autoPtr<typename Type::solution> sol(p->TPN(P, T));
+                //autoPtr<typename Type::solution> sol(p->TPN(P, T));
+                //sol.reset(p->TPN(P, T).ptr());
 
                 out.resize(4);
 
@@ -451,7 +454,7 @@ namespace Foam
                 out[3] = p->c_opt(P, T, rho, sol());
             }
 
-            void derive(const scalarList &in, const scalarList &in2, scalarRectangularMatrix &out, scalar T0)
+            void derive(const scalarList &in, const scalarList &in2, scalarRectangularMatrix &out, scalar T0, autoPtr<typename Type::solution>& sol)
             {
                 scalar rho = in[in.size() - 2];
                 scalar P = in[in.size() - 1];
@@ -459,7 +462,8 @@ namespace Foam
                 scalar T = in2[0];
                 //scalar T = p->T(rho, P, T0, &Type::rho, &Type::drhodT, &Type::limit);
 
-                autoPtr<typename Type::solution> sol(p->TPN(P, T)); // sol(p->TPn_flash_New_TPD(P, T));//sol(p->TPn_flash(P, T));
+                //sol.reset(p->TPN(P, T).ptr());
+                //autoPtr<typename Type::solution> sol(p->TPN(P, T)); // sol(p->TPn_flash_New_TPD(P, T));//sol(p->TPn_flash(P, T));
                 autoPtr<scalarRectangularMatrix> grad(p->dTHvfcdXrhoP(P, T, sol()));
                 // autoPtr<scalarRectangularMatrix> grad(p->dTPvfdXErho(P, T, sol()));
                 out = grad();

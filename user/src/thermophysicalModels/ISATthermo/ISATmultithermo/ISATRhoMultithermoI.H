@@ -30,49 +30,44 @@ License
 
 template <class ThermoMixture, template <class> class Type>
 inline Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::ISATRhoMultithermo(
-    const ThermoMixture& sp)
+    const ThermoMixture &sp)
     : ThermoMixture(sp)
 {
 }
 template <class ThermoMixture, template <class> class Type>
 inline Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::ISATRhoMultithermo(
-    const word& name,
-    PtrList<SingleThermoType>& speciesData,
-    const speciesTable& specieNames,
-    const dictionary& thermoDict,
-    ISATRhoMultithermo<ThermoMixture, Type>* pin)
-    :
-    ThermoMixture(name, speciesData, specieNames, thermoDict),
-    ISATDict_
-    (
-        IFstream
-        (
-            fileName(thermoDict.lookup("ISATDictFile")).expand()
-        )()
-    ),
-    temp_p(pin),
-    //TPvfcfun_XErho(temp_p ? temp_p : this),
-    //HEfun(this, &ThermoMixture::HE),
-    Erhovfcfun_XTP(temp_p ? temp_p : this),//Erhovfcfun_XTP(this),
-    //Tpsivfcfun_XHP(temp_p ? temp_p : this),
-    //TPvfcsolfun_XErho(temp_p ? temp_p : this),
-    //Tpsivfcsolfun_XHP(temp_p ? temp_p : this),
-    THvfcfun_XrhoP(temp_p ? temp_p : this),//THvfcfun_XrhoP(this),
-    //kappafun_XTP(temp_p ? temp_p : this, & ThermoMixture::kappa_dev),
-    //mufun_XTP(temp_p ? temp_p : this, & ThermoMixture::mu_dev),
-    //alphahfun_XTP(temp_p ? temp_p : this, & ThermoMixture::alphah_dev),
+    const word &name,
+    PtrList<SingleThermoType> &speciesData,
+    const speciesTable &specieNames,
+    const dictionary &thermoDict,
+    ISATRhoMultithermo<ThermoMixture, Type> *pin)
+    : ThermoMixture(name, speciesData, specieNames, thermoDict),
+      ISATDict_(
+          IFstream(
+              fileName(thermoDict.lookup("ISATDictFile")).expand())()),
+      temp_p(pin),
+      //TPvfcfun_XErho(temp_p ? temp_p : this),
+      //HEfun(this, &ThermoMixture::HE),
+      Erhovfcfun_XTP(temp_p ? temp_p : this), //Erhovfcfun_XTP(this),
+      //Tpsivfcfun_XHP(temp_p ? temp_p : this),
+      //TPvfcsolfun_XErho(temp_p ? temp_p : this),
+      //Tpsivfcsolfun_XHP(temp_p ? temp_p : this),
+      THvfcfun_XrhoP(temp_p ? temp_p : this), //THvfcfun_XrhoP(this),
+      //kappafun_XTP(temp_p ? temp_p : this, & ThermoMixture::kappa_dev),
+      //mufun_XTP(temp_p ? temp_p : this, & ThermoMixture::mu_dev),
+      //alphahfun_XTP(temp_p ? temp_p : this, & ThermoMixture::alphah_dev),
 
-    //TPvfctree_XErho(speciesData.size() + 2, 4, TPvfcfun_XErho, "TPvfctree_XErho", ISATDict_),
-    Erhovfctree_XTP(speciesData.size() + 2, 4, Erhovfcfun_XTP, "Erhovfctree_XTP", ISATDict_),
-    //Tpsivfctree_XHP(speciesData.size() + 2, 4, Tpsivfcfun_XHP, "Tpsivfctree_XHP", ISATDict_),
-    //TPvfcsoltree_XErho(speciesData.size() + 2,4+2*speciesData.sGize(),TPvfcsolfun_XErho,"TPvfcsolfun_XErho",ISATDict_),
-    //Tpsivfcsoltree_XHP(speciesData.size() + 2,4+2*speciesData.size(),Tpsivfcsolfun_XHP,"Tpsivfcsoltree_XHP",ISATDict_),
-    THvfctree_XrhoP(speciesData.size() + 2, 4, THvfcfun_XrhoP, "THvfctree_XrhoP", ISATDict_)
-    //TPvftree_Erho(speciesData.size() + 2, 3, TPvffun_Erho, "TPvftree_Erho", ISATDict_),
-    //Etree(speciesData.size() + 1, 1, HEfun, "HEtree", ISATDict_),
-    //kappatree_XTP(speciesData.size() + 2, 1, kappafun_XTP, "kappatree_XTP", ISATDict_),
-    //mutree_XTP(speciesData.size() + 2, 1, mufun_XTP, "mutree_XTP", ISATDict_),
-    //alphahtree_XTP(speciesData.size() + 2, 1, alphahfun_XTP, "alphahtree_XTP", ISATDict_)
+      //TPvfctree_XErho(speciesData.size() + 2, 4, TPvfcfun_XErho, "TPvfctree_XErho", ISATDict_),
+      Erhovfctree_XTP(speciesData.size() + 2, 4, Erhovfcfun_XTP, "Erhovfctree_XTP", ISATDict_),
+      //Tpsivfctree_XHP(speciesData.size() + 2, 4, Tpsivfcfun_XHP, "Tpsivfctree_XHP", ISATDict_),
+      //TPvfcsoltree_XErho(speciesData.size() + 2,4+2*speciesData.sGize(),TPvfcsolfun_XErho,"TPvfcsolfun_XErho",ISATDict_),
+      //Tpsivfcsoltree_XHP(speciesData.size() + 2,4+2*speciesData.size(),Tpsivfcsolfun_XHP,"Tpsivfcsoltree_XHP",ISATDict_),
+      THvfctree_XrhoP(speciesData.size() + 2, 4, THvfcfun_XrhoP, "THvfctree_XrhoP", ISATDict_)
+//TPvftree_Erho(speciesData.size() + 2, 3, TPvffun_Erho, "TPvftree_Erho", ISATDict_),
+//Etree(speciesData.size() + 1, 1, HEfun, "HEtree", ISATDict_),
+//kappatree_XTP(speciesData.size() + 2, 1, kappafun_XTP, "kappatree_XTP", ISATDict_),
+//mutree_XTP(speciesData.size() + 2, 1, mufun_XTP, "mutree_XTP", ISATDict_),
+//alphahtree_XTP(speciesData.size() + 2, 1, alphahfun_XTP, "alphahtree_XTP", ISATDict_)
 
 {
     //mutree_XTP.relepsilon() = 1;//2e-3;
@@ -84,10 +79,10 @@ inline Foam::scalar Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::T(
     scalar f,
     scalar p,
     scalar T0,
-    scalar(ISATRhoMultithermo<ThermoMixture, Type>::* F)(const scalar, const scalar) const,
-    scalar(ISATRhoMultithermo<ThermoMixture, Type>::* dFdT)(const scalar, const scalar)
-    const,
-    scalar(ISATRhoMultithermo<ThermoMixture, Type>::* limit)(const scalar) const) const
+    scalar (ISATRhoMultithermo<ThermoMixture, Type>::*F)(const scalar, const scalar) const,
+    scalar (ISATRhoMultithermo<ThermoMixture, Type>::*dFdT)(const scalar, const scalar)
+        const,
+    scalar (ISATRhoMultithermo<ThermoMixture, Type>::*limit)(const scalar) const) const
 {
 
     if (T0 < 0)
@@ -96,7 +91,7 @@ inline Foam::scalar Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::T(
             << "Negative initial temperature T0: " << T0
             << abort(FatalError);
     }
-    //static int call_n=0; 
+    //static int call_n=0;
     //static int inter_n=0;
     scalar T1 = T0;
     scalar F1 = (this->*F)(p, T1), F2 = F1;
@@ -105,9 +100,9 @@ inline Foam::scalar Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::T(
         T2 = (this->*limit)(T0 - 1);
     // if(F1>f)
     //     T2=(this->*limit)(T0-30);
-     //scalar F1=(this->*F)(p, T1);
-     //scalar F2=(this->*F)(p, T2);
-     //scalar Tnew = T0;
+    //scalar F1=(this->*F)(p, T1);
+    //scalar F2=(this->*F)(p, T2);
+    //scalar Tnew = T0;
     scalar Ttol = T0 * tol_;
     scalar dF = 0, dfdt = 0, dFold = 1e100;
     int iter = 0;
@@ -128,7 +123,7 @@ inline Foam::scalar Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::T(
         dFold = dF;
         inSection = ((F2 - f) * (F1 - f) < 0);
 
-        dfdt = (F2 - F1) / (T2 - T1);//(this->*dFdT)(p, Test);
+        dfdt = (F2 - F1) / (T2 - T1); //(this->*dFdT)(p, Test);
 
         if (!inSection)
         {
@@ -137,11 +132,11 @@ inline Foam::scalar Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::T(
                 T2 = (this->*limit)(T1 - sign(relax * dF / dfdt) * 30);
             else
                 T2 = (this->*limit)(T1 - relax * dF / dfdt);
-
         }
         else
         {
-            do {
+            do
+            {
                 dfdt = (F2 - F1) / (T2 - T1);
                 if (bisec)
                 {
@@ -157,7 +152,6 @@ inline Foam::scalar Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::T(
                     bisec = ((T2 - Tm) / (T2 - T1) < 0.1);
                     T2 = Tm;
                     F2 = Fm;
-
                 }
                 else
                 {
@@ -168,50 +162,179 @@ inline Foam::scalar Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::T(
                 if (iter++ > maxIter_)
                 {
                     FatalErrorInFunction << setprecision(50)
-                        << "Maximum number of iterations exceeded: " << maxIter_
-                        << " f: " << f
-                        << " p: " << p
-                        << " T0: " << T0
-                        << "  Tg: " << T2
-                        << " X: " << this->X_
-                        << abort(FatalError);
+                                         << "Maximum number of iterations exceeded: " << maxIter_
+                                         << " f: " << f
+                                         << " p: " << p
+                                         << " T0: " << T0
+                                         << "  Tg: " << T2
+                                         << " X: " << this->X_
+                                         << abort(FatalError);
                 }
             } while (mag(T2 - T1) > Ttol && mag(f - Fm) > 0.0001);
             T2 = Tm;
-
         }
         //Tnew =
-         //   (this->*limit)(Test - ((this->*F)(p, Test) - f) / (this->*dFdT)(p, Test));
+        //   (this->*limit)(Test - ((this->*F)(p, Test) - f) / (this->*dFdT)(p, Test));
 
         if (T2 == 0)
         {
             FatalErrorInFunction << setprecision(50)
-                << "Maximum number of iterations exceeded: " << maxIter_
-                << " f: " << f
-                << " p: " << p
-                << " T0: " << T0
-                << "  Tg: " << T2
-                << " X: " << this->X_
-                << abort(FatalError);
+                                 << "Maximum number of iterations exceeded: " << maxIter_
+                                 << " f: " << f
+                                 << " p: " << p
+                                 << " T0: " << T0
+                                 << "  Tg: " << T2
+                                 << " X: " << this->X_
+                                 << abort(FatalError);
         }
         if (iter++ > maxIter_)
         {
             FatalErrorInFunction << setprecision(50)
-                << "Maximum number of iterations exceeded: " << maxIter_
-                << " f: " << f
-                << " p: " << p
-                << " T0: " << T0
-                << "  Tg: " << T2
-                << " X: " << this->X_
-                << abort(FatalError);
+                                 << "Maximum number of iterations exceeded: " << maxIter_
+                                 << " f: " << f
+                                 << " p: " << p
+                                 << " T0: " << T0
+                                 << "  Tg: " << T2
+                                 << " X: " << this->X_
+                                 << abort(FatalError);
         }
 
     } while (mag(T2 - T1) > Ttol && mag(f - F2) > 0.0001);
     return T2;
-
 }
 
+template <class ThermoMixture, template <class> class Type>
+inline Foam::scalar Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::Tsol(
+    scalar f,
+    scalar p,
+    scalar T0,
+    scalar (ISATRhoMultithermo<ThermoMixture, Type>::*F)(const scalar, const scalar, typename ISATRhoMultithermo<ThermoMixture, Type>::solution &) const,
+    scalar (ISATRhoMultithermo<ThermoMixture, Type>::*dFdT)(const scalar, const scalar)
+        const,
+    scalar (ISATRhoMultithermo<ThermoMixture, Type>::*limit)(const scalar) const,
+    autoPtr<typename ISATRhoMultithermo<ThermoMixture, Type>::solution> &sol) const
+{
 
+    if (T0 < 0)
+    {
+        FatalErrorInFunction
+            << "Negative initial temperature T0: " << T0
+            << abort(FatalError);
+    }
+    //static int call_n=0;
+    //static int inter_n=0;
+    scalar T1 = T0;
+    sol.reset(this->TPN(p, T1).ptr());
+    scalar F1 = (this->*F)(p, T1, sol()), F2 = F1;
+    scalar T2 = (this->*limit)(T0 + 1);
+    if (T2 == T1)
+        T2 = (this->*limit)(T0 - 1);
+    // if(F1>f)
+    //     T2=(this->*limit)(T0-30);
+    //scalar F1=(this->*F)(p, T1);
+    //scalar F2=(this->*F)(p, T2);
+    //scalar Tnew = T0;
+    scalar Ttol = T0 * tol_;
+    scalar dF = 0, dfdt = 0, dFold = 1e100;
+    int iter = 0;
+    scalar relax = 1;
+    bool inSection = false;
+    bool bisec = false;
+    double Tm, Fm;
+    do
+    {
+
+        F1 = F2;
+        sol.reset(this->TPN(p, T2).ptr());
+        F2 = (this->*F)(p, T2, sol());
+        dF = (F2 - f);
+
+        if (fabs(dF) > fabs(dFold))
+            relax *= 0.85;
+
+        dFold = dF;
+        inSection = ((F2 - f) * (F1 - f) < 0);
+
+        dfdt = (F2 - F1) / (T2 - T1); //(this->*dFdT)(p, Test);
+
+        if (!inSection)
+        {
+            T1 = T2;
+            if (mag(relax * dF / dfdt) > 30)
+                T2 = (this->*limit)(T1 - sign(relax * dF / dfdt) * 30);
+            else
+                T2 = (this->*limit)(T1 - relax * dF / dfdt);
+        }
+        else
+        {
+            do
+            {
+                dfdt = (F2 - F1) / (T2 - T1);
+                if (bisec)
+                {
+                    Tm = (T2 + T1) / 2;
+                }
+                else
+                {
+                    Tm = T2 - (F2 - f) / dfdt;
+                }
+                sol.reset(this->TPN(p, Tm).ptr());
+                Fm = (this->*F)(p, Tm, sol());
+                if ((Fm - f) * (F1 - f) < 0)
+                {
+                    bisec = ((T2 - Tm) / (T2 - T1) < 0.1);
+                    T2 = Tm;
+                    F2 = Fm;
+                }
+                else
+                {
+                    bisec = ((T1 - Tm) / (T1 - T2) < 0.1);
+                    T1 = Tm;
+                    F1 = Fm;
+                }
+                if (iter++ > maxIter_)
+                {
+                    FatalErrorInFunction << setprecision(50)
+                                         << "Maximum number of iterations exceeded: " << maxIter_
+                                         << " f: " << f
+                                         << " p: " << p
+                                         << " T0: " << T0
+                                         << "  Tg: " << T2
+                                         << " X: " << this->X_
+                                         << abort(FatalError);
+                }
+            } while (mag(T2 - T1) > Ttol && mag(f - Fm) > 0.0001);
+            T2 = Tm;
+        }
+        //Tnew =
+        //   (this->*limit)(Test - ((this->*F)(p, Test) - f) / (this->*dFdT)(p, Test));
+
+        if (T2 == 0)
+        {
+            FatalErrorInFunction << setprecision(50)
+                                 << "Maximum number of iterations exceeded: " << maxIter_
+                                 << " f: " << f
+                                 << " p: " << p
+                                 << " T0: " << T0
+                                 << "  Tg: " << T2
+                                 << " X: " << this->X_
+                                 << abort(FatalError);
+        }
+        if (iter++ > maxIter_)
+        {
+            FatalErrorInFunction << setprecision(50)
+                                 << "Maximum number of iterations exceeded: " << maxIter_
+                                 << " f: " << f
+                                 << " p: " << p
+                                 << " T0: " << T0
+                                 << "  Tg: " << T2
+                                 << " X: " << this->X_
+                                 << abort(FatalError);
+        }
+
+    } while (mag(T2 - T1) > Ttol && mag(f - F2) > 0.0001);
+    return T2;
+}
 
 template <class ThermoMixture, template <class> class Type>
 inline std::tuple<Foam::scalar, Foam::scalar> Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::TrhoEs(
@@ -219,9 +342,9 @@ inline std::tuple<Foam::scalar, Foam::scalar> Foam::species::ISATRhoMultithermo<
     scalar rho,
     scalar p0,
     scalar T0,
-    scalar(ISATRhoMultithermo<ThermoMixture, Type>::* Fe)(const scalar, const scalar) const,
-    scalar(ISATRhoMultithermo<ThermoMixture, Type>::* Frho)(const scalar, const scalar)
-    const)
+    scalar (ISATRhoMultithermo<ThermoMixture, Type>::*Fe)(const scalar, const scalar) const,
+    scalar (ISATRhoMultithermo<ThermoMixture, Type>::*Frho)(const scalar, const scalar)
+        const)
 {
     if (T0 < 0)
     {
@@ -246,7 +369,7 @@ inline std::tuple<Foam::scalar, Foam::scalar> Foam::species::ISATRhoMultithermo<
     scalar p1 = p0;
     scalar e11 = (this->*Fe)(p1, T1), e21, e12;
     scalar rho11 = (this->*Frho)(p1, T1), rho21, rho12;
-    scalar T2 = T1 + 1, p2 = p1 + 10;  //(this->*limit)(T0+1);
+    scalar T2 = T1 + 1, p2 = p1 + 10; //(this->*limit)(T0+1);
     scalar Ttol = T0 * tol_, ptol = p0 * tol_;
     scalar de = 0, drho = 0, dedt = 0, dedp = 0, drhodt = 0, drhodp = 0;
     scalar de_old = 1e10, drho_old = 1e10;
@@ -338,7 +461,6 @@ inline std::tuple<Foam::scalar, Foam::scalar> Foam::species::ISATRhoMultithermo<
         //T1 = T1 > 1 ? T1 : 1;
         //p1 = p1 > 100 ? p1 : 100;
 
-
         e11 = (this->*Fe)(p1 + dp, T1 + dT);
         rho11 = (this->*Frho)(p1 + dp, T1 + dT);
         t_f = sqr(e11 - e) + sqr(rho11 - rho);
@@ -374,21 +496,21 @@ inline std::tuple<Foam::scalar, Foam::scalar> Foam::species::ISATRhoMultithermo<
         if (iter++ > 20 * maxIter_)
         {
             WarningInFunction << setprecision(50)
-                << "Maximum number of iterations exceeded: " << iter - 1
-                << " minf:" << minf
-                << " e: " << e
-                << " rho: " << rho
-                << " T0: " << T0
-                << "  p0: " << p0
-                << " T1: " << T1
-                << "  p1: " << p1
-                << " X: " << this->X_
-                << endl;
+                              << "Maximum number of iterations exceeded: " << iter - 1
+                              << " minf:" << minf
+                              << " e: " << e
+                              << " rho: " << rho
+                              << " T0: " << T0
+                              << "  p0: " << p0
+                              << " T1: " << T1
+                              << "  p1: " << p1
+                              << " X: " << this->X_
+                              << endl;
             //<< abort(FatalError);
             break;
         }
 
-    } while ((mag(e11 - e) > 1e-3 || mag(rho11 - rho) > 1e-5));// && (mag(dT) > 1e-5 || mag(dp) > 1e-4));
+    } while ((mag(e11 - e) > 1e-3 || mag(rho11 - rho) > 1e-5)); // && (mag(dT) > 1e-5 || mag(dp) > 1e-4));
     //call_n++;
     //inter_n+=iter;
     //if(call_n%10000==0)
@@ -400,8 +522,8 @@ inline std::tuple<Foam::scalar, Foam::scalar> Foam::species::ISATRhoMultithermo<
 
 template <class ThermoMixture, template <class> class Type>
 inline Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::ISATRhoMultithermo(
-    const word& name,
-    const ISATRhoMultithermo& st)
+    const word &name,
+    const ISATRhoMultithermo &st)
     : ThermoMixture(name, st)
 {
 }
@@ -458,7 +580,7 @@ inline Foam::scalar
 Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::Es(const scalar p, const scalar T) const
 {
     scalarList in(this->X().size() + 2), out(4);
-    for (int i = 0;i < this->X().size();i++)
+    for (int i = 0; i < this->X().size(); i++)
     {
         in[i] = this->X_[i];
     }
@@ -469,7 +591,7 @@ Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::Es(const scalar p, const
 
     Erhovfctree_XTP.call(in, out);
     //psivftree.call(in, out);
-    return out[0];//std::make_tuple(out[0], out[1], out[2], out[3]);
+    return out[0]; //std::make_tuple(out[0], out[1], out[2], out[3]);
     //return this->Hs(p, T) - p / this->rho(p, T);
 }
 
@@ -491,7 +613,7 @@ inline std::tuple<Foam::scalar, Foam::scalar, Foam::scalar>
 Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::rhovfc_ISAT(const scalar p, const scalar T) const
 {
     scalarList in(this->X().size() + 2), out(3);
-    for (int i = 0;i < this->X().size();i++)
+    for (int i = 0; i < this->X().size(); i++)
     {
         in[i] = this->X_[i];
     }
@@ -699,7 +821,7 @@ inline Foam::scalar Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::THs(
     double sum = 0;
     //scalarList in(this->X().size() + 2), out(1);
     scalarList in(this->X().size() + 1), out(1);
-    for (int i = 0;i < this->X().size() - 1;i++)
+    for (int i = 0; i < this->X().size() - 1; i++)
     {
         in[i] = this->X_[i];
         sum += this->X_[i];
@@ -808,7 +930,7 @@ Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::psi(const scalar p, cons
 
     double sum = 0;
     scalarList in(this->X().size() + 1), out(1);
-    for (int i = 0;i < this->X().size() - 1;i++)
+    for (int i = 0; i < this->X().size() - 1; i++)
     {
         in[i] = this->X_[i];
         sum += this->X_[i];
@@ -827,7 +949,6 @@ Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::psi(const scalar p, cons
     //psivftree.call(in, out);
     return this->ThermoMixture::psi(p, T);
     //return out[0];
-
 }
 
 template <class ThermoMixture, template <class> class Type>
@@ -838,13 +959,12 @@ Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::psi_a(const scalar h, co
     return this->ThermoMixture::psi(p, tt);
 }
 
-
 template <class ThermoMixture, template <class> class Type>
 inline Foam::scalar
 Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::psi_HP(const scalar H, const scalar P, const scalar T0) const
 {
     scalarList in(this->X().size() + 2), out(1);
-    for (int i = 0;i < this->X().size();i++)
+    for (int i = 0; i < this->X().size(); i++)
     {
         in[i] = this->X_[i];
     }
@@ -858,13 +978,12 @@ Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::psi_HP(const scalar H, c
     return out[0];
 }
 
-
 template <class ThermoMixture, template <class> class Type>
 inline std::tuple<Foam::scalar, Foam::scalar>
 Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::Tpsi_HP(const scalar H, const scalar P, const scalar T0) const
 {
     scalarList in(this->X().size() + 2), out(2);
-    for (int i = 0;i < this->X().size();i++)
+    for (int i = 0; i < this->X().size(); i++)
     {
         in[i] = this->X_[i];
     }
@@ -876,7 +995,6 @@ Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::Tpsi_HP(const scalar H, 
     //Tpsitree_HP.call(in, out, T0);
     //psivftree.call(in, out);
     return std::make_tuple(out[0], out[1]);
-
 }
 /*
 template <class ThermoMixture, template <class> class Type>
@@ -903,7 +1021,7 @@ inline std::tuple<Foam::scalar, Foam::scalar, Foam::scalar, Foam::scalar>
 Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::THvfc_XrhoP(const scalar rho, const scalar P, const scalar T0) const
 {
     scalarList in(this->X().size() + 2), out(4);
-    for (int i = 0;i < this->X().size();i++)
+    for (int i = 0; i < this->X().size(); i++)
     {
         in[i] = this->X_[i];
     }
@@ -911,8 +1029,9 @@ Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::THvfc_XrhoP(const scalar
     in[this->X().size() + 1] = P;
 
     //Info << "psi_HP" << endl;
+    autoPtr<typename ISATRhoMultithermo<ThermoMixture, Type>::solution> sol(nullptr);
 
-    THvfctree_XrhoP.call(in, out, T0);
+    THvfctree_XrhoP.call(in, out, T0, sol);
     //psivftree.call(in, out);
     return std::make_tuple(out[0], out[1], out[2], out[3]);
 }
@@ -996,7 +1115,6 @@ Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::Tpsivfcsol_XHP(const sca
     return std::make_tuple(out[0], out[1], out[2], out[3],pS);
 }
 */
-
 
 template <class ThermoMixture, template <class> class Type>
 inline void Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::newTimeStep()
@@ -1091,7 +1209,7 @@ Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::vaporfra(const scalar p,
 
     double sum = 0;
     scalarList in(this->X().size() + 1), out(1);
-    for (int i = 0;i < this->X().size() - 1;i++)
+    for (int i = 0; i < this->X().size() - 1; i++)
     {
         in[i] = this->X_[i];
         sum += this->X_[i];
@@ -1111,14 +1229,13 @@ Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::vaporfra(const scalar p,
     //Info<<in<<endl;
     return this->ThermoMixture::vaporfra(p, T);
     return out[0];
-
 }
 template <class ThermoMixture, template <class> class Type>
-inline void Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::psi_vf(const scalar p, const scalar T, scalar& psi_out, scalar& vf_out) const
+inline void Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::psi_vf(const scalar p, const scalar T, scalar &psi_out, scalar &vf_out) const
 {
     double sum = 0;
     scalarList in(this->X().size() + 1), out(1);
-    for (int i = 0;i < this->X().size() - 1;i++)
+    for (int i = 0; i < this->X().size() - 1; i++)
     {
         in[i] = this->X_[i];
         sum += this->X_[i];
@@ -1143,12 +1260,11 @@ inline void Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::psi_vf(const
     return;
 }
 
-
 // * * * * * * * * * * * * * * * Member Operators  * * * * * * * * * * * * * //
 
 template <class ThermoMixture, template <class> class Type>
 inline void Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::operator+=(
-    const ISATRhoMultithermo<ThermoMixture, Type>& st)
+    const ISATRhoMultithermo<ThermoMixture, Type> &st)
 {
     ThermoMixture::operator+=(st);
 }
@@ -1163,29 +1279,29 @@ inline void Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::operator*=(c
 
 template <class ThermoMixture, template <class> class Type>
 inline Foam::species::ISATRhoMultithermo<ThermoMixture, Type> Foam::species::operator+(
-    const ISATRhoMultithermo<ThermoMixture, Type>& st1,
-    const ISATRhoMultithermo<ThermoMixture, Type>& st2)
+    const ISATRhoMultithermo<ThermoMixture, Type> &st1,
+    const ISATRhoMultithermo<ThermoMixture, Type> &st2)
 {
     return ISATRhoMultithermo<ThermoMixture, Type>(
-        static_cast<const ThermoMixture&>(st1) + static_cast<const ThermoMixture&>(st2));
+        static_cast<const ThermoMixture &>(st1) + static_cast<const ThermoMixture &>(st2));
 }
 
 template <class ThermoMixture, template <class> class Type>
 inline Foam::species::ISATRhoMultithermo<ThermoMixture, Type> Foam::species::operator*(
     const scalar s,
-    const ISATRhoMultithermo<ThermoMixture, Type>& st)
+    const ISATRhoMultithermo<ThermoMixture, Type> &st)
 {
     return ISATRhoMultithermo<ThermoMixture, Type>(
-        s * static_cast<const ThermoMixture&>(st));
+        s * static_cast<const ThermoMixture &>(st));
 }
 
 template <class ThermoMixture, template <class> class Type>
 inline Foam::species::ISATRhoMultithermo<ThermoMixture, Type> Foam::species::operator==(
-    const ISATRhoMultithermo<ThermoMixture, Type>& st1,
-    const ISATRhoMultithermo<ThermoMixture, Type>& st2)
+    const ISATRhoMultithermo<ThermoMixture, Type> &st1,
+    const ISATRhoMultithermo<ThermoMixture, Type> &st2)
 {
     return ISATRhoMultithermo<ThermoMixture, Type>(
-        static_cast<const ThermoMixture&>(st1) == static_cast<const ThermoMixture&>(st2));
+        static_cast<const ThermoMixture &>(st1) == static_cast<const ThermoMixture &>(st2));
 }
 
 // ************************************************************************* //

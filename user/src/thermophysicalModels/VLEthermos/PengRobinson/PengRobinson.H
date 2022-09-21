@@ -90,8 +90,23 @@ namespace Foam
         scalar sqrt_rTc_;
         scalar coef_;
         scalar kappa_;
+
         scalar Aa_;
         scalar Ab_;
+
+        scalar dAdTa_;
+        scalar dAdTb_;
+        scalar dAdTc_;
+
+        scalar dAdPa_;
+        scalar dAdPb_;
+        scalar dAdPc_;
+        
+        scalar aa_;
+        scalar ab_;
+
+        scalar dadta_;
+        scalar dadtb_;
         //- Acentric factor [-]
         scalar omega_;
 
@@ -168,13 +183,17 @@ namespace Foam
         inline scalar sqrt_ATbyP_M(scalar T) const;
         inline scalar Tsqrt_AbyP(scalar sqrtT) const;
         inline scalar dAdT(scalar p, scalar T) const;
+        inline scalar sqrTdAdTbyP(scalar rSqrtT, scalar rT) const;
         inline scalar dAdP(scalar p, scalar T) const;
+        inline scalar TdAdP(scalar rSqrtT, scalar rT) const;
         inline scalar B(scalar p, scalar T) const;
         inline scalar dBdT(scalar p, scalar T) const;
         inline scalar dBdP(scalar p, scalar T) const;
         inline scalar a(scalar p, scalar T) const;
+        inline scalar sqrta(scalar sqrtT) const;
         inline scalar b(scalar p, scalar T) const;
         inline scalar dadt(scalar p, scalar T) const;
+        inline scalar dadt_opt(scalar rSqrtT) const;
         inline scalar dadp(scalar p, scalar T) const;
         inline scalar dbdT(scalar p, scalar T) const;
         inline scalar dbdP(scalar p, scalar T) const;

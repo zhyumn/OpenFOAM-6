@@ -163,6 +163,18 @@ inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::rho // PY:phase mi
 }
 
 template <class ThermoMixture>
+inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::rho // PY:phase mixture density
+    (
+        scalar p,
+        scalar T,
+        scalar Zin,
+        const scalarList &Xinp,
+        const label pf) const
+{                                                  //RR: 10e+03*m3 Pa K-1 mol-1
+    return W(Xinp) * p / (Zin * RR * 1.0e-03 * T); // kg/m3
+}
+
+template <class ThermoMixture>
 inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::drhodT // PY:phase mixture density
     (
         scalar p,
@@ -172,7 +184,23 @@ inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::drhodT // PY:phase
 {
     scalar z = Z(p, T, Xinp, pf);
     //RR: 10e+03*m3 Pa K-1 mol-1
+    //return -W(Xinp) * p / (RR * 1.0e-03) * (dZdT(p, T, z, Xinp, pf) * T + z) / (z * z * T * T); // kg/m3
     return -W(Xinp) * p / (RR * 1.0e-03) * (dZdT(p, T, Xinp, pf) * T + z) / (z * z * T * T); // kg/m3
+}
+
+template <class ThermoMixture>
+inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::drhodT // PY:phase mixture density
+    (
+        scalar p,
+        scalar T,
+        scalar Zin,
+        const scalarList &Xinp,
+        const label pf) const
+{
+    scalar z = Zin;
+    //RR: 10e+03*m3 Pa K-1 mol-1
+    //return -W(Xinp) * p / (RR * 1.0e-03) * (dZdT(p, T, z, Xinp, pf) * T + z) / (z * z * T * T); // kg/m3
+    return -W(Xinp) * p / (RR * 1.0e-03) * (dZdT(p, T, Zin, Xinp, pf) * T + z) / (z * z * T * T); // kg/m3
 }
 
 template <class ThermoMixture>
@@ -186,6 +214,19 @@ inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::drhodP // PY:phase
     scalar z = Z(p, T, Xinp, pf);
     //RR: 10e+03*m3 Pa K-1 mol-1
     return W(Xinp) / (RR * 1.0e-03 * T) * (z - p * dZdP(p, T, Xinp, pf)) / (z * z); // kg/m3
+}
+template <class ThermoMixture>
+inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::drhodP // PY:phase mixture density
+    (
+        scalar p,
+        scalar T,
+        scalar Zin,
+        const scalarList &Xinp,
+        const label pf) const
+{
+    scalar z = Zin;
+    //RR: 10e+03*m3 Pa K-1 mol-1
+    return W(Xinp) / (RR * 1.0e-03 * T) * (z - p * dZdP(p, T, Zin, Xinp, pf)) / (z * z); // kg/m3
 }
 
 template <class ThermoMixture>
@@ -210,15 +251,20 @@ inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::A(
     scalar Amix = 0.0;
     scalar sqrtT = sqrt(T);
     scalar rsqrT_P = p / (T * T);
-
+    scalar temp = 0.0;
     forAll(Xinp, i)
     {
+        temp = 0.0;
         forAll(Xinp, j)
         {
             //Amix += Xinp[i] * Xinp[j] * sqrt(This[i].EOS::A(p, T) * This[j].EOS::A(p, T)) * (1.0 - bico[i][j]);
             //Amix += Xinp[i] * Xinp[j] * 0.45724 * This[i].EOS::sqrt_ATbyP_M(T) * This[j].EOS::sqrt_ATbyP_M(T) / (T * T) * p * (1.0 - bico[i][j]);
-            Amix += Xinp[i] * Xinp[j] * This[i].EOS::Tsqrt_AbyP(sqrtT) * This[j].EOS::Tsqrt_AbyP(sqrtT) * rsqrT_P * oneMbico[i][j]; //optimized way
+
+            //Amix += Xinp[i] * Xinp[j] * This[i].EOS::Tsqrt_AbyP(sqrtT) * This[j].EOS::Tsqrt_AbyP(sqrtT) * oneMbico[i][j]; //optimized way
+
+            temp += Xinp[j] * This[j].EOS::Tsqrt_AbyP(sqrtT) * oneMbico[i][j];
         }
+        Amix += temp * Xinp[i] * This[i].EOS::Tsqrt_AbyP(sqrtT);
     }
     /*
     forAll(IJlistI, iter)
@@ -227,6 +273,7 @@ inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::A(
         const label &j = IJlistJ[iter];
         Amix += Xinp[i] * Xinp[j] * This[i].EOS::Tsqrt_AbyP(sqrtT) * This[j].EOS::Tsqrt_AbyP(sqrtT) * rsqrT_P * oneMbico[i][j]; //optimized way
     }*/
+    Amix *= rsqrT_P;
     return Amix;
 }
 
@@ -238,14 +285,19 @@ inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::dAdT(
 {
 
     const PengRobinsonMixture<ThermoMixture> &This = *this;
-    scalar Amix = 0.0;
+    scalar Amix = 0.0, Ai, Aj;
     scalar sqrtT = sqrt(T);
+    scalar rSqrtT = 1 / sqrtT;
+    scalar rT = 1 / T;
+    scalar PbySqrT = p / sqr(T);
     forAll(Xinp, i)
     {
         forAll(Xinp, j)
         {
+            Ai = This[i].EOS::Tsqrt_AbyP(sqrtT);
+            Aj = This[j].EOS::Tsqrt_AbyP(sqrtT);
             //Amix += Xinp[i] * Xinp[j] * (sqrt(This[i].EOS::A(p, T) / This[j].EOS::A(p, T)) * This[j].EOS::dAdT(p, T) + sqrt(This[j].EOS::A(p, T) / This[i].EOS::A(p, T)) * This[i].EOS::dAdT(p, T)) * 0.5 * (1.0 - bico[i][j]);
-            Amix += Xinp[i] * Xinp[j] * (This[i].EOS::Tsqrt_AbyP(sqrtT) / This[j].EOS::Tsqrt_AbyP(sqrtT) * This[j].EOS::dAdT(p, T) + This[j].EOS::Tsqrt_AbyP(sqrtT) / This[i].EOS::Tsqrt_AbyP(sqrtT) * This[i].EOS::dAdT(p, T)) * 0.5 * oneMbico[i][j];
+            Amix += Xinp[i] * Xinp[j] * PbySqrT * (Ai / Aj * This[j].EOS::sqrTdAdTbyP(rSqrtT, rT) + Aj / Ai * This[i].EOS::sqrTdAdTbyP(rSqrtT, rT)) * 0.5 * oneMbico[i][j];
         }
     }
     return Amix;
@@ -258,12 +310,19 @@ inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::dAdP(
 {
 
     const PengRobinsonMixture<ThermoMixture> &This = *this;
-    scalar Amix = 0.0;
+    scalar Amix = 0.0, Ai, Aj;
+    scalar sqrtT = sqrt(T);
+    scalar rSqrtT = 1 / sqrtT;
+    scalar rT = 1 / T;
+    scalar rSqrT = 1 / sqr(T);
     forAll(Xinp, i)
     {
         forAll(Xinp, j)
         {
-            Amix += Xinp[i] * Xinp[j] * (sqrt(This[i].EOS::A(p, T) / This[j].EOS::A(p, T)) * This[j].EOS::dAdP(p, T) + sqrt(This[j].EOS::A(p, T) / This[i].EOS::A(p, T)) * This[i].EOS::dAdP(p, T)) * 0.5 * (1.0 - bico[i][j]);
+            //Amix += Xinp[i] * Xinp[j] * (sqrt(This[i].EOS::A(p, T) / This[j].EOS::A(p, T)) * This[j].EOS::dAdP(p, T) + sqrt(This[j].EOS::A(p, T) / This[i].EOS::A(p, T)) * This[i].EOS::dAdP(p, T)) * 0.5 * (1.0 - bico[i][j]);
+            Ai = This[i].EOS::Tsqrt_AbyP(sqrtT);
+            Aj = This[j].EOS::Tsqrt_AbyP(sqrtT);
+            Amix += Xinp[i] * Xinp[j] * rT * (Ai / Aj * This[j].EOS::TdAdP(rSqrtT, rT) + Aj / Ai * This[i].EOS::TdAdP(rSqrtT, rT)) * 0.5 * oneMbico[i][j];
         }
     }
     return Amix;
@@ -360,11 +419,13 @@ inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::a(
 {
     const PengRobinsonMixture<ThermoMixture> &This = *this;
     scalar amix = 0.0;
+    scalar sqrtT = sqrt(T);
     forAll(Xinp, i)
     {
         forAll(Xinp, j)
         {
-            amix += Xinp[i] * Xinp[j] * sqrt(This[i].EOS::a(p, T) * This[j].EOS::a(p, T)) * (1.0 - bico[i][j]);
+            //amix += Xinp[i] * Xinp[j] * sqrt(This[i].EOS::a(p, T) * This[j].EOS::a(p, T)) * (oneMbico[i][j]);
+            amix += Xinp[i] * Xinp[j] * This[i].EOS::sqrta(sqrtT) * This[j].EOS::sqrta(sqrtT) * oneMbico[i][j];
         }
     }
     return amix;
@@ -378,13 +439,19 @@ inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::dadt(
 {
     const PengRobinsonMixture<ThermoMixture> &This = *this;
     scalar dadtmix = 0.0, ai, aj;
+    scalar sqrtT = sqrt(T);
+    scalar rSqrtT = 1 / sqrtT;
     forAll(Xinp, i)
     {
         forAll(Xinp, j)
         {
-            ai = This[i].EOS::a(p, T);
-            aj = This[j].EOS::a(p, T);
-            dadtmix += Xinp[i] * Xinp[j] * 0.5 * (sqrt(ai / aj) * This[j].dadt(p, T) + sqrt(aj / ai) * This[i].dadt(p, T)) * (1.0 - bico[i][j]);
+            //ai = This[i].EOS::a(p, T);
+            //aj = This[j].EOS::a(p, T);
+            //dadtmix += Xinp[i] * Xinp[j] * 0.5 * (sqrt(ai / aj) * This[j].dadt(p, T) + sqrt(aj / ai) * This[i].dadt(p, T)) * (oneMbico[i][j]);
+
+            ai = This[i].EOS::Tsqrt_AbyP(sqrtT);
+            aj = This[j].EOS::Tsqrt_AbyP(sqrtT);
+            dadtmix += Xinp[i] * Xinp[j] * 0.5 * (ai / aj * This[j].dadt_opt(rSqrtT) + aj / ai * This[i].dadt_opt(rSqrtT)) * oneMbico[i][j];
         }
     }
     return dadtmix;
@@ -408,11 +475,13 @@ inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::dadxi(
 {
     const PengRobinsonMixture<ThermoMixture> &This = *this;
     scalar dadtmix = 0.0; //, ai, adi;
+    scalar sqrtT = sqrt(T);
     //adi = This[di].EOS::a(p, T);
     forAll(Xinp, i)
     {
         //ai = This[i].EOS::a(p, T);
-        dadtmix += 2 * Xinp[i] * sqrt(This[i].EOS::a(p, T) * This[di].EOS::a(p, T)) * (1.0 - bico[i][di]);
+        //dadtmix += 2 * Xinp[i] * sqrt(This[i].EOS::a(p, T) * This[di].EOS::a(p, T)) * (oneMbico[i][di]);
+        dadtmix += 2 * Xinp[i] * This[i].EOS::sqrta(sqrtT) * This[di].EOS::sqrta(sqrtT) * oneMbico[i][di];
     }
     return dadtmix;
 }
@@ -425,11 +494,17 @@ inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::d2adtdxi(
 {
     const PengRobinsonMixture<ThermoMixture> &This = *this;
     scalar dadtmix = 0.0, ai, adi;
-    adi = This[di].EOS::a(p, T);
+    scalar sqrtT = sqrt(T);
+    scalar rSqrtT = 1 / sqrtT;
+    //adi = This[di].EOS::a(p, T);
+    adi = This[di].EOS::sqrta(sqrtT);
     forAll(Xinp, i)
     {
-        ai = This[i].EOS::a(p, T);
-        dadtmix += Xinp[i] * (sqrt(ai / adi) * This[di].dadt(p, T) + sqrt(adi / ai) * This[i].dadt(p, T)) * (1.0 - bico[i][di]);
+        //ai = This[i].EOS::a(p, T);
+        //dadtmix += Xinp[i] * (sqrt(ai / adi) * This[di].dadt(p, T) + sqrt(adi / ai) * This[i].dadt(p, T)) * oneMbico[i][di];
+
+        ai = This[i].EOS::sqrta(sqrtT);
+        dadtmix += Xinp[i] * (ai / adi * This[di].dadt_opt(rSqrtT) + adi / ai * This[i].dadt_opt(rSqrtT)) * oneMbico[i][di];
     }
     return dadtmix;
 }
@@ -442,6 +517,7 @@ inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::d2adt2(
 {
     const PengRobinsonMixture<ThermoMixture> &This = *this;
     scalar d2adt2mix = 0.0, ai, aj, dai, daj;
+
     forAll(Xinp, i)
     {
         forAll(Xinp, j)
@@ -450,7 +526,7 @@ inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::d2adt2(
             aj = This[j].EOS::a(p, T);
             dai = This[i].dadt(p, T);
             daj = This[j].dadt(p, T);
-            d2adt2mix += Xinp[i] * Xinp[j] * 0.25 / (ai * aj * sqrt(ai * aj)) * (-sqr(aj * dai - ai * daj) + 2 * ai * aj * (ai * This[j].d2adt2(p, T) + aj * This[i].d2adt2(p, T))) * (1.0 - bico[i][j]);
+            d2adt2mix += Xinp[i] * Xinp[j] * 0.25 / (ai * aj * sqrt(ai * aj)) * (-sqr(aj * dai - ai * daj) + 2 * ai * aj * (ai * This[j].d2adt2(p, T) + aj * This[i].d2adt2(p, T))) * oneMbico[i][j];
         }
     }
     return d2adt2mix;
@@ -555,8 +631,8 @@ inline std::tuple<int, double, double, double> Foam::PengRobinsonMixture<ThermoM
     {
         // One root is real: in supercritical zone
         scalar D05 = sqrt(D);
-        scalar S = sign(Rl + D05) * pow(mag(Rl + D05), 1.0 / 3.0);
-        scalar Tl = sign(Rl - D05) * pow(mag(Rl - D05), 1.0 / 3.0);
+        scalar S = sign(Rl + D05) * cbrt(mag(Rl + D05));
+        scalar Tl = sign(Rl - D05) * cbrt(mag(Rl - D05));
         root = S + Tl - a2 / 3;
         return std::make_tuple(1, root, root, root);
     }
@@ -717,6 +793,27 @@ inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::dZdT(
 }
 
 template <class ThermoMixture>
+inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::dZdT(
+    scalar p,
+    scalar T,
+    scalar Zin,
+    const scalarList &Xinp,
+    const label pf) const
+{
+    scalar A = this->A(p, T, Xinp), B = this->B(p, T, Xinp);
+    scalar dAdT = this->dAdT(p, T, Xinp), dBdT = this->dBdT(p, T, Xinp);
+    scalar Z0 = Zin;
+    scalar a2 = B - 1.0;
+    scalar da2dT = dBdT;
+    scalar a1 = A - 2.0 * B - 3.0 * B * B;
+    scalar da1dT = dAdT - 2.0 * dBdT - 6.0 * B * dBdT;
+    //scalar a0 = -A * B + B * B + B * B * B;
+    scalar da0dT = -(dAdT * B + A * dBdT) + 2 * B * dBdT + 3 * B * B * dBdT;
+
+    return -(da2dT * Z0 * Z0 + da1dT * Z0 + da0dT) / (3 * Z0 * Z0 + 2 * Z0 * a2 + a1);
+}
+
+template <class ThermoMixture>
 inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::dZdP(
     scalar p,
     scalar T,
@@ -726,6 +823,27 @@ inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::dZdP(
     scalar A = this->A(p, T, Xinp), B = this->B(p, T, Xinp);
     scalar dAdP = this->dAdP(p, T, Xinp), dBdP = this->dBdP(p, T, Xinp);
     scalar Z0 = this->Z(p, T, Xinp, pf);
+    scalar a2 = B - 1.0;
+    scalar da2dP = dBdP;
+    scalar a1 = A - 2.0 * B - 3.0 * B * B;
+    scalar da1dP = dAdP - 2.0 * dBdP - 6.0 * B * dBdP;
+    //scalar a0 = -A * B + B * B + B * B * B;
+    scalar da0dP = -(dAdP * B + A * dBdP) + 2 * B * dBdP + 3 * B * B * dBdP;
+
+    return -(da2dP * Z0 * Z0 + da1dP * Z0 + da0dP) / (3 * Z0 * Z0 + 2 * Z0 * a2 + a1);
+}
+
+template <class ThermoMixture>
+inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::dZdP(
+    scalar p,
+    scalar T,
+    scalar Zin,
+    const scalarList &Xinp,
+    const label pf) const
+{
+    scalar A = this->A(p, T, Xinp), B = this->B(p, T, Xinp);
+    scalar dAdP = this->dAdP(p, T, Xinp), dBdP = this->dBdP(p, T, Xinp);
+    scalar Z0 = Zin;
     scalar a2 = B - 1.0;
     scalar da2dP = dBdP;
     scalar a1 = A - 2.0 * B - 3.0 * B * B;
@@ -758,6 +876,28 @@ inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::dZdxi(
 }
 
 template <class ThermoMixture>
+inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::dZdxi(
+    scalar p,
+    scalar T,
+    label di,
+    scalar Zin,
+    const scalarList &Xinp,
+    const label pf) const
+{
+    scalar A = this->A(p, T, Xinp), B = this->B(p, T, Xinp);
+    scalar dAdxi = this->dAdxi(p, T, di, Xinp), dBdxi = this->dBdxi(p, T, di, Xinp);
+    scalar Z0 = Zin;
+    scalar a2 = B - 1.0;
+    scalar da2dxi = dBdxi;
+    scalar a1 = A - 2.0 * B - 3.0 * B * B;
+    scalar da1dxi = dAdxi - 2.0 * dBdxi - 6.0 * B * dBdxi;
+    //scalar a0 = -A * B + B * B + B * B * B;
+    scalar da0dxi = -(dAdxi * B + A * dBdxi) + 2 * B * dBdxi + 3 * B * B * dBdxi;
+
+    return -(da2dxi * Z0 * Z0 + da1dxi * Z0 + da0dxi) / (3 * Z0 * Z0 + 2 * Z0 * a2 + a1);
+}
+
+template <class ThermoMixture>
 inline Foam::autoPtr<scalarList> Foam::PengRobinsonMixture<ThermoMixture>::A2(
     scalar p, //inp
     scalar T, //inp
@@ -774,7 +914,7 @@ inline Foam::autoPtr<scalarList> Foam::PengRobinsonMixture<ThermoMixture>::A2(
         forAll(Xinp, j)
         {
             //Amix2[i] += Xinp[j] * sqrt((*this)[i].EOS::A(p, T) * (*this)[j].EOS::A(p, T)) * (1.0 - bico[j][i]);
-            Amix2[i] += Xinp[j] * rsqrT_P * This[i].EOS::Tsqrt_AbyP(sqrtT) * This[j].EOS::Tsqrt_AbyP(sqrtT) * (1.0 - bico[j][i]); //optimized way
+            Amix2[i] += Xinp[j] * rsqrT_P * This[i].EOS::Tsqrt_AbyP(sqrtT) * This[j].EOS::Tsqrt_AbyP(sqrtT) * oneMbico[j][i]; //optimized way
         }
     }
     return autoPtr<scalarList>(&Amix2);
@@ -788,13 +928,22 @@ inline Foam::autoPtr<scalarList> Foam::PengRobinsonMixture<ThermoMixture>::dA2dT
 {
 
     scalarList &dAmix2dT = *(new scalarList(this->N_));
+    scalar sqrtT = sqrt(T);
+    scalar rSqrtT = 1 / sqrtT;
+    scalar rT = 1 / T;
+    scalar PbysqrT = p / sqr(T);
+    scalar Ai, Aj;
 
     forAll(Xinp, i)
     {
         dAmix2dT[i] = 0.0;
         forAll(Xinp, j)
         {
-            dAmix2dT[i] += Xinp[j] * 0.5 * (sqrt((*this)[i].EOS::A(p, T) / (*this)[j].EOS::A(p, T)) * (*this)[j].EOS::dAdT(p, T) + sqrt((*this)[j].EOS::A(p, T) / (*this)[i].EOS::A(p, T)) * (*this)[i].EOS::dAdT(p, T)) * (1.0 - bico[j][i]);
+            //dAmix2dT[i] += Xinp[j] * 0.5 * (sqrt((*this)[i].EOS::A(p, T) / (*this)[j].EOS::A(p, T)) * (*this)[j].EOS::dAdT(p, T) + sqrt((*this)[j].EOS::A(p, T) / (*this)[i].EOS::A(p, T)) * (*this)[i].EOS::dAdT(p, T)) * (oneMbico[j][i]);
+
+            Ai = (*this)[i].EOS::Tsqrt_AbyP(sqrtT);
+            Aj = (*this)[j].EOS::Tsqrt_AbyP(sqrtT);
+            dAmix2dT[i] += Xinp[j] * 0.5 * PbysqrT * (Ai / Aj * (*this)[j].EOS::sqrTdAdTbyP(rSqrtT, rT) + Aj / Ai * (*this)[i].EOS::sqrTdAdTbyP(rSqrtT, rT)) * oneMbico[j][i];
         }
     }
     return autoPtr<scalarList>(&dAmix2dT);
@@ -806,13 +955,22 @@ inline Foam::autoPtr<scalarList> Foam::PengRobinsonMixture<ThermoMixture>::dA2dP
     const scalarList &Xinp) const
 {
     scalarList &dAmix2dT = *(new scalarList(this->N_));
+    scalar sqrtT = sqrt(T);
+    scalar rSqrtT = 1 / sqrtT;
+    scalar rT = 1 / T;
+    scalar Ai, Aj;
 
     forAll(Xinp, i)
     {
         dAmix2dT[i] = 0.0;
         forAll(Xinp, j)
         {
-            dAmix2dT[i] += Xinp[j] * 0.5 * (sqrt((*this)[i].EOS::A(p, T) / (*this)[j].EOS::A(p, T)) * (*this)[j].EOS::dAdP(p, T) + sqrt((*this)[j].EOS::A(p, T) / (*this)[i].EOS::A(p, T)) * (*this)[i].EOS::dAdP(p, T)) * (1.0 - bico[j][i]);
+            //dAmix2dT[i] += Xinp[j] * 0.5 * (sqrt((*this)[i].EOS::A(p, T) / (*this)[j].EOS::A(p, T)) * (*this)[j].EOS::dAdP(p, T) + sqrt((*this)[j].EOS::A(p, T) / (*this)[i].EOS::A(p, T)) * (*this)[i].EOS::dAdP(p, T)) * (oneMbico[j][i]);
+            //scalar ta = (*this)[j].EOS::dAdP(p, T);
+            //scalar tb = (*this)[j].EOS::dAdP(p, T);
+            Ai = (*this)[i].EOS::Tsqrt_AbyP(sqrtT);
+            Aj = (*this)[j].EOS::Tsqrt_AbyP(sqrtT);
+            dAmix2dT[i] += Xinp[j] * 0.5 * rT * (Ai / Aj * (*this)[j].EOS::TdAdP(rSqrtT, rT) + Aj / Ai * (*this)[i].EOS::TdAdP(rSqrtT, rT)) * oneMbico[j][i];
         }
     }
     return autoPtr<scalarList>(&dAmix2dT);
@@ -826,12 +984,14 @@ inline Foam::autoPtr<scalarList> Foam::PengRobinsonMixture<ThermoMixture>::dA2dx
     const scalarList &Xinp) const
 {
     scalarList &Amix2 = *(new scalarList(this->N_));
+    scalar rsqrT_P = p / (T * T);
+    scalar sqrtT = sqrt(T);
 
     forAll(Xinp, i)
     {
-        //Amix2[i] = 0.0;
+        //Amix2[i] = sqrt((*this)[i].EOS::A(p, T) * (*this)[di].EOS::A(p, T)) * (oneMbico[di][i]);
 
-        Amix2[i] = sqrt((*this)[i].EOS::A(p, T) * (*this)[di].EOS::A(p, T)) * (1.0 - bico[di][i]);
+        Amix2[i] = (*this)[i].EOS::Tsqrt_AbyP(sqrtT) * (*this)[di].EOS::Tsqrt_AbyP(sqrtT) * rsqrT_P * oneMbico[di][i];
     }
     return autoPtr<scalarList>(&Amix2);
 }
@@ -859,9 +1019,13 @@ inline Foam::autoPtr<scalarList> Foam::PengRobinsonMixture<ThermoMixture>::fugac
 
     //this->ABZmix(p, T, comp_inp, Amixz, Bmixz, Amix2, Bz);
 
-    Zmix = this->Z(p, T, Xinp, pf);
+    scalar Z0, Zmix0;
+    std::tie(Z0, Zmix0) = Z_opt(p, T, Amixz, Xinp);
+    Zmix = (pf == 0) ? Z0 : Zmix0;
 
-    scalar Zmix0 = this->Z(p, T, Xinp, 1);
+    //Zmix = this->Z(p, T, Xinp, pf);
+
+    //scalar Zmix0 = this->Z(p, T, Xinp, 1);
 
     scalar comptrifile = 0.7;
     scalarList Xs(this->X_.size());
@@ -895,10 +1059,12 @@ inline Foam::autoPtr<scalarList> Foam::PengRobinsonMixture<ThermoMixture>::fugac
         zfactor00 = Bmixz + small8;
         ZMB = small8;
     }
+    scalar logX = log((zfactor00 + cc1 * Bmixz) / (zfactor00 + cc2 * Bmixz));
+    scalar logZMB = log(ZMB);
     forAll(Xinp, spid)
     {
         scalar b = (*this)[spid].B(p, T);
-        fugcoef[spid] = exp(b / Bmixz * (zfactor00 - 1.0) - log(ZMB) - Amixz / (cc0 * Bmixz) * (2.0 * Amix2[spid] / Amixz - b / Bmixz) * log((zfactor00 + cc1 * Bmixz) / (zfactor00 + cc2 * Bmixz)));
+        fugcoef[spid] = exp(b / Bmixz * (zfactor00 - 1.0) - logZMB - Amixz / (cc0 * Bmixz) * (2.0 * Amix2[spid] / Amixz - b / Bmixz) * logX);
     }
     return autoPtr<scalarList>(&fugcoef);
 }
@@ -955,22 +1121,25 @@ inline Foam::autoPtr<scalarList> Foam::PengRobinsonMixture<ThermoMixture>::Ln_fu
         }
     }
 
-    scalar cc0 = 2.0 * sqrt(2.0);
-    scalar cc1 = 1.0 + sqrt(2.0);
-    scalar cc2 = 1.0 - sqrt(2.0);
+    const scalar cc0 = 2.0 * sqrt(2.0);
+    const scalar cc1 = 1.0 + sqrt(2.0);
+    const scalar cc2 = 1.0 - sqrt(2.0);
 
     scalar zfactor00 = Zmix;
     scalar ZMB = zfactor00 - Bmixz;
+
     if (ZMB < 0.0)
     {
         //FatalErrorInFunction << "ZMB < 0.0" << exit(FatalError);
         zfactor00 = Bmixz + small8;
         ZMB = small8;
     }
+    scalar logZMB = log(ZMB);
+    scalar logX = log((zfactor00 + cc1 * Bmixz) / (zfactor00 + cc2 * Bmixz));
     forAll(Xinp, spid)
     {
         scalar b = (*this)[spid].B(p, T);
-        fugcoef[spid] = b / Bmixz * (zfactor00 - 1.0) - log(ZMB) - Amixz / (cc0 * Bmixz) * (2.0 * Amix2[spid] / Amixz - b / Bmixz) * log((zfactor00 + cc1 * Bmixz) / (zfactor00 + cc2 * Bmixz));
+        fugcoef[spid] = b / Bmixz * (zfactor00 - 1.0) - logZMB - Amixz / (cc0 * Bmixz) * (2.0 * Amix2[spid] / Amixz - b / Bmixz) * logX;
     }
     return autoPtr<scalarList>(&fugcoef);
 }
@@ -1005,10 +1174,12 @@ inline Foam::autoPtr<scalarList> Foam::PengRobinsonMixture<ThermoMixture>::ln_fu
         zfactor00 = Bmixz + small8;
         ZMB = small8;
     }
+    scalar logZMB = log(ZMB);
+    scalar logX = log((zfactor00 + cc1 * Bmixz) / (zfactor00 + cc2 * Bmixz));
     forAll(Xinp, spid)
     {
         scalar b = (*this)[spid].B(p, T);
-        fugcoef[spid] = b / Bmixz * (zfactor00 - 1.0) - log(ZMB) - Amixz / (cc0 * Bmixz) * (2.0 * Amix2[spid] / Amixz - b / Bmixz) * log((zfactor00 + cc1 * Bmixz) / (zfactor00 + cc2 * Bmixz));
+        fugcoef[spid] = b / Bmixz * (zfactor00 - 1.0) - logZMB - Amixz / (cc0 * Bmixz) * (2.0 * Amix2[spid] / Amixz - b / Bmixz) * logX;
     }
     return autoPtr<scalarList>(&fugcoef);
 }
@@ -1037,10 +1208,14 @@ inline Foam::autoPtr<scalarList> Foam::PengRobinsonMixture<ThermoMixture>::ddT_L
     const scalarList &dAmix2dT = pdAmix2dT();
     const scalar small8 = 1.e-08; //PY: need to be noticed
 
-    Zmix = this->Z(p, T, Xinp, pf);
-    scalar dZmixdT = this->dZdT(p, T, Xinp, pf);
+    scalar Z0, Zmix0;
+    std::tie(Z0, Zmix0) = Z_opt(p, T, Amixz, Xinp);
+    Zmix = (pf == 0) ? Z0 : Zmix0;
 
-    scalar Zmix0 = this->Z(p, T, Xinp, 1);
+    //Zmix = this->Z(p, T, Xinp, pf);
+    scalar dZmixdT = this->dZdT(p, T, Zmix, Xinp, pf);
+
+    //scalar Zmix0 = this->Z(p, T, Xinp, 1);
 
     scalar comptrifile = 0.7;
     scalarList Xs(this->X_.size());
@@ -1076,6 +1251,7 @@ inline Foam::autoPtr<scalarList> Foam::PengRobinsonMixture<ThermoMixture>::ddT_L
         zfactor00 = Bmixz + small8;
         ZMB = small8;
     }
+    scalar logX = log((zfactor00 + cc1 * Bmixz) / (zfactor00 + cc2 * Bmixz));
     forAll(Xinp, spid)
     {
         scalar Bi = (*this)[spid].B(p, T);
@@ -1083,7 +1259,7 @@ inline Foam::autoPtr<scalarList> Foam::PengRobinsonMixture<ThermoMixture>::ddT_L
         //ddT_Ln_fugcoef[spid] = Bi / Bmixz * (Zmix - 1);
         ddT_Ln_fugcoef[spid] = dBidT / Bmixz * (Zmix - 1) - Bi / (Bmixz * Bmixz) * dBmixzdT * (Zmix - 1) + Bi / Bmixz * dZmixdT;
         ddT_Ln_fugcoef[spid] -= (dZmixdT - dBmixzdT) / (Zmix - Bmixz);
-        ddT_Ln_fugcoef[spid] -= (dAmix2dT[spid] / (sqrt(2.0) * Bmixz) - Amix2[spid] * dBmixzdT / (sqrt(2.0) * Bmixz * Bmixz) - (dAmixzdT * Bi + Amixz * dBidT) / (cc0 * Bmixz * Bmixz) + (Amixz * Bi * dBmixzdT) / (sqrt(2.0) * Bmixz * Bmixz * Bmixz)) * log((zfactor00 + cc1 * Bmixz) / (zfactor00 + cc2 * Bmixz));
+        ddT_Ln_fugcoef[spid] -= (dAmix2dT[spid] / (sqrt(2.0) * Bmixz) - Amix2[spid] * dBmixzdT / (sqrt(2.0) * Bmixz * Bmixz) - (dAmixzdT * Bi + Amixz * dBidT) / (cc0 * Bmixz * Bmixz) + (Amixz * Bi * dBmixzdT) / (sqrt(2.0) * Bmixz * Bmixz * Bmixz)) * logX;
 
         ddT_Ln_fugcoef[spid] -= (Amix2[spid] / (sqrt(2.0) * Bmixz) - Amixz * Bi / (cc0 * Bmixz * Bmixz)) * ((dZmixdT + cc1 * dBmixzdT) / (Zmix + cc1 * Bmixz) - (dZmixdT + cc2 * dBmixzdT) / (Zmix + cc2 * Bmixz));
     }
@@ -1114,10 +1290,14 @@ inline Foam::autoPtr<scalarList> Foam::PengRobinsonMixture<ThermoMixture>::ddP_L
     const scalarList &dAmix2dT = pdAmix2dT();
     const scalar small8 = 1.e-08; //PY: need to be noticed
 
-    Zmix = this->Z(p, T, Xinp, pf);
-    scalar dZmixdT = this->dZdP(p, T, Xinp, pf);
+    scalar Z0, Zmix0;
+    std::tie(Z0, Zmix0) = Z_opt(p, T, Amixz, Xinp);
+    Zmix = (pf == 0) ? Z0 : Zmix0;
 
-    scalar Zmix0 = this->Z(p, T, Xinp, 1);
+    //Zmix = this->Z(p, T, Xinp, pf);
+    scalar dZmixdT = this->dZdP(p, T, Zmix, Xinp, pf);
+
+    //scalar Zmix0 = this->Z(p, T, Xinp, 1);
 
     scalar comptrifile = 0.7;
     scalarList Xs(this->X_.size());
@@ -1152,6 +1332,7 @@ inline Foam::autoPtr<scalarList> Foam::PengRobinsonMixture<ThermoMixture>::ddP_L
         zfactor00 = Bmixz + small8;
         ZMB = small8;
     }
+    scalar logX = log((zfactor00 + cc1 * Bmixz) / (zfactor00 + cc2 * Bmixz));
     forAll(Xinp, spid)
     {
         scalar Bi = (*this)[spid].B(p, T);
@@ -1159,7 +1340,7 @@ inline Foam::autoPtr<scalarList> Foam::PengRobinsonMixture<ThermoMixture>::ddP_L
         //ddT_Ln_fugcoef[spid] = Bi / Bmixz * (Zmix - 1);
         ddT_Ln_fugcoef[spid] = dBidT / Bmixz * (Zmix - 1) - Bi / (Bmixz * Bmixz) * dBmixzdT * (Zmix - 1) + Bi / Bmixz * dZmixdT;
         ddT_Ln_fugcoef[spid] -= (dZmixdT - dBmixzdT) / (Zmix - Bmixz);
-        ddT_Ln_fugcoef[spid] -= (dAmix2dT[spid] / (sqrt(2.0) * Bmixz) - Amix2[spid] * dBmixzdT / (sqrt(2.0) * Bmixz * Bmixz) - (dAmixzdT * Bi + Amixz * dBidT) / (cc0 * Bmixz * Bmixz) + (Amixz * Bi * dBmixzdT) / (sqrt(2.0) * Bmixz * Bmixz * Bmixz)) * log((zfactor00 + cc1 * Bmixz) / (zfactor00 + cc2 * Bmixz));
+        ddT_Ln_fugcoef[spid] -= (dAmix2dT[spid] / (sqrt(2.0) * Bmixz) - Amix2[spid] * dBmixzdT / (sqrt(2.0) * Bmixz * Bmixz) - (dAmixzdT * Bi + Amixz * dBidT) / (cc0 * Bmixz * Bmixz) + (Amixz * Bi * dBmixzdT) / (sqrt(2.0) * Bmixz * Bmixz * Bmixz)) * logX;
 
         ddT_Ln_fugcoef[spid] -= (Amix2[spid] / (sqrt(2.0) * Bmixz) - Amixz * Bi / (cc0 * Bmixz * Bmixz)) * ((dZmixdT + cc1 * dBmixzdT) / (Zmix + cc1 * Bmixz) - (dZmixdT + cc2 * dBmixzdT) / (Zmix + cc2 * Bmixz));
     }
@@ -1191,10 +1372,14 @@ inline Foam::autoPtr<scalarList> Foam::PengRobinsonMixture<ThermoMixture>::ddxi_
     const scalarList &dAmix2dxi = pdAmix2dxi();
     const scalar small8 = 1.e-08; //PY: need to be noticed
 
-    Zmix = this->Z(p, T, Xinp, pf);
-    scalar dZmixdxi = this->dZdxi(p, T, di, Xinp, pf);
+    scalar Z0, Zmix0;
+    std::tie(Z0, Zmix0) = Z_opt(p, T, Amixz, Xinp);
+    Zmix = (pf == 0) ? Z0 : Zmix0;
 
-    scalar Zmix0 = this->Z(p, T, Xinp, 1);
+    //Zmix = this->Z(p, T, Xinp, pf);
+    scalar dZmixdxi = this->dZdxi(p, T, di, Zmix, Xinp, pf);
+
+    //scalar Zmix0 = this->Z(p, T, Xinp, 1);
 
     scalar comptrifile = 0.7;
     scalarList Xs(this->X_.size());
@@ -1229,6 +1414,7 @@ inline Foam::autoPtr<scalarList> Foam::PengRobinsonMixture<ThermoMixture>::ddxi_
         zfactor00 = Bmixz + small8;
         ZMB = small8;
     }
+    scalar logX = log((zfactor00 + cc1 * Bmixz) / (zfactor00 + cc2 * Bmixz));
     forAll(Xinp, spid)
     {
         scalar Bi = (*this)[spid].B(p, T);
@@ -1236,7 +1422,7 @@ inline Foam::autoPtr<scalarList> Foam::PengRobinsonMixture<ThermoMixture>::ddxi_
         //ddT_Ln_fugcoef[spid] = Bi / Bmixz * (Zmix - 1);
         ddxi_Ln_fugcoef[spid] = dBidxi / Bmixz * (Zmix - 1) - Bi / (Bmixz * Bmixz) * dBmixzdxi * (Zmix - 1) + Bi / Bmixz * dZmixdxi;
         ddxi_Ln_fugcoef[spid] -= (dZmixdxi - dBmixzdxi) / (Zmix - Bmixz);
-        ddxi_Ln_fugcoef[spid] -= (dAmix2dxi[spid] / (sqrt(2.0) * Bmixz) - Amix2[spid] * dBmixzdxi / (sqrt(2.0) * Bmixz * Bmixz) - (dAmixzdxi * Bi + Amixz * dBidxi) / (cc0 * Bmixz * Bmixz) + (Amixz * Bi * dBmixzdxi) / (sqrt(2.0) * Bmixz * Bmixz * Bmixz)) * log((zfactor00 + cc1 * Bmixz) / (zfactor00 + cc2 * Bmixz));
+        ddxi_Ln_fugcoef[spid] -= (dAmix2dxi[spid] / (sqrt(2.0) * Bmixz) - Amix2[spid] * dBmixzdxi / (sqrt(2.0) * Bmixz * Bmixz) - (dAmixzdxi * Bi + Amixz * dBidxi) / (cc0 * Bmixz * Bmixz) + (Amixz * Bi * dBmixzdxi) / (sqrt(2.0) * Bmixz * Bmixz * Bmixz)) * logX;
 
         ddxi_Ln_fugcoef[spid] -= (Amix2[spid] / (sqrt(2.0) * Bmixz) - Amixz * Bi / (cc0 * Bmixz * Bmixz)) * ((dZmixdxi + cc1 * dBmixzdxi) / (Zmix + cc1 * Bmixz) - (dZmixdxi + cc2 * dBmixzdxi) / (Zmix + cc2 * Bmixz));
     }
@@ -1293,8 +1479,8 @@ inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::Ha // internal ene
     scalar bmix = this->b(p, T, Xinp);
     scalar cc1 = 1.0 + sqrt(2.0);
     scalar cc2 = 1.0 - sqrt(2.0);
-
-    scalar VV = this->W(Xinp) / this->rho(p, T, Xinp, pf); //m3*mol-1, phase specific volume
+    scalar z = Z(p, T, Xinp, pf);
+    scalar VV = this->W(Xinp) / this->rho(p, T, z, Xinp, pf); //m3*mol-1, phase specific volume
 
     scalar xxx = ((VV + cc1 * bmix) / (VV + cc2 * bmix));
     scalar dH;
@@ -1304,14 +1490,14 @@ inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::Ha // internal ene
     //Info<<"!!!dH1="<<Z(p, T, Xinp, pf) <<"!!!\n";
     if (xxx > 0)
     {
-        dH = (Z(p, T, Xinp, pf) - 1) * RR * 1e-3 * T + ((T * this->dadt(p, T, Xinp) - this->a(p, T, Xinp)) / (2.0 * sqrt(2.0) * bmix)) * log(xxx);
+        dH = (z - 1) * RR * 1e-3 * T + ((T * this->dadt(p, T, Xinp) - this->a(p, T, Xinp)) / (2.0 * sqrt(2.0) * bmix)) * log(xxx);
         //dH = (T * this->dadt(p, T, Xinp) - this->a(p, T, Xinp))/bmix;
         //dH = 1;
         //dH = 0 * (Z(p, T, Xinp, pf) - 1) * RR * 1e-3 * T + this->dadt(p, T, Xinp);
     }
     else
     {
-        dH = (Z(p, T, Xinp, pf) - 1) * RR * 1e-3 * T;
+        dH = (z - 1) * RR * 1e-3 * T;
     }
 
     //Info << "dH=" << dH << endl;
@@ -1339,27 +1525,27 @@ inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::dHadT // internal 
     //scalar dbmixdT = 0;
     scalar cc1 = 1.0 + sqrt(2.0);
     scalar cc2 = 1.0 - sqrt(2.0);
-
-    scalar rho_ = this->rho(p, T, Xinp, pf);
+    scalar z = Z(p, T, Xinp, pf);
+    scalar rho_ = this->rho(p, T, z, Xinp, pf);
     scalar VV = this->W(Xinp) / rho_; //m3*mol-1, phase specific volume
-    scalar dVVdT = -this->W(Xinp) / (rho_ * rho_) * this->drhodT(p, T, Xinp, pf);
+    scalar dVVdT = -this->W(Xinp) / (rho_ * rho_) * this->drhodT(p, T, z, Xinp, pf);
     scalar xxx = ((VV + cc1 * bmix) / (VV + cc2 * bmix));
     scalar ddT_dH;
-    scalar z = Z(p, T, Xinp, pf);
+
     //scalar a_b=this->a(p, T, Xinp);
     //scalar dadt_b=this->dadt(p, T, Xinp);
     //scalar z_b=Z(p, T, Xinp, pf);
     //Info<<"!!!dH1="<<Z(p, T, Xinp, pf) <<"!!!\n";
     if (xxx > 0)
     {
-        ddT_dH = dZdT(p, T, Xinp, pf) * RR * 1e-3 * T + (z - 1) * RR * 1e-3;
+        ddT_dH = dZdT(p, T, z, Xinp, pf) * RR * 1e-3 * T + (z - 1) * RR * 1e-3;
         ddT_dH += ((T * this->d2adt2(p, T, Xinp)) / (2.0 * sqrt(2.0) * bmix)) * log(xxx);
         //ddT_dH = this->d2adt2(p, T, Xinp);
         ddT_dH += ((T * this->dadt(p, T, Xinp) - this->a(p, T, Xinp)) / (2.0 * sqrt(2.0) * bmix)) * (dVVdT / (VV + cc1 * bmix) - dVVdT / (VV + cc2 * bmix));
     }
     else
     {
-        ddT_dH = dZdT(p, T, Xinp, pf) * RR * 1e-3 * T + (z - 1) * RR * 1e-3;
+        ddT_dH = dZdT(p, T, z, Xinp, pf) * RR * 1e-3 * T + (z - 1) * RR * 1e-3;
     }
     //Info << "haha=" << setw(20) << setprecision(20) << this->dHadT(p, T, &flag, &(sol().X_gas())) << endl;
     ddT_dH = ddT_dH / this->W(Xinp); // J/kg
@@ -1389,10 +1575,10 @@ inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::dHadP // internal 
     //scalar dbmixdT = 0;
     scalar cc1 = 1.0 + sqrt(2.0);
     scalar cc2 = 1.0 - sqrt(2.0);
-
-    scalar rho_ = this->rho(p, T, Xinp, pf);
+    scalar z = Z(p, T, Xinp, pf);
+    scalar rho_ = this->rho(p, T, z, Xinp, pf);
     scalar VV = this->W(Xinp) / rho_; //m3*mol-1, phase specific volume
-    scalar dVVdT = -this->W(Xinp) / (rho_ * rho_) * this->drhodP(p, T, Xinp, pf);
+    scalar dVVdT = -this->W(Xinp) / (rho_ * rho_) * this->drhodP(p, T, z, Xinp, pf);
     scalar xxx = ((VV + cc1 * bmix) / (VV + cc2 * bmix));
     scalar ddT_dH;
     //scalar z = Z(p, T, Xinp, pf);
@@ -1402,12 +1588,12 @@ inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::dHadP // internal 
     //Info<<"!!!dH1="<<Z(p, T, Xinp, pf) <<"!!!\n";
     if (xxx > 0)
     {
-        ddT_dH = dZdP(p, T, Xinp, pf) * RR * 1e-3 * T;
+        ddT_dH = dZdP(p, T, z, Xinp, pf) * RR * 1e-3 * T;
         ddT_dH += ((T * this->dadt(p, T, Xinp) - this->a(p, T, Xinp)) / (2.0 * sqrt(2.0) * bmix)) * (dVVdT / (VV + cc1 * bmix) - dVVdT / (VV + cc2 * bmix));
     }
     else
     {
-        ddT_dH = dZdP(p, T, Xinp, pf) * RR * 1e-3 * T;
+        ddT_dH = dZdP(p, T, z, Xinp, pf) * RR * 1e-3 * T;
     }
     //Info << "haha=" << setw(20) << setprecision(20) << this->dHadT(p, T, &flag, &(sol().X_gas())) << endl;
     ddT_dH = ddT_dH / this->W(Xinp); // J/kg
@@ -1440,31 +1626,33 @@ inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::dHadxi // internal
 
     scalar cc1 = 1.0 + sqrt(2.0);
     scalar cc2 = 1.0 - sqrt(2.0);
-
-    scalar VV = this->W(Xinp) / this->rho(p, T, Xinp, pf); //m3*mol-1, phase specific volume
-    scalar dVVdxi = dZdxi(p, T, di, Xinp, pf) * RR * 1.0e-03 * T / p;
+    scalar z = Z(p, T, Xinp, pf);
+    scalar VV = this->W(Xinp) / this->rho(p, T, z, Xinp, pf); //m3*mol-1, phase specific volume
+    scalar dVVdxi = dZdxi(p, T, di, z, Xinp, pf) * RR * 1.0e-03 * T / p;
     scalar xxx = ((VV + cc1 * bmix) / (VV + cc2 * bmix));
     scalar ddxi_dH, dH;
+
     //scalar a_b=this->a(p, T, Xinp);
     //scalar dadt_b=this->dadt(p, T, Xinp);
     //scalar z_b=Z(p, T, Xinp, pf);
     //Info<<"!!!dH1="<<Z(p, T, Xinp, pf) <<"!!!\n";
     if (xxx > 0)
     {
-        dH = (Z(p, T, Xinp, pf) - 1) * RR * 1e-3 * T + ((T * this->dadt(p, T, Xinp) - this->a(p, T, Xinp)) / (2.0 * sqrt(2.0) * bmix)) * log(xxx);
+        scalar logxxx = log(xxx);
+        dH = (z - 1) * RR * 1e-3 * T + ((T * this->dadt(p, T, Xinp) - this->a(p, T, Xinp)) / (2.0 * sqrt(2.0) * bmix)) * logxxx;
         //dH = 1;
-        ddxi_dH = dZdxi(p, T, di, Xinp, pf) * RR * 1e-3 * T;
+        ddxi_dH = dZdxi(p, T, di, z, Xinp, pf) * RR * 1e-3 * T;
         //ddxi_dH = 0;
-        ddxi_dH += ((T * this->d2adtdxi(p, T, di, Xinp) - this->dadxi(p, T, di, Xinp)) / (2.0 * sqrt(2.0) * bmix)) * log(xxx);
-        ddxi_dH -= ((T * this->dadt(p, T, Xinp) - this->a(p, T, Xinp)) / (2.0 * sqrt(2.0) * bmix * bmix) * dbmixdxi) * log(xxx);
+        ddxi_dH += ((T * this->d2adtdxi(p, T, di, Xinp) - this->dadxi(p, T, di, Xinp)) / (2.0 * sqrt(2.0) * bmix)) * logxxx;
+        ddxi_dH -= ((T * this->dadt(p, T, Xinp) - this->a(p, T, Xinp)) / (2.0 * sqrt(2.0) * bmix * bmix) * dbmixdxi) * logxxx;
         ddxi_dH += ((T * this->dadt(p, T, Xinp) - this->a(p, T, Xinp)) / (2.0 * sqrt(2.0) * bmix)) * ((dVVdxi + cc1 * dbmixdxi) / (VV + cc1 * bmix) - (dVVdxi + cc2 * dbmixdxi) / (VV + cc2 * bmix));
         //dH = (T * this->dadt(p, T, Xinp) - this->a(p, T, Xinp))/bmix;
         //ddxi_dH = (T * this->d2adtdxi(p, T, di, Xinp) - this->dadxi(p, T, di, Xinp))/bmix+(T * this->dadt(p, T, Xinp) - this->a(p, T, Xinp))/bmix/bmix*dbmixdxi;
     }
     else
     {
-        ddxi_dH = dZdxi(p, T, di, Xinp, pf) * RR * 1e-3 * T;
-        dH = (Z(p, T, Xinp, pf) - 1) * RR * 1e-3 * T;
+        ddxi_dH = dZdxi(p, T, di, z, Xinp, pf) * RR * 1e-3 * T;
+        dH = (z - 1) * RR * 1e-3 * T;
     }
     scalar w = this->W(Xinp);
     ddxi_dH = ddxi_dH / w - dH / (w * w) * This[di].W() * 1e-3;
@@ -1699,9 +1887,9 @@ inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::G // Gibbs energy 
     scalar bmix = this->b(p, T, Xinp);
     scalar cc1 = 1.0 + sqrt(2.0);
     scalar cc2 = 1.0 - sqrt(2.0);
-    scalar Zmix = this->Z(p, T, Xinp, pf);
+    scalar z = this->Z(p, T, Xinp, pf);
     scalar Bmix = this->B(p, T, Xinp);
-    scalar VV = this->W(Xinp) / this->rho(p, T, Xinp, pf); //m3*mol-1, phase specific volume
+    scalar VV = this->W(Xinp) / this->rho(p, T, z, Xinp, pf); //m3*mol-1, phase specific volume
 
     scalar xxx = ((VV + cc1 * bmix) / (VV + cc2 * bmix));
     scalar dG;
@@ -1711,14 +1899,14 @@ inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::G // Gibbs energy 
     //Info<<"!!!dH1="<<Z(p, T, Xinp, pf) <<"!!!\n";
     if (xxx > 0)
     {
-        dG = (Z(p, T, Xinp, pf) - 1) * RR * 1e-3 * T - log(Zmix - Bmix) * RR * 1e-3 * T + ((-this->a(p, T, Xinp)) / (2.0 * sqrt(2.0) * bmix)) * log(xxx);
+        dG = (z - 1) * RR * 1e-3 * T - log(z - Bmix) * RR * 1e-3 * T + ((-this->a(p, T, Xinp)) / (2.0 * sqrt(2.0) * bmix)) * log(xxx);
         //dH = (T * this->dadt(p, T, Xinp) - this->a(p, T, Xinp))/bmix;
         //dH = 1;
         //dH = 0 * (Z(p, T, Xinp, pf) - 1) * RR * 1e-3 * T + this->dadt(p, T, Xinp);
     }
     else
     {
-        dG = (Z(p, T, Xinp, pf) - 1) * RR * 1e-3 * T - log(Zmix - Bmix) * RR * 1e-3 * T;
+        dG = (z - 1) * RR * 1e-3 * T - log(z - Bmix) * RR * 1e-3 * T;
     }
 
     dG = dG / this->W(Xinp); // J/kg
@@ -1983,10 +2171,11 @@ inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::CpMCv(
     scalar amix = this->a(p, T, Xinp);
     scalar bmix = this->b(p, T, Xinp);
     scalar dadt = this->dadt(p, T, Xinp);
+    scalar Zmix = this->Z(p, T, Xinp, pf);
 
     scalar mw_phase = this->W(Xinp);
-    scalar rho_phase = this->rho(p, T, Xinp, pf);
-    scalar VV = this->W(Xinp) / this->rho(p, T, Xinp, pf);
+    scalar rho_phase = this->rho(p, T, Zmix, Xinp, pf);
+    scalar VV = this->W(Xinp) / this->rho(p, T, Zmix, Xinp, pf);
     scalar den = sqr(VV) + 2.0 * bmix * VV - sqr(bmix);
     scalar dpdt = RR * 1.0e-03 / (VV - bmix) - dadt / den;
     scalar dpdv = -RR * 1.0e-03 * T / sqr(VV - bmix) + 2.0 * amix * (VV + bmix) / sqr(den);
@@ -2067,22 +2256,24 @@ inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::dSdT(
     const scalar cc0 = 2.0 * sqrt(2.0);
 
     scalar bmix = this->b(p, T, Xinp);
-    scalar VV = this->W(Xinp) / this->rho(p, T, Xinp, pf); // m3*mol-1,phase specific volume
-    scalar xxx = (VV + cc1 * bmix) / (VV + cc2 * bmix);
     scalar z = Z(p, T, Xinp, pf);
-    scalar rho_ = this->rho(p, T, Xinp, pf);
-    scalar dVVdT = -this->W(Xinp) / (rho_ * rho_) * this->drhodT(p, T, Xinp, pf);
+
+    scalar VV = this->W(Xinp) / this->rho(p, T, z, Xinp, pf); // m3*mol-1,phase specific volume
+    scalar xxx = (VV + cc1 * bmix) / (VV + cc2 * bmix);
+
+    scalar rho_ = this->rho(p, T, z, Xinp, pf);
+    scalar dVVdT = -this->W(Xinp) / (rho_ * rho_) * this->drhodT(p, T, z, Xinp, pf);
     scalar ddT_dS;
     if (xxx > 0.0)
     {
-        ddT_dS = RR * 1.0e-03 * (dZdT(p, T, Xinp, pf) * (1 - bmix / VV) + z * bmix * dVVdT / (VV * VV)) / (z * (1 - bmix / VV));
+        ddT_dS = RR * 1.0e-03 * (dZdT(p, T, z, Xinp, pf) * (1 - bmix / VV) + z * bmix * dVVdT / (VV * VV)) / (z * (1 - bmix / VV));
         ddT_dS += ((this->d2adt2(p, T, Xinp)) / (cc0 * bmix)) * log(xxx);
         ddT_dS += (this->dadt(p, T, Xinp)) / (cc0 * bmix) * (dVVdT / (VV + cc1 * bmix) - dVVdT / (VV + cc2 * bmix));
         //RR * log((p * VV - bmix * p) / (RR * 1.0e-03 * T)) + this->dadt(p, T, Xinp) / (cc0 * bmix) * log(xxx);
     }
     else
     {
-        ddT_dS = RR * 1.0e-03 * (dZdT(p, T, Xinp, pf) * (1 - bmix / VV) + z * bmix * dVVdT / (VV * VV)) / (z * (1 - bmix / VV));
+        ddT_dS = RR * 1.0e-03 * (dZdT(p, T, z, Xinp, pf) * (1 - bmix / VV) + z * bmix * dVVdT / (VV * VV)) / (z * (1 - bmix / VV));
     }
 
     ddT_dS = ddT_dS / this->W(Xinp);
@@ -2105,22 +2296,24 @@ inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::dSdP(
     const scalar cc2 = 1.0 - sqrt(2.0);
     const scalar cc0 = 2.0 * sqrt(2.0);
 
-    scalar bmix = this->b(p, T, Xinp);
-    scalar VV = this->W(Xinp) / this->rho(p, T, Xinp, pf); // m3*mol-1,phase specific volume
-    scalar xxx = (VV + cc1 * bmix) / (VV + cc2 * bmix);
     scalar z = Z(p, T, Xinp, pf);
-    scalar rho_ = this->rho(p, T, Xinp, pf);
-    scalar dVVdP = -this->W(Xinp) / (rho_ * rho_) * this->drhodP(p, T, Xinp, pf);
+
+    scalar bmix = this->b(p, T, Xinp);
+    scalar rho_ = this->rho(p, T, z, Xinp, pf);
+    scalar VV = this->W(Xinp) / rho_; // m3*mol-1,phase specific volume
+    scalar xxx = (VV + cc1 * bmix) / (VV + cc2 * bmix);
+
+    scalar dVVdP = -this->W(Xinp) / (rho_ * rho_) * this->drhodP(p, T, z, Xinp, pf);
     scalar ddP_dS;
     if (xxx > 0.0)
     {
-        ddP_dS = RR * 1.0e-03 * (dZdP(p, T, Xinp, pf) * (1 - bmix / VV) + z * bmix * dVVdP / (VV * VV)) / (z * (1 - bmix / VV));
+        ddP_dS = RR * 1.0e-03 * (dZdP(p, T, z, Xinp, pf) * (1 - bmix / VV) + z * bmix * dVVdP / (VV * VV)) / (z * (1 - bmix / VV));
         ddP_dS += (this->dadt(p, T, Xinp)) / (cc0 * bmix) * (dVVdP / (VV + cc1 * bmix) - dVVdP / (VV + cc2 * bmix));
         //RR * log((p * VV - bmix * p) / (RR * 1.0e-03 * T)) + this->dadt(p, T, Xinp) / (cc0 * bmix) * log(xxx);
     }
     else
     {
-        ddP_dS = RR * 1.0e-03 * (dZdP(p, T, Xinp, pf) * (1 - bmix / VV) + z * bmix * dVVdP / (VV * VV)) / (z * (1 - bmix / VV));
+        ddP_dS = RR * 1.0e-03 * (dZdP(p, T, z, Xinp, pf) * (1 - bmix / VV) + z * bmix * dVVdP / (VV * VV)) / (z * (1 - bmix / VV));
     }
 
     ddP_dS = ddP_dS / this->W(Xinp);
@@ -2150,15 +2343,16 @@ inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::dSdxi // internal 
     const scalar cc0 = 2.0 * sqrt(2.0);
 
     scalar z = Z(p, T, Xinp, pf);
-    scalar VV = this->W(Xinp) / this->rho(p, T, Xinp, pf); //m3*mol-1, phase specific volume
-    scalar dVVdxi = dZdxi(p, T, di, Xinp, pf) * RR * 1.0e-03 * T / p;
+    scalar dzdxi = dZdxi(p, T, di, z, Xinp, pf);
+    scalar VV = this->W(Xinp) / this->rho(p, T, z, Xinp, pf); //m3*mol-1, phase specific volume
+    scalar dVVdxi = dzdxi * RR * 1.0e-03 * T / p;
     scalar xxx = ((VV + cc1 * bmix) / (VV + cc2 * bmix));
     //scalar ddxi_dH, dH;
     scalar ddxi_dS, dS_phase;
 
     if (xxx > 0)
     {
-        ddxi_dS = RR * 1.0e-03 * (dZdxi(p, T, di, Xinp, pf) * (1 - bmix / VV) - z * (VV * dbmixdxi - bmix * dVVdxi) / (VV * VV)) / (z * (1 - bmix / VV));
+        ddxi_dS = RR * 1.0e-03 * (dzdxi * (1 - bmix / VV) - z * (VV * dbmixdxi - bmix * dVVdxi) / (VV * VV)) / (z * (1 - bmix / VV));
 
         ddxi_dS += (this->d2adtdxi(p, T, di, Xinp) / (cc0 * bmix)) * log(xxx);
         ddxi_dS -= (this->dadt(p, T, Xinp) / (cc0 * bmix * bmix) * dbmixdxi) * log(xxx);
@@ -2168,7 +2362,7 @@ inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::dSdxi // internal 
     }
     else
     {
-        ddxi_dS = RR * 1.0e-03 * (dZdxi(p, T, di, Xinp, pf) * (1 - bmix / VV) - z * (VV * dbmixdxi - bmix * dVVdxi) / (VV * VV)) / (z * (1 - bmix / VV));
+        ddxi_dS = RR * 1.0e-03 * (dzdxi * (1 - bmix / VV) - z * (VV * dbmixdxi - bmix * dVVdxi) / (VV * VV)) / (z * (1 - bmix / VV));
         dS_phase = RR * 1.0e-03 * log((p * VV - bmix * p) / (RR * 1.0e-03 * T));
     }
     scalar w = this->W(Xinp);

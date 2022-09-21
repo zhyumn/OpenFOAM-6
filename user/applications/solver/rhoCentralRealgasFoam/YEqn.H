@@ -171,8 +171,8 @@ PtrList<volScalarField> tempY(Y.size());
             volScalarField &rhoYi = rhoY[i];
             // Central upwind scheme
             // interpolation of Yi to cell faces
-            surfaceScalarField Yi_pos = interpolate(Yi, pos, T.name());
-            surfaceScalarField Yi_neg = interpolate(Yi, neg, T.name());
+            surfaceScalarField Yi_pos = interpolate(Yi, pos);
+            surfaceScalarField Yi_neg = interpolate(Yi, neg);
             surfaceScalarField phiYi(
                 "phiYi",
                 aphiv_pos * rho_pos * Yi_pos + aphiv_neg * rho_neg * Yi_neg);

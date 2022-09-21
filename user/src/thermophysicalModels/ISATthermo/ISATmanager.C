@@ -216,7 +216,7 @@ void Foam::ISATmanager<FuncType>::call(
             {
                 leafvalue[i] = value[i];
             }
-            pfunc->value(leafvalue + dvalue, out, arg...);
+            //pfunc->value(leafvalue + dvalue, out, arg...);
             scalarList out2(out.size());
             scalarList others = leafvalue - dvalue;
             bool flag_others = pfunc->valid_in(others);
@@ -237,11 +237,13 @@ void Foam::ISATmanager<FuncType>::call(
             flag_others = flag_others && sumother <= 1;
             if (!flag_others)
             {
+                pfunc->value(leafvalue + dvalue, out, arg...);
                 add(value, out, arg...);
             }
             else
             {
                 pfunc->value(leafvalue - dvalue, out2, arg...);
+                pfunc->value(leafvalue + dvalue, out, arg...);
                 //Info<<out<<endl;
 
                 //scalarList out2, value2;

@@ -143,8 +143,11 @@ namespace Foam
         inline static std::tuple<int, double, double, double> cubicSolve(scalar a2, scalar a1, scalar a0);
         //- Return density [kg/m^3]
         inline scalar rho(scalar p, scalar T, const scalarList &Xinp, const label pf = 2) const;
+        inline scalar rho(scalar p, scalar T, scalar Zin, const scalarList &Xinp, const label pf = 2) const;
         inline scalar drhodT(scalar p, scalar T, const scalarList &Xinp, const label pf = 2) const;
         inline scalar drhodP(scalar p, scalar T, const scalarList &Xinp, const label pf = 2) const;
+        inline scalar drhodT(scalar p, scalar T, scalar Zin, const scalarList &Xinp, const label pf = 2) const;
+        inline scalar drhodP(scalar p, scalar T, scalar Zin, const scalarList &Xinp, const label pf = 2) const;
         //inline scalar V(scalar p, scalar T, const label *pf = NULL, const scalarList *Xinp = NULL) const;
         inline scalar Ha(scalar p, scalar T, const scalarList &Xinp, const label pf = 2) const;
         inline scalar Hs(scalar p, scalar T, const scalarList &Xinp, const label pf = 2) const;
@@ -205,10 +208,13 @@ namespace Foam
         inline scalar vol_gibbs(scalar p, scalar T, const scalarList *Xinp) const;
 
         inline scalar dZdT(scalar p, scalar T, const scalarList &Xinp, const label pf = 2) const;
+        inline scalar dZdT(scalar p, scalar T, scalar Zin, const scalarList &Xinp, const label pf = 2) const;
 
         inline scalar dZdP(scalar p, scalar T, const scalarList &Xinp, const label pf = 2) const;
+        inline scalar dZdP(scalar p, scalar T, scalar Zin, const scalarList &Xinp, const label pf = 2) const;
 
         inline scalar dZdxi(scalar p, scalar T, label di, const scalarList &Xinp, const label pf = 2) const;
+        inline scalar dZdxi(scalar p, scalar T, label di, scalar Zin, const scalarList &Xinp, const label pf = 2) const;
 
         //- Return molecular weight [kg/mol]
         inline scalar W(const scalarList &Xinp) const;
