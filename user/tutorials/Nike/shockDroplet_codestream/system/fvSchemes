@@ -42,13 +42,13 @@ laplacianSchemes
 interpolationSchemes
 {
     default         linear;
-    //reconstruct(rho) vanLeer;
-    reconstruct(thermo:rho) vanLeer;
+    reconstruct(rho) vanLeer;
     reconstruct(U)  vanLeerV;
-    //reconstruct(T)  upwind;//vanLeer;
-    reconstruct(doubleFlux) upwind;
-    //reconstruct(gammaStar)  upwind;
-    //reconstruct(eStar)  upwind;
+    reconstruct(DF) upwind;
+    reconstruct(Yi) upwind;
+    reconstruct(rPsi) upwind;
+    reconstruct(e) upwind;
+    reconstruct(soundspeed) upwind;
 }
 
 snGradSchemes
