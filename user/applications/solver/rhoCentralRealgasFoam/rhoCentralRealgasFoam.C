@@ -96,11 +96,11 @@ int main(int argc, char *argv[])
         surfaceScalarField rPsi_pos(interpolate(rPsi, pos));
         surfaceScalarField rPsi_neg(interpolate(rPsi, neg));
 
-        surfaceScalarField gammaStar_pos(interpolate(gammaStar, pos, DF));
-        surfaceScalarField gammaStar_neg(interpolate(gammaStar, neg, DF));
+        surfaceScalarField gammaStar_pos(interpolate(gammaStar, pos, DF_name));
+        surfaceScalarField gammaStar_neg(interpolate(gammaStar, neg, DF_name));
 
-        surfaceScalarField eStar_pos(interpolate(eStar, pos, DF));
-        surfaceScalarField eStar_neg(interpolate(eStar, neg, DF));
+        surfaceScalarField eStar_pos(interpolate(eStar, pos, DF_name));
+        surfaceScalarField eStar_neg(interpolate(eStar, neg, DF_name));
 
         surfaceScalarField e_pos(interpolate(e, pos));
         surfaceScalarField e_neg(interpolate(e, neg));

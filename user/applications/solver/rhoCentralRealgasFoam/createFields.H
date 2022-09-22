@@ -1,6 +1,7 @@
 #include "createRDeltaT.H"
 
-const word DF("DF");
+const word DF_name("DF");
+const word Yi_name("Yi");
 Info << "Reading thermophysical properties\n" << endl;
 
 autoPtr<rhoReactionThermo> pThermo

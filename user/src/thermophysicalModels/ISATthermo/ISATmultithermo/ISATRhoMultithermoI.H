@@ -303,7 +303,7 @@ inline Foam::scalar Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::Tsol
                                          << " X: " << this->X_
                                          << abort(FatalError);
                 }
-            } while (mag(T2 - T1) > Ttol && mag(f - Fm) > 0.0001);
+            } while (mag(T2 - T1) > Ttol && mag(f - Fm) > 1e-8 * f);
             T2 = Tm;
         }
         //Tnew =
@@ -332,7 +332,7 @@ inline Foam::scalar Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::Tsol
                                  << abort(FatalError);
         }
 
-    } while (mag(T2 - T1) > Ttol && mag(f - F2) > 0.0001);
+    } while (mag(T2 - T1) > Ttol && mag(f - F2) > 1e-8 * f);
     return T2;
 }
 
