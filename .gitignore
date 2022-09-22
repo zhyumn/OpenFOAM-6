@@ -89,3 +89,5 @@ doc/Doxygen/DTAGS
 *.exe
 *.out
 *.OLD
+
+/recyclebin
