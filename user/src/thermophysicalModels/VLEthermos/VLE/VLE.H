@@ -174,6 +174,7 @@ namespace Foam
         inline scalar Cp_num(scalar p, scalar T) const;
         inline scalar Cp(scalar p, scalar T) const;
         inline scalar Cp(scalar p, scalar T, solution &sol) const;
+        inline scalar Cp(scalar p, scalar T, solution &sol, scalarSquareMatrix &A, labelList &pivotIndices) const;
         inline scalar Cp_Hs(scalar p, scalar T, solution &sol) const;
         inline scalar dHadXi(scalar p, scalar T, label di, solution &sol) const;
         inline scalar dHadP(scalar p, scalar T, solution &sol) const;
@@ -199,7 +200,9 @@ namespace Foam
         //inline scalar Dimix_dev(scalar p, scalar T,label di) const;
 
         inline scalar dZdT(scalar p, scalar T, solution &sol) const;
+        inline scalar dZdT(scalar p, scalar T, solution &sol, scalarSquareMatrix &A, labelList &pivotIndices) const;
         inline scalar dZdP(scalar p, scalar T, solution &sol) const;
+        inline scalar dZdP(scalar p, scalar T, solution &sol, scalarSquareMatrix &A, labelList &pivotIndices) const;
         inline scalar dZdXi(scalar p, scalar T, label di, solution &sol) const;
 
         //- Return (Cp - Cv) [J/(kg K]
@@ -228,9 +231,11 @@ namespace Foam
         inline label solve_vaporf(scalar p, scalar T, solution &sol) const;
         inline label noramlize(scalarList &X_in) const;
         inline autoPtr<scalarList> wilsoneq(scalar p, scalar T) const;
-        inline autoPtr<scalarList> dvidT(scalar p, scalar T, solution &sol) const;
+
         inline scalar dvfdT(scalar p, scalar T, solution &sol) const;
+        inline scalar dvfdT(scalar p, scalar T, solution &sol, scalarList &dvidT_) const;
         inline scalar dvfdP(scalar p, scalar T, solution &sol) const;
+        inline scalar dvfdP(scalar p, scalar T, solution &sol, scalarList &dvidP_) const;
         inline scalar dvfdXi(scalar p, scalar T, label di, solution &sol) const;
         inline autoPtr<scalarList> dXdT_gas(scalar p, scalar T, solution &sol) const;
         inline autoPtr<scalarList> dXdT_gas(scalar p, scalar T, solution &sol, autoPtr<scalarList> &dvidt) const;
@@ -248,7 +253,11 @@ namespace Foam
         inline scalar dWdXi_liq(scalar p, scalar T, label di, solution &sol) const;
         inline scalar dWdXi(label di) const;
 
+        inline autoPtr<scalarSquareMatrix> A_dvid_(scalar p, scalar T, solution &sol) const;
+        inline autoPtr<scalarList> dvidT(scalar p, scalar T, solution &sol) const;
+        inline autoPtr<scalarList> dvidT(scalar p, scalar T, solution &sol, scalarSquareMatrix &A, labelList &pivotIndices) const;
         inline autoPtr<scalarList> dvidP(scalar p, scalar T, solution &sol) const;
+        inline autoPtr<scalarList> dvidP(scalar p, scalar T, solution &sol, scalarSquareMatrix &A, labelList &pivotIndices) const;
 
         inline autoPtr<scalarList> dvidXi(scalar p, scalar T, label di, solution &sol) const;
         inline autoPtr<scalarList> dXdXi_gas(scalar p, scalar T, label di, solution &sol) const;
@@ -310,6 +319,7 @@ namespace Foam
         inline autoPtr<scalarRectangularMatrix> dTHvfcdXrhoP(scalar p, scalar T, solution &sol) const;
 
         inline autoPtr<scalarRectangularMatrix> dErhovfcdXTP_simp(scalar p, scalar T, solution &sol) const;
+        inline autoPtr<scalarRectangularMatrix> dErhovfcdXTP(scalar p, scalar T, solution &sol) const;
 
         inline tuple<scalar, scalar, scalar, scalar> dTPdErho(scalar p, scalar T, solution &sol) const;
 
@@ -330,9 +340,18 @@ namespace Foam
         inline scalar c_noVLE(scalar p, scalar T, solution &sol) const;
         inline scalar c_noVLE(scalar p, scalar T) const;
 
-        //mutable solution temp_sol;
-        //mutable scalar temp_p,temp_T;
-        /* friend VLE operator==<ThermoMixture>(
+#ifdef USEOPT
+
+        scalar p_opt, T_opt;
+        scalarList X_opt;
+
+        calculate(scalar p, scalar T)
+
+#endif
+
+            //mutable solution temp_sol;
+            //mutable scalar temp_p,temp_T;
+            /* friend VLE operator==<ThermoMixture>(
                const VLE &,
                const VLE &);
 
@@ -340,10 +359,10 @@ namespace Foam
                const scalar &,
                const VLE &);
                */
-        // IO
+            // IO
 
-        //- Write to Ostream
-        void write(Ostream &os) const;
+            //- Write to Ostream
+            void write(Ostream &os) const;
 
         // Ostream Operator
 

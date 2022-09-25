@@ -434,14 +434,14 @@ namespace Foam
         {
             Type *p;
             thermofunction_THvf(Type *pin) : p(pin) {}
-            void value(const scalarList &in, scalarList &out, scalar T0, autoPtr<typename Type::solution>& sol) const
+            void value(const scalarList &in, scalarList &out, scalar T0, autoPtr<typename Type::solution> &sol) const
             {
                 scalar rho = in[in.size() - 2];
                 scalar P = in[in.size() - 1];
                 p->setX(in);
                 //scalar T = p->T(rho, P, T0, &Type::rho, &Type::drhodT, &Type::limit);
                 //scalar T = p->T(1 / rho, P, T0, &Type::rrho, &Type::drrhodT, &Type::limit);
-                scalar T = p->Tsol(1 / rho, P, T0, &Type::rrho, &Type::drrhodT, &Type::limit,sol);
+                scalar T = p->Tsol(1 / rho, P, T0, &Type::rrho, &Type::drrhodT, &Type::limit, sol);
 
                 //autoPtr<typename Type::solution> sol(p->TPN(P, T));
                 //sol.reset(p->TPN(P, T).ptr());
@@ -454,7 +454,7 @@ namespace Foam
                 out[3] = p->c_opt(P, T, rho, sol());
             }
 
-            void derive(const scalarList &in, const scalarList &in2, scalarRectangularMatrix &out, scalar T0, autoPtr<typename Type::solution>& sol)
+            void derive(const scalarList &in, const scalarList &in2, scalarRectangularMatrix &out, scalar T0, autoPtr<typename Type::solution> &sol)
             {
                 scalar rho = in[in.size() - 2];
                 scalar P = in[in.size() - 1];
@@ -592,7 +592,7 @@ namespace Foam
         {
             Type *p;
             thermofunction_TPX_to_Erhovfc(Type *pin) : p(pin) {}
-            void value(const scalarList &in, scalarList &out) const
+            void value(const scalarList &in, scalarList &out, autoPtr<typename Type::solution> &sol) const
             {
                 scalar T = in[in.size() - 2];
                 scalar P = in[in.size() - 1];
@@ -630,8 +630,8 @@ namespace Foam
                 }
                 */
                 p->setX(in);
-
-                autoPtr<typename Type::solution> sol(p->TPN(P, T));
+                sol.reset(p->TPN(P, T).ptr());
+                //autoPtr<typename Type::solution> sol(p->TPN(P, T));
                 out[0] = p->Hs(P, T, sol()) - P / p->rho(P, T, sol());
                 out[1] = p->rho(P, T, sol());
                 out[2] = sol().vaporfra;
@@ -646,7 +646,7 @@ namespace Foam
                     */
             }
 
-            void derive(const scalarList &in, scalarList &in2, scalarRectangularMatrix &out)
+            void derive(const scalarList &in, scalarList &in2, scalarRectangularMatrix &out , autoPtr<typename Type::solution> &sol)
             {
                 scalar T = in[in.size() - 2];
                 scalar P = in[in.size() - 1];
@@ -654,7 +654,7 @@ namespace Foam
                 // std::tie(P, T) = p->TrhoE(E, rho, P0, T0);
 
                 p->setX(in);
-                autoPtr<typename Type::solution> sol(p->TPN(P, T)); // sol(p->TPn_flash_New_TPD(P, T));//sol(p->TPn_flash(P, T));
+                //autoPtr<typename Type::solution> sol(p->TPN(P, T)); // sol(p->TPn_flash_New_TPD(P, T));//sol(p->TPn_flash(P, T));
                 autoPtr<scalarRectangularMatrix> grad(p->dErhovfcdXTP_simp(P, T, sol()));
                 // autoPtr<scalarRectangularMatrix> grad(p->dTPvfdXErho(P, T, sol()));
                 out = grad();

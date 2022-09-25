@@ -201,6 +201,48 @@ Foam::VLE<ThermoMixture>::S(scalar p, scalar T) const
 // *** system (T,P,X) *** //
 // X is mole number, but sum(X)=1
 
+template <class ThermoMixture>
+inline autoPtr<scalarSquareMatrix>
+Foam::VLE<ThermoMixture>::A_dvid_(scalar p, scalar T, solution &sol) const
+{
+    scalarSquareMatrix &A = *(new scalarSquareMatrix(this->X_.size(), Zero));
+    scalar vf_ = sol.vaporfra;
+
+    List<autoPtr<scalarList>> ddxi_Ln_fugcoef_G_(this->X_.size()),
+        ddxi_Ln_fugcoef_L_(this->X_.size());
+
+    for (int i = 0; i < this->X_.size(); i++)
+        ddxi_Ln_fugcoef_G_[i].reset(
+            (this->ddxi_Ln_fugacityCoefficient(p, T, i, sol.X_gas(), 1)).ptr());
+
+    for (int i = 0; i < this->X_.size(); i++)
+        ddxi_Ln_fugcoef_L_[i].reset(
+            (this->ddxi_Ln_fugacityCoefficient(p, T, i, sol.X_liq(), 0)).ptr());
+    for (int i = 0; i < this->X_.size(); i++)
+    {
+        for (int j = 0; j < this->X_.size(); j++)
+        {
+            A(i, j) = 1;
+            if (i == j)
+                A(i, j) -= this->X_[i] / (sol.X_gas()[i] * sol.X_liq()[i]);
+            for (int k = 0; k < this->X_.size(); k++)
+            {
+                if (j == k)
+                    A(i, j) +=
+                        (1 - vf_) * ddxi_Ln_fugcoef_G_[k]()[i] * (sol.X_gas()[k] - 1);
+                else
+                    A(i, j) += (1 - vf_) * ddxi_Ln_fugcoef_G_[k]()[i] * sol.X_gas()[k];
+                if (j == k)
+                    A(i, j) += vf_ * ddxi_Ln_fugcoef_L_[k]()[i] * (sol.X_liq()[k] - 1);
+                else
+                    A(i, j) += vf_ * ddxi_Ln_fugcoef_L_[k]()[i] * sol.X_liq()[k];
+            }
+        }
+    }
+
+    return autoPtr<scalarSquareMatrix>(&A);
+}
+
 // vi: In mixture, mole fraction of specie i, gas phase.
 template <class ThermoMixture>
 inline autoPtr<scalarList>
@@ -258,6 +300,39 @@ Foam::VLE<ThermoMixture>::dvidT(scalar p, scalar T, solution &sol) const
     for (int i = 0; i < this->X_.size(); i++)
         b[i] = (1 - vf_) * vf_ * (ddT_Ln_fugcoef_G_()[i] - ddT_Ln_fugcoef_L_()[i]);
     LUsolve(A, b);
+    return autoPtr<scalarList>(&b);
+}
+
+template <class ThermoMixture>
+inline autoPtr<scalarList>
+Foam::VLE<ThermoMixture>::dvidT(scalar p, scalar T, solution &sol, scalarSquareMatrix &A, labelList &pivotIndices) const
+{
+    scalarList &b = *(new scalarList(this->X_.size()));
+    scalar vf_ = sol.vaporfra;
+    int n_sp = 0;
+    for (int i = 0; i < this->X_.size(); i++)
+    {
+        if (this->X_[i] > 0)
+            n_sp++;
+    }
+    if (n_sp == 1 || vf_ == 0 || vf_ == 1)
+    {
+        for (int i = 0; i < this->X_.size(); i++)
+            b[i] = 0;
+        return autoPtr<scalarList>(&b);
+    }
+    autoPtr<scalarList> ddT_Ln_fugcoef_G_, ddT_Ln_fugcoef_L_;
+
+    ddT_Ln_fugcoef_G_.reset(
+        (this->ddT_Ln_fugacityCoefficient(p, T, sol.X_gas(), 1)).ptr());
+
+    ddT_Ln_fugcoef_L_.reset(
+        (this->ddT_Ln_fugacityCoefficient(p, T, sol.X_liq(), 0)).ptr());
+
+    for (int i = 0; i < this->X_.size(); i++)
+        b[i] = (1 - vf_) * vf_ * (ddT_Ln_fugcoef_G_()[i] - ddT_Ln_fugcoef_L_()[i]);
+    //LUsolve(A, b);
+    LUBacksubstitute(A, pivotIndices, b);
     return autoPtr<scalarList>(&b);
 }
 template <class ThermoMixture>
@@ -320,6 +395,42 @@ Foam::VLE<ThermoMixture>::dvidP(scalar p, scalar T, solution &sol) const
     for (int i = 0; i < this->X_.size(); i++)
         b[i] = (1 - vf_) * vf_ * (ddP_Ln_fugcoef_G_()[i] - ddP_Ln_fugcoef_L_()[i]);
     LUsolve(A, b);
+    return autoPtr<scalarList>(&b);
+}
+
+template <class ThermoMixture>
+inline autoPtr<scalarList>
+Foam::VLE<ThermoMixture>::dvidP(scalar p, scalar T, solution &sol, scalarSquareMatrix &A, labelList &pivotIndices) const
+{
+
+    scalarList &b = *(new scalarList(this->X_.size()));
+    scalar vf_ = sol.vaporfra;
+    int n_sp = 0;
+    for (int i = 0; i < this->X_.size(); i++)
+    {
+        if (this->X_[i] > 0)
+            n_sp++;
+    }
+    if (n_sp == 1)
+    {
+        for (int i = 0; i < this->X_.size(); i++)
+            b[i] = 0;
+        return autoPtr<scalarList>(&b);
+    }
+    autoPtr<scalarList> ddP_Ln_fugcoef_G_, ddP_Ln_fugcoef_L_;
+    List<autoPtr<scalarList>> ddxi_Ln_fugcoef_G_(this->X_.size()),
+        ddxi_Ln_fugcoef_L_(this->X_.size());
+
+    ddP_Ln_fugcoef_G_.reset(
+        (this->ddP_Ln_fugacityCoefficient(p, T, sol.X_gas(), 1)).ptr());
+
+    ddP_Ln_fugcoef_L_.reset(
+        (this->ddP_Ln_fugacityCoefficient(p, T, sol.X_liq(), 0)).ptr());
+
+    for (int i = 0; i < this->X_.size(); i++)
+        b[i] = (1 - vf_) * vf_ * (ddP_Ln_fugcoef_G_()[i] - ddP_Ln_fugcoef_L_()[i]);
+    //LUsolve(A, b);
+    LUBacksubstitute(A, pivotIndices, b);
     return autoPtr<scalarList>(&b);
 }
 template <class ThermoMixture>
@@ -430,6 +541,19 @@ Foam::VLE<ThermoMixture>::dvfdT(scalar p, scalar T, solution &sol) const
     }
     return dvfdT_;
 }
+
+template <class ThermoMixture>
+inline Foam::scalar
+Foam::VLE<ThermoMixture>::dvfdT(scalar p, scalar T, solution &sol, scalarList &dvidT_) const
+{
+    //autoPtr<scalarList> dvidT_(this->dvidT(p, T, sol));
+    scalar dvfdT_ = 0;
+    for (int i = 0; i < this->X_.size(); i++)
+    {
+        dvfdT_ += dvidT_[i];
+    }
+    return dvfdT_;
+}
 template <class ThermoMixture>
 inline Foam::scalar
 Foam::VLE<ThermoMixture>::dvfdP(scalar p, scalar T, solution &sol) const
@@ -440,6 +564,20 @@ Foam::VLE<ThermoMixture>::dvfdP(scalar p, scalar T, solution &sol) const
     for (int i = 0; i < this->X_.size(); i++)
     {
         dvfdP_ += dvidP_()[i];
+    }
+    return dvfdP_;
+}
+
+template <class ThermoMixture>
+inline Foam::scalar
+Foam::VLE<ThermoMixture>::dvfdP(scalar p, scalar T, solution &sol, scalarList &dvidP_) const
+{
+    //autoPtr<scalarList> dvidP_(this->dvidP(p, T, sol));
+
+    scalar dvfdP_ = 0;
+    for (int i = 0; i < this->X_.size(); i++)
+    {
+        dvfdP_ += dvidP_[i];
     }
     return dvfdP_;
 }
@@ -468,7 +606,7 @@ Foam::VLE<ThermoMixture>::dZdT(scalar p, scalar T, solution &sol) const
     dvidt.reset((this->dvidT(p, T, sol)).ptr());
     autoPtr<scalarList> dXdT_G_(this->dXdT_gas(p, T, sol, dvidt));
     autoPtr<scalarList> dXdT_L_(this->dXdT_liq(p, T, sol, dvidt));
-    scalar dvfdT_ = this->dvfdT(p, T, sol);
+    scalar dvfdT_ = this->dvfdT(p, T, sol, dvidt());
     scalar vf_ = sol.vaporfra;
     scalar Z_G_ = this->ThermoMixture::Z(p, T, sol.X_gas(), 1);
     scalar Z_L_ = this->ThermoMixture::Z(p, T, sol.X_liq(), 0);
@@ -488,6 +626,30 @@ Foam::VLE<ThermoMixture>::dZdT(scalar p, scalar T, solution &sol) const
     // dZliqdT - dvfdT * ZLiq);
     return dvfdT_ * (Z_G_ - Z_L_) + vf_ * dZdT_G_ + (1 - vf_) * dZdT_L_;
 }
+
+template <class ThermoMixture>
+inline Foam::scalar
+Foam::VLE<ThermoMixture>::dZdT(scalar p, scalar T, solution &sol, scalarSquareMatrix &A, labelList &pivotIndices) const
+{
+    autoPtr<scalarList> dvidt;
+    dvidt.reset((this->dvidT(p, T, sol, A, pivotIndices)).ptr());
+    autoPtr<scalarList> dXdT_G_(this->dXdT_gas(p, T, sol, dvidt));
+    autoPtr<scalarList> dXdT_L_(this->dXdT_liq(p, T, sol, dvidt));
+    scalar dvfdT_ = this->dvfdT(p, T, sol, dvidt());
+    scalar vf_ = sol.vaporfra;
+    scalar Z_G_ = this->ThermoMixture::Z(p, T, sol.X_gas(), 1);
+    scalar Z_L_ = this->ThermoMixture::Z(p, T, sol.X_liq(), 0);
+    scalar dZdT_G_ = this->ThermoMixture::dZdT(p, T, sol.X_gas(), 1);
+    scalar dZdT_L_ = this->ThermoMixture::dZdT(p, T, sol.X_liq(), 0);
+    for (int i = 0; i < this->X_.size(); i++)
+    {
+        dZdT_G_ +=
+            this->ThermoMixture::dZdxi(p, T, i, sol.X_gas(), 1) * dXdT_G_()[i];
+        dZdT_L_ +=
+            this->ThermoMixture::dZdxi(p, T, i, sol.X_liq(), 0) * dXdT_L_()[i];
+    }
+    return dvfdT_ * (Z_G_ - Z_L_) + vf_ * dZdT_G_ + (1 - vf_) * dZdT_L_;
+}
 template <class ThermoMixture>
 inline Foam::scalar
 Foam::VLE<ThermoMixture>::dZdP(scalar p, scalar T, solution &sol) const
@@ -496,7 +658,7 @@ Foam::VLE<ThermoMixture>::dZdP(scalar p, scalar T, solution &sol) const
     dvidp.reset((this->dvidP(p, T, sol)).ptr());
     autoPtr<scalarList> dXdP_G_(this->dXdP_gas(p, T, sol, dvidp));
     autoPtr<scalarList> dXdP_L_(this->dXdP_liq(p, T, sol, dvidp));
-    scalar dvfdP_ = this->dvfdP(p, T, sol);
+    scalar dvfdP_ = this->dvfdP(p, T, sol, dvidp());
     scalar vf_ = sol.vaporfra;
     scalar Z_G_ = this->ThermoMixture::Z(p, T, sol.X_gas(), 1);
     scalar Z_L_ = this->ThermoMixture::Z(p, T, sol.X_liq(), 0);
@@ -516,6 +678,31 @@ Foam::VLE<ThermoMixture>::dZdP(scalar p, scalar T, solution &sol) const
     // dZliqdT - dvfdt * ZLiq);
     //Info << "dZdP_G_=" << dZdP_G_ << endl;
     //Info << "dZdP_L_=" << dZdP_L_ << endl;
+    return dvfdP_ * (Z_G_ - Z_L_) + vf_ * dZdP_G_ + (1 - vf_) * dZdP_L_;
+}
+
+template <class ThermoMixture>
+inline Foam::scalar
+Foam::VLE<ThermoMixture>::dZdP(scalar p, scalar T, solution &sol, scalarSquareMatrix &A, labelList &pivotIndices) const
+{
+    autoPtr<scalarList> dvidp;
+    dvidp.reset((this->dvidP(p, T, sol, A, pivotIndices)).ptr());
+    autoPtr<scalarList> dXdP_G_(this->dXdP_gas(p, T, sol, dvidp));
+    autoPtr<scalarList> dXdP_L_(this->dXdP_liq(p, T, sol, dvidp));
+    scalar dvfdP_ = this->dvfdP(p, T, sol, dvidp());
+    scalar vf_ = sol.vaporfra;
+    scalar Z_G_ = this->ThermoMixture::Z(p, T, sol.X_gas(), 1);
+    scalar Z_L_ = this->ThermoMixture::Z(p, T, sol.X_liq(), 0);
+    scalar dZdP_G_ = this->ThermoMixture::dZdP(p, T, sol.X_gas(), 1);
+    scalar dZdP_L_ = this->ThermoMixture::dZdP(p, T, sol.X_liq(), 0);
+    for (int i = 0; i < this->X_.size(); i++)
+    {
+        dZdP_G_ +=
+            this->ThermoMixture::dZdxi(p, T, i, sol.X_gas(), 1) * dXdP_G_()[i];
+        dZdP_L_ +=
+            this->ThermoMixture::dZdxi(p, T, i, sol.X_liq(), 0) * dXdP_L_()[i];
+    }
+
     return dvfdP_ * (Z_G_ - Z_L_) + vf_ * dZdP_G_ + (1 - vf_) * dZdP_L_;
 }
 template <class ThermoMixture>
@@ -832,12 +1019,15 @@ inline Foam::scalar
 Foam::VLE<ThermoMixture>::c_opt(scalar p, scalar T, scalar rho_, solution &sol) const
 {
     scalar Z_M_ = Z(p, T, sol);
-    scalar dZdP_M_ = dZdP(p, T, sol);
+    autoPtr<scalarSquareMatrix> pA(A_dvid_(p, T, sol));
+    labelList pivotIndices(pA().m());
+    LUDecompose(pA(), pivotIndices);
+    scalar dZdP_M_ = dZdP(p, T, sol, pA(), pivotIndices);
     scalar drhodP_ = this->W() / (Z_M_ * RR * 1.0e-03 * T) -
                      p * this->W() / (Z_M_ * Z_M_ * RR * 1.0e-03 * T) * dZdP_M_;
     scalar kappaT_ = drhodP_ / rho_;
-    scalar Cp_ = Cp(p, T, sol);
-    scalar dZdT_M_ = dZdT(p, T, sol);
+    scalar Cp_ = Cp(p, T, sol, pA(), pivotIndices);
+    scalar dZdT_M_ = dZdT(p, T, sol, pA(), pivotIndices);
     scalar drhodT_ = -p * this->W() / (Z_M_ * Z_M_ * RR * 1.0e-03 * T * T) *
                      (dZdT_M_ * T + Z_M_);
     scalar alphaP_ = -drhodT_ / rho_;

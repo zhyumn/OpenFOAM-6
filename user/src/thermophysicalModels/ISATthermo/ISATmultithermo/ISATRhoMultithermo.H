@@ -176,7 +176,7 @@ namespace Foam
                     const,
                 scalar (ISATRhoMultithermo<ThermoMixture, Type>::*limit)(const scalar) const,
                 autoPtr<typename ISATRhoMultithermo<ThermoMixture, Type>::solution> &sol) const;
-                /*
+            /*
                     inline scalar T_IQI
                     (
                         scalar f,
@@ -187,13 +187,13 @@ namespace Foam
                         scalar (ISATRhoMultithermo::*limit)(const scalar) const
                     ) const;
             */
-                inline std::tuple<scalar, scalar> TrhoEs(
-                    scalar e,
-                    scalar rho,
-                    scalar p0,
-                    scalar T0,
-                    scalar (ISATRhoMultithermo<ThermoMixture, Type>::*Fe)(const scalar, const scalar) const,
-                    scalar (ISATRhoMultithermo<ThermoMixture, Type>::*Frho)(const scalar, const scalar) const);
+            inline std::tuple<scalar, scalar> TrhoEs(
+                scalar e,
+                scalar rho,
+                scalar p0,
+                scalar T0,
+                scalar (ISATRhoMultithermo<ThermoMixture, Type>::*Fe)(const scalar, const scalar) const,
+                scalar (ISATRhoMultithermo<ThermoMixture, Type>::*Frho)(const scalar, const scalar) const);
 
         public:
             //- The thermodynamics of the individual species'
@@ -285,6 +285,7 @@ namespace Foam
             inline scalar THP(const scalar H, const scalar P, const scalar T0) const;
 
             inline std::tuple<scalar, scalar, scalar> rhovfc_ISAT(const scalar p, const scalar T) const;
+            inline std::tuple<scalar, scalar, scalar, scalar> Erhovfc_ISAT(const scalar p, const scalar T) const;
 
             //- Absolute internal energy [J/kg]
             inline scalar Ea(const scalar p, const scalar T) const;

@@ -117,6 +117,8 @@ namespace Foam
         // Fundamental properties
         inline scalar A(scalar p, scalar T, const scalarList &Xinp) const;
         inline scalar A(scalar p, scalar T) const { return A(p, T, this->X_); }
+
+        inline void A_A2(scalar p, scalar T, const scalarList &Xinp, scalar &A, scalarList &A2) const;
         inline scalar dAdT(scalar p, scalar T, const scalarList &Xinp) const;
         inline scalar dAdP(scalar p, scalar T, const scalarList &Xinp) const;
         inline scalar dAdxi(scalar p, scalar T, label di, const scalarList &Xinp) const;
@@ -223,6 +225,7 @@ namespace Foam
         inline autoPtr<scalarList> fugacityCoefficient(scalar p, scalar T, const scalarList &Xinp, const label pf = 2) const;
         inline autoPtr<scalarList> fugacityCoefficient(scalar p, scalar T, const label pf = 2) const { return fugacityCoefficient(p, T, this->X_, pf); };
         inline autoPtr<scalarList> Ln_fugacityCoefficient(scalar p, scalar T, const scalarList &Xinp, const label pf = 2) const;
+        inline void Ln_fugacityCoefficient_opt(scalar p, scalar T, const scalarList &Xinp, scalarList &fugcoef, scalarList &B_, scalarList &Tsqrt_AbyP_, const label pf) const;
         inline autoPtr<scalarList> Ln_fugacityCoefficient(scalar p, scalar T, const label pf = 2) const { return Ln_fugacityCoefficient(p, T, this->X_, pf); }
         inline autoPtr<scalarList> ln_fugacityCoefficient(scalar p, scalar T, scalar z, const scalarList &Xinp) const;
 

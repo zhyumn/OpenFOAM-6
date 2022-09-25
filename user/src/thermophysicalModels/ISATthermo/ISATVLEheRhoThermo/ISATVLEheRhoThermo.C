@@ -285,7 +285,7 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
     scalar tempT, tempP, maxdT = 0, maxdP = 0, tempmu, temppsi, tempHe;
     static scalar maxdmu = 0;
     static int timeflag = 0;
-    
+
     if (!boundary_flag)
     {
         this->newTimeStep();
@@ -449,9 +449,9 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
                         // std::tie(pT[facei], pp[facei], pvaporfrac[facei], psoundspeed[facei]) = mixture_.TPvf_Erho(phe[facei], prho[facei], pT[facei], pp[facei]);
 
                         // std::tie(pT[facei], ppsi[facei], pvaporfrac[facei], psoundspeed[facei]) = mixture_.Tpsivfc_XHP(phe[facei] + pp[facei] / prho[facei], pp[facei], pT[facei]);
-                        std::tie(prho[facei], pvaporfrac[facei], psoundspeed[facei]) = mixture_.rhovfc_ISAT(pp[facei], pT[facei]);
+                        std::tie(phe[facei], prho[facei], pvaporfrac[facei], psoundspeed[facei]) = mixture_.Erhovfc_ISAT(pp[facei], pT[facei]);
                         //std::tie(pT[facei], tempHe, pvaporfrac[facei], psoundspeed[facei]) = mixture_.THvfc_XrhoP(prho[facei], pp[facei], pT[facei]);
-                        phe[facei] = mixture_.HE(pp[facei], pT[facei]);
+                        //phe[facei] = mixture_.HE(pp[facei], pT[facei]);
                         ppsi[facei] = prho[facei] / pp[facei];
                         // autoPtr<typename MixtureType::thermoType::solution> sol;
                         // std::tie(pT[facei], temppsi, pvaporfrac[facei], psoundspeed[facei],sol) = mixture_.Tpsivfcsol_XHP(phe[facei] + pp[facei] / prho[facei], pp[facei], pT[facei]);

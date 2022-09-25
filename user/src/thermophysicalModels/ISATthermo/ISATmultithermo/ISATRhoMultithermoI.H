@@ -588,8 +588,8 @@ Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::Es(const scalar p, const
     in[this->X().size() + 1] = p;
 
     //Info << "psi_HP" << endl;
-
-    Erhovfctree_XTP.call(in, out);
+    autoPtr<typename ISATRhoMultithermo<ThermoMixture, Type>::solution> sol(nullptr);
+    Erhovfctree_XTP.call(in, out, sol);
     //psivftree.call(in, out);
     return out[0]; //std::make_tuple(out[0], out[1], out[2], out[3]);
     //return this->Hs(p, T) - p / this->rho(p, T);
@@ -621,11 +621,32 @@ Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::rhovfc_ISAT(const scalar
     in[this->X().size() + 1] = p;
 
     //Info << "psi_HP" << endl;
-
-    Erhovfctree_XTP.call(in, out);
+    autoPtr<typename ISATRhoMultithermo<ThermoMixture, Type>::solution> sol(nullptr);
+    Erhovfctree_XTP.call(in, out, sol);
     //psivftree.call(in, out);
     //return out[1];//std::make_tuple(out[0], out[1], out[2], out[3]);
     return std::make_tuple(out[1], out[2], out[3]);
+    //return this->Hs(p, T) - p / this->rho(p, T);
+}
+
+template <class ThermoMixture, template <class> class Type>
+inline std::tuple<Foam::scalar, Foam::scalar, Foam::scalar, Foam::scalar>
+Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::Erhovfc_ISAT(const scalar p, const scalar T) const
+{
+    scalarList in(this->X().size() + 2), out(3);
+    for (int i = 0; i < this->X().size(); i++)
+    {
+        in[i] = this->X_[i];
+    }
+    in[this->X().size()] = T;
+    in[this->X().size() + 1] = p;
+
+    //Info << "psi_HP" << endl;
+    autoPtr<typename ISATRhoMultithermo<ThermoMixture, Type>::solution> sol(nullptr);
+    Erhovfctree_XTP.call(in, out, sol);
+    //psivftree.call(in, out);
+    //return out[1];//std::make_tuple(out[0], out[1], out[2], out[3]);
+    return std::make_tuple(out[0], out[1], out[2], out[3]);
     //return this->Hs(p, T) - p / this->rho(p, T);
 }
 
