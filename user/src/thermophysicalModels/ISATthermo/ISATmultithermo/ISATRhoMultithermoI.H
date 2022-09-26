@@ -541,7 +541,9 @@ template <class ThermoMixture, template <class> class Type>
 inline Foam::scalar
 Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::Cv(const scalar p, const scalar T) const
 {
-    return this->Cp(p, T) - this->CpMCv(p, T);
+    autoPtr<typename ISATRhoMultithermo<ThermoMixture, Type>::solution> sol(this->TPN(p, T));
+    //return this->Cp(p, T, sol()) - this->CpMCv(p, T, sol());
+    return this->Cv_VLE(p, T, sol());
 }
 
 template <class ThermoMixture, template <class> class Type>
