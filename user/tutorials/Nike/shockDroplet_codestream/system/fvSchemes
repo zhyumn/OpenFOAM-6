@@ -45,10 +45,10 @@ interpolationSchemes
     reconstruct(rho) vanLeer;
     reconstruct(U)  vanLeerV;
     reconstruct(DF) upwind;
-    reconstruct(Yi) upwind;
-    reconstruct(rPsi) upwind;
-    reconstruct(e) upwind;
-    reconstruct(soundspeed) upwind;
+    reconstruct(Yi) vanLeer;
+    reconstruct(rPsi) vanLeer;
+    reconstruct(e) vanLeer;
+    reconstruct(soundspeed) vanLeer;
 }
 
 snGradSchemes
