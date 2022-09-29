@@ -80,8 +80,8 @@ namespace Foam
     public:
         scalarListList bico;
         scalarListList oneMbico;
-        labelList IJlistI;
-        labelList IJlistJ;
+        //labelList IJlistI;
+        //labelList IJlistJ;
         label phaseFlag; //gas 1,liq 0
 
     public:
@@ -143,6 +143,7 @@ namespace Foam
 
         inline static scalar cubicSolve(scalar a2, scalar a1, scalar a0, label flag);
         inline static std::tuple<int, double, double, double> cubicSolve(scalar a2, scalar a1, scalar a0);
+        inline static std::tuple<int, double, double, double> cubicSolve2(scalar a2, scalar a1, scalar a0);
         //- Return density [kg/m^3]
         inline scalar rho(scalar p, scalar T, const scalarList &Xinp, const label pf = 2) const;
         inline scalar rho(scalar p, scalar T, scalar Zin, const scalarList &Xinp, const label pf = 2) const;
@@ -204,7 +205,9 @@ namespace Foam
         //- Return compression factor []
         inline scalar Z(scalar p, scalar T, const scalarList &Xinp, const label pf = 2) const;
         inline scalar Z(scalar p, scalar T, const label pf = 2) const { return Z(p, T, this->X_, pf); }
+        inline std::tuple<scalar, scalar, scalar> Z_coe(scalar p, scalar T, const scalarList &Xinp) const;
         inline std::tuple<double, double> Z_opt(scalar p, scalar T, scalar A, const scalarList &Xinp) const;
+        inline std::tuple<double, double> Z_opt2(scalar p, scalar T, scalar A, const scalarList &Xinp) const;
         inline std::tuple<int, double, double, double> Z_full(scalar p, scalar T, const scalarList &Xinp) const;
         inline scalar Z_gibbs(scalar p, scalar T, const scalarList &Xinp) const;
         inline scalar vol_gibbs(scalar p, scalar T, const scalarList *Xinp) const;
@@ -225,7 +228,7 @@ namespace Foam
         inline autoPtr<scalarList> fugacityCoefficient(scalar p, scalar T, const scalarList &Xinp, const label pf = 2) const;
         inline autoPtr<scalarList> fugacityCoefficient(scalar p, scalar T, const label pf = 2) const { return fugacityCoefficient(p, T, this->X_, pf); };
         inline autoPtr<scalarList> Ln_fugacityCoefficient(scalar p, scalar T, const scalarList &Xinp, const label pf = 2) const;
-        inline void Ln_fugacityCoefficient_opt(scalar p, scalar T, const scalarList &Xinp, scalarList &fugcoef, scalarList &B_, scalarList &Tsqrt_AbyP_, const label pf) const;
+        inline bool Ln_fugacityCoefficient_opt(scalar p, scalar T, const scalarList &Xinp, scalarList &fugcoef, scalarList &B_, scalarList &Tsqrt_AbyP_, const label pf) const;
         inline autoPtr<scalarList> Ln_fugacityCoefficient(scalar p, scalar T, const label pf = 2) const { return Ln_fugacityCoefficient(p, T, this->X_, pf); }
         inline autoPtr<scalarList> ln_fugacityCoefficient(scalar p, scalar T, scalar z, const scalarList &Xinp) const;
 

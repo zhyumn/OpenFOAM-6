@@ -1009,7 +1009,9 @@ Foam::VLE<ThermoMixture>::c(scalar p, scalar T, solution &sol) const
     scalar kappaS_ = kappaS(p, T, sol);
     if (kappaS_ < 0)
     {
-        FatalErrorInFunction << " kappaS_ =" << kappaS_ << exit(FatalError);
+        return c_noVLE(p, T, sol);
+        WarningInFunction << " kappaS_ =" << kappaS_
+                             << ",p=" << p << ",T=" << T << ",X=" << this->X_ << exit(FatalError);
     }
     return sqrt(1.0 / (kappaS_ * rho_));
 }
@@ -1033,8 +1035,10 @@ Foam::VLE<ThermoMixture>::c_opt(scalar p, scalar T, scalar rho_, solution &sol) 
     scalar alphaP_ = -drhodT_ / rho_;
     scalar kappaS_ = kappaT_ - T * alphaP_ * alphaP_ / (rho_ * Cp_);
     if (kappaS_ < 0)
-    {
-        FatalErrorInFunction << " kappaS_ =" << kappaS_ << exit(FatalError);
+    { 
+        return c_noVLE(p, T, sol);
+        WarningInFunction << " kappaS_ =" << kappaS_
+                             << ",p=" << p << ",T=" << T << ",X=" << this->X_ << exit(FatalError);
     }
     return sqrt(1.0 / (kappaS_ * rho_));
 }
