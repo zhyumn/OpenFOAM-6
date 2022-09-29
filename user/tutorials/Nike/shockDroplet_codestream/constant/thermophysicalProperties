@@ -49,7 +49,7 @@ liquids
 {
     C12H26;
 }
-inputK true;
+inputK false;
 Kinit (898871489.0830865 28337.84530200413 0.0014273249038749681);
 solids
 {}
