@@ -1360,14 +1360,24 @@ inline Foam::autoPtr<typename Foam::VLE<ThermoMixture>::solution> Foam::VLE<Ther
         }
         else
             FatalErrorInFunction << "TPn_flash_Matheis" << exit(FatalError);
-            
+
         if (vf > 0.999999 || vf < 0.0000001)
             break;
 
         //Ln_fugcoef_liq.reset(this->Ln_fugacityCoefficient(p, T, Sol.X_liq(), 0).ptr()); //todo optimize
         //Ln_fugcoef_gas.reset(this->Ln_fugacityCoefficient(p, T, Sol.X_gas(), 1).ptr());
-        bool fl = this->Ln_fugacityCoefficient_opt(p, T, Sol.X_liq(), Ln_fugcoef_liq(), B_, Tsqrt_AbyP_, 0);
-        bool fg = this->Ln_fugacityCoefficient_opt(p, T, Sol.X_gas(), Ln_fugcoef_gas(), B_, Tsqrt_AbyP_, 1);
+        bool fl, fg;
+        fl = this->Ln_fugacityCoefficient_opt(p, T, Sol.X_liq(), Ln_fugcoef_liq(), B_, Tsqrt_AbyP_, 0);
+        fg = this->Ln_fugacityCoefficient_opt(p, T, Sol.X_gas(), Ln_fugcoef_gas(), B_, Tsqrt_AbyP_, 1);
+        if (!(fl || fg))
+        {
+            scalarList *liq = Sol.X_gas.ptr();
+            scalarList *gas = Sol.X_liq.ptr();
+            Sol.X_gas.reset(gas);
+            Sol.X_liq.reset(liq);
+            fl = this->Ln_fugacityCoefficient_opt(p, T, Sol.X_liq(), Ln_fugcoef_liq(), B_, Tsqrt_AbyP_, 0);
+            fg = this->Ln_fugacityCoefficient_opt(p, T, Sol.X_gas(), Ln_fugcoef_gas(), B_, Tsqrt_AbyP_, 1);
+        }
 
         eps_outer = 0;
 
@@ -1736,7 +1746,7 @@ inline Foam::autoPtr<typename Foam::VLE<ThermoMixture>::solution> Foam::VLE<Ther
         }
     }
     autoPtr<solution> sol = TPn_flash_Matheis(p, T, Xinp, stable, isVapor, K_init, success);
-    /*if (sol().vaporfra < 1e-8)
+    /*if (sol().vaporfra < 1e-8||sol().vaporfra > 0.99999)
     {
         scalarList *liq = sol().X_gas.ptr();
         scalarList *gas = sol().X_liq.ptr();
@@ -1761,7 +1771,7 @@ inline Foam::autoPtr<typename Foam::VLE<ThermoMixture>::solution> Foam::VLE<Ther
     //}
     //scalar tttt;
 
-    tie(stable, p_K_init, isVapor, p_TPD_star) = solveTPD_BFGS_v2(p, T);
+    tie(stable, p_K_init, isVapor, p_TPD_star) = solveTPD_BFGS_v3(p, T);
     labelList order;
     sortedOrder(p_TPD_star(), order);
     if (p_TPD_star()[order[0]] < be_negative)
@@ -2317,6 +2327,275 @@ inline tuple<bool, Foam::autoPtr<Foam::List<Foam::scalarList>>, bool, Foam::auto
                 stable = false;
 
                 scalar z2 = this->Z_gibbs(p, T, y_sp[itrial]);
+                if (z < z2)
+                    for (int i = 0; i < Xinp.size(); i++)
+                    {
+                        //K_init_min[i] = Y_init[itrial][i] / this->X_[i];
+                        K_init[itrial][i] = y_sp[itrial][i] / Xinp[i];
+                    }
+                else
+                    for (int i = 0; i < Xinp.size(); i++)
+                    {
+                        //K_init_min[i] = Y_init[itrial][i] / this->X_[i];
+                        K_init[itrial][i] = Xinp[i] / y_sp[itrial][i];
+                    }
+            }
+        }
+    }
+    return make_tuple(stable, p_K_init, isVapor, p_TPD_star);
+}
+
+template <class ThermoMixture>
+inline tuple<bool, Foam::autoPtr<Foam::List<Foam::scalarList>>, bool, Foam::autoPtr<Foam::scalarList>> Foam::VLE<ThermoMixture>::solveTPD_BFGS_v3(
+    scalar p, //input
+    scalar T, //input
+    const scalarList &Xinp) const
+{
+    const scalar be_negative = -1.E-9;
+    //const scalar be_pure_substance = 1. - 1.E-8;
+    //const scalar be_very_large = 1.E10;
+
+    scalar pow_v[4] = {1.0, 1.0 / 3, -1.0, -1.0 / 3.0};
+    scalar pow_l[4] = {-1.0, -1.0 / 3, 1.0, 1.0 / 3.0};
+
+    bool stable = true;
+    bool isVapor, tmp_isVapor;
+    int n_sp = 0;
+    for (int i = 0; i < Xinp.size(); i++)
+    {
+        if (Xinp[i] > 0)
+            n_sp++;
+    }
+
+    //scalar TPDmin = 10.0;
+    int n = Xinp.size();
+    int ntrial = 4 + n;
+    autoPtr<List<scalarList>> p_K_init(new List<scalarList>(ntrial));
+    List<scalarList> &K_init = p_K_init();
+    for (int i = 0; i < ntrial; i++)
+    {
+        K_init[i].resize(Xinp.size());
+    }
+    autoPtr<scalarList> p_TPD_star(new scalarList(ntrial));
+    scalarList &TPD_star = p_TPD_star();
+    if (n_sp == 1)
+    {
+        stable = true;
+        for (int i = 0; i < Xinp.size(); i++)
+        {
+            TPD_star[i] = 10;
+        }
+        return make_tuple(stable, p_K_init, isVapor, p_TPD_star);
+    }
+    scalar tol = 1.E-9;
+    int iter_max = 1000;
+    scalarList y_sp[ntrial];
+    scalar z;
+    std::tie(z, isVapor) = this->Z_gibbs2(p, T, Xinp);
+
+    scalarList TPD(ntrial), mask_stationary(ntrial);
+    autoPtr<scalarList> lnphi(this->ln_fugacityCoefficient(p, T, z, Xinp));
+    scalarList d(Xinp.size()), K(Xinp.size());
+    for (int i = 0; i < Xinp.size(); i++)
+    {
+        d[i] = log(Xinp[i]) + lnphi()[i];
+        K[i] = (*this)[i].Pc_ / p * exp(5.373 * (1.0 + (*this)[i].omega_) * (1.0 - (*this)[i].Tc_ / T));
+    }
+    scalar B = this->B(p, T, Xinp);
+    scalarList Y_init[ntrial];
+    for (int i = 0; i < ntrial; i++)
+    {
+        y_sp[i].resize(Xinp.size());
+        Y_init[i].resize(Xinp.size());
+    }
+    if (!isVapor) //(z < 3.5 * B)
+    {
+        //isVapor = false;
+        for (int i = 0; i < Xinp.size(); i++)
+        {
+            for (int j = 0; j < 4; j++)
+            {
+
+                Y_init[j][i] = Xinp[i] * pow(K[i], pow_v[j]);
+            }
+        }
+    }
+    else
+    {
+        //isVapor = true;
+        for (int i = 0; i < Xinp.size(); i++)
+        {
+            for (int j = 0; j < 4; j++)
+            {
+                Y_init[j][i] = Xinp[i] * pow(K[i], pow_l[j]);
+            }
+        }
+    }
+
+    for (int i = 0; i < Xinp.size(); i++)
+    {
+        for (int j = 0; j < Xinp.size(); j++)
+        {
+            Y_init[4 + i][j] = 0.1 / (n - 1);
+        }
+        Y_init[4 + i][i] = 0.90;
+    }
+    scalar sum = 0, z_y, beta;
+    scalarList Y(Xinp.size()), y_trial(Xinp.size());
+    scalarList alpha_old(Xinp.size()), F_old(Xinp.size());
+    scalarList alpha_new(Xinp.size()), F_new(Xinp.size());
+    scalarList g(Xinp.size()), s(Xinp.size());
+    scalarList dalpha(Xinp.size());
+    scalar F_times_s, F_times_g, s_times_g, g_times_g, eps, r;
+
+    for (int itrial = 0; itrial < ntrial; itrial++)
+    {
+        sum = 0;
+        for (int i = 0; i < Xinp.size(); i++)
+        {
+            Y[i] = Y_init[itrial][i];
+            sum += Y[i];
+        }
+        for (int i = 0; i < Xinp.size(); i++)
+        {
+            y_trial[i] = Y[i] / sum;
+        }
+        std::tie(z_y, tmp_isVapor) = this->Z_gibbs2(p, T, y_trial);
+        autoPtr<scalarList> lnphi_y(this->ln_fugacityCoefficient(p, T, z_y, y_trial));
+        for (int i = 0; i < Xinp.size(); i++)
+        {
+            alpha_old[i] = 2 * sqrt(Y[i]);
+            F_old[i] = alpha_old[i] / 2 * (lnphi_y()[i] + log(Y[i]) - d[i]);
+            alpha_new[i] = 2 * exp(-0.5 * (lnphi_y()[i] - d[i]));
+        }
+        int iter;
+        for (iter = 0; iter < iter_max; iter++)
+        {
+            sum = 0;
+            for (int i = 0; i < Xinp.size(); i++)
+            {
+                Y[i] = 0.25 * alpha_new[i] * alpha_new[i];
+                sum += Y[i];
+            }
+            for (int i = 0; i < Xinp.size(); i++)
+            {
+                y_trial[i] = Y[i] / sum;
+            }
+            std::tie(z_y, tmp_isVapor) = this->Z_gibbs2(p, T, y_trial);
+
+            TPD_star[itrial] = 1.;
+            beta = 0;
+
+            //lnphi_y.reset(this->ln_fugacityCoefficient(p, T, z_y, &y_trial));
+            autoPtrReset(lnphi_y, this->ln_fugacityCoefficient(p, T, z_y, y_trial));
+            for (int i = 0; i < Xinp.size(); i++)
+            {
+                F_new[i] = alpha_new[i] / 2 * (lnphi_y()[i] + log(Y[i]) - d[i]);
+                TPD_star[itrial] += +Y[i] * (lnphi_y()[i] + log(Y[i]) - d[i] - 1);
+                beta += (Y[i] - Xinp[i]) * (lnphi_y()[i] + log(Y[i]) - d[i]);
+            }
+            for (int i = 0; i < Xinp.size(); i++)
+            {
+                g[i] = F_new[i] - F_old[i];
+                F_old[i] = F_new[i];
+                s[i] = alpha_new[i] - alpha_old[i];
+                alpha_old[i] = alpha_new[i];
+            }
+            F_times_s = 0;
+            F_times_g = 0;
+            s_times_g = 0;
+            g_times_g = 0;
+            for (int i = 0; i < Xinp.size(); i++)
+            {
+                F_times_s += F_old[i] * s[i];
+                F_times_g += F_old[i] * g[i];
+                s_times_g += s[i] * g[i];
+                g_times_g += g[i] * g[i];
+            }
+            eps = 0;
+            for (int i = 0; i < Xinp.size(); i++)
+            {
+                dalpha[i] = (g[i] * F_times_s - s[i] * (F_times_s - F_times_g + g_times_g * F_times_s / s_times_g)) / s_times_g - F_old[i];
+                alpha_new[i] = alpha_old[i] + dalpha[i];
+                eps += dalpha[i] * dalpha[i];
+            }
+            eps = sqrt(eps);
+            if (beta != 0.0)
+            {
+                r = 2 * TPD_star[itrial] / beta;
+            }
+            else
+            {
+                r = 1;
+            }
+
+            if (eps < tol)
+            {
+                sum = 0;
+                for (int i = 0; i < Xinp.size(); i++)
+                {
+                    sum += Y[i];
+                }
+                for (int i = 0; i < Xinp.size(); i++)
+                {
+                    y_sp[itrial][i] = Y[i] / sum;
+                }
+                TPD[itrial] = -log(sum);
+                TPD_star[itrial] = 1. - sum;
+                mask_stationary[itrial] = true;
+                if (TPD_star[itrial] < be_negative)
+                {
+                    stable = false;
+
+                    scalar z2;
+                    std::tie(z2, tmp_isVapor) = this->Z_gibbs2(p, T, y_sp[itrial]);
+                    if (z < z2)
+                        for (int i = 0; i < Xinp.size(); i++)
+                        {
+                            //K_init_min[i] = Y_init[itrial][i] / this->X_[i];
+                            K_init[itrial][i] = y_sp[itrial][i] / Xinp[i];
+                        }
+                    else
+                        for (int i = 0; i < Xinp.size(); i++)
+                        {
+                            //K_init_min[i] = Y_init[itrial][i] / this->X_[i];
+                            K_init[itrial][i] = Xinp[i] / y_sp[itrial][i];
+                        }
+                }
+                break;
+            }
+            if (fabs(r - 1) < 1e-3 || TPD_star[itrial] > 1e40)
+            {
+                TPD[itrial] = 10.;
+                TPD_star[itrial] = 10.;
+                mask_stationary[itrial] = false;
+                for (int i = 0; i < Xinp.size(); i++)
+                {
+                    y_sp[itrial][i] = -1;
+                }
+                break;
+            }
+        }
+        if (iter >= iter_max)
+        {
+            sum = 0;
+            for (int i = 0; i < Xinp.size(); i++)
+            {
+                sum += Y[i];
+            }
+            for (int i = 0; i < Xinp.size(); i++)
+            {
+                y_sp[itrial][i] = Y[i] / sum;
+            }
+            TPD[itrial] = -log(sum);
+            TPD_star[itrial] = 1. - sum;
+            mask_stationary[itrial] = true;
+            if (TPD_star[itrial] < be_negative)
+            {
+                stable = false;
+
+                scalar z2;
+                std::tie(z2, tmp_isVapor) = this->Z_gibbs2(p, T, y_sp[itrial]);
                 if (z < z2)
                     for (int i = 0; i < Xinp.size(); i++)
                     {

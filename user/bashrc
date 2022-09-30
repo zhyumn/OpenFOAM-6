@@ -37,3 +37,4 @@ source $FOAM_DIR/etc/bashrc;source $FOAM_DIR/user/etc/bashrc
 alias ofo="source $FOAM_DIR/etc/bashrc;source $FOAM_DIR/user/etc/bashrc"
 alias ofd="source $FOAM_DIR/etc/bashrc WM_COMPILE_OPTION=Debug;source $FOAM_DIR/user/etc/bashrc"
 alias odwmake="source $FOAM_DIR/etc/bashrc;source $FOAM_DIR/user/etc/bashrc;wmake;source $FOAM_DIR/etc/bashrc WM_COMPILE_OPTION=Debug;source $FOAM_DIR/user/etc/bashrc;wmake"
+alias odrun='f(){ source $FOAM_DIR/etc/bashrc; source $FOAM_DIR/user/etc/bashrc; "$@"; source $FOAM_DIR/etc/bashrc WM_COMPILE_OPTION=Debug; source $FOAM_DIR/user/etc/bashrc; "$@"; unset -f f;} ;f'

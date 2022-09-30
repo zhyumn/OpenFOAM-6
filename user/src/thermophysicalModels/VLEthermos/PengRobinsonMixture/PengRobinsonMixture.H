@@ -208,8 +208,10 @@ namespace Foam
         inline std::tuple<scalar, scalar, scalar> Z_coe(scalar p, scalar T, const scalarList &Xinp) const;
         inline std::tuple<double, double> Z_opt(scalar p, scalar T, scalar A, const scalarList &Xinp) const;
         inline std::tuple<double, double> Z_opt2(scalar p, scalar T, scalar A, const scalarList &Xinp) const;
+        inline std::tuple<double, double> Z_opt2(scalar p, scalar T, const scalarList &Xinp) const;
         inline std::tuple<int, double, double, double> Z_full(scalar p, scalar T, const scalarList &Xinp) const;
         inline scalar Z_gibbs(scalar p, scalar T, const scalarList &Xinp) const;
+        inline std::tuple<double, bool> Z_gibbs2(scalar p, scalar T, const scalarList &Xinp) const;
         inline scalar vol_gibbs(scalar p, scalar T, const scalarList *Xinp) const;
 
         inline scalar dZdT(scalar p, scalar T, const scalarList &Xinp, const label pf = 2) const;

@@ -671,7 +671,7 @@ inline std::tuple<int, double, double, double> Foam::PengRobinsonMixture<ThermoM
         scalar S = sign(Rl + D05) * cbrt(mag(Rl + D05));
         scalar Tl = sign(Rl - D05) * cbrt(mag(Rl - D05));
         root = S + Tl - a2 / 3;
-        
+
         if (Q3 < 0)
         {
 
@@ -683,9 +683,9 @@ inline std::tuple<int, double, double, double> Foam::PengRobinsonMixture<ThermoM
         else
         {
             if (27 * a0 > a2 * (9 * a1 - 2 * a2 * a2))
-                return std::make_tuple(1, root, -1, -1);
+                return std::make_tuple(1, root, root, root);//std::make_tuple(1, root, -1, -1);
             else
-                return std::make_tuple(1, -1, -1, root);
+                return std::make_tuple(1, root, root, root);//std::make_tuple(1, -1, -1, root);
         }
     }
     return std::make_tuple(1, root, root, root);
@@ -800,6 +800,30 @@ inline std::tuple<Foam::scalar, Foam::scalar> Foam::PengRobinsonMixture<ThermoMi
 }
 
 template <class ThermoMixture>
+inline std::tuple<Foam::scalar, Foam::scalar> Foam::PengRobinsonMixture<ThermoMixture>::Z_opt2(
+    scalar p,
+    scalar T,
+    const scalarList &Xinp) const
+{
+    scalar A = this->A(p, T, Xinp);
+    scalar B = this->B(p, T, Xinp);
+    scalar a2 = B - 1.0;
+    scalar a1 = A - 2.0 * B - 3.0 * B * B;
+    scalar a0 = -A * B + B * B + B * B * B;
+    scalar r1, r2, r3;
+    int nr;
+    std::tie(nr, r1, r2, r3) = cubicSolve2(a2, a1, a0);
+
+    return std::make_tuple(r1, r3);
+    /*
+    if (pf != 2)
+        return cubicSolve(a2, a1, a0, pf);
+    else
+        return cubicSolve(a2, a1, a0, phaseFlag);
+        */
+}
+
+template <class ThermoMixture>
 inline std::tuple<int, double, double, double> Foam::PengRobinsonMixture<ThermoMixture>::Z_full(
     scalar p,
     scalar T,
@@ -849,6 +873,58 @@ inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::Z_gibbs(
         }
     }
     return z_ret;
+}
+
+template <class ThermoMixture>
+inline std::tuple<double, bool> Foam::PengRobinsonMixture<ThermoMixture>::Z_gibbs2(
+    scalar p,
+    scalar T,
+    const scalarList &Xinp) const
+{
+    scalar r1, r2;
+    bool isVapor;
+    std::tie(r1, r2) = Z_opt2(p, T, Xinp);
+    scalar z_ret;
+    scalar sqrt2 = sqrt(2.0);
+    if (r1 < 0)
+    {
+        z_ret = r2;
+        isVapor = true;
+    }
+    else if (r2 < 0)
+    {
+        z_ret = r1;
+        isVapor = false;
+    }
+    else
+    {
+        scalar z_v = r2;
+        scalar z_l = r1;
+        scalar A = this->A(p, T, Xinp), B = this->B(p, T, Xinp);
+        if (z_l < B)
+        {
+            z_ret = z_v;
+            isVapor = true;
+            if (z_v < B)
+                FatalErrorInFunction << "z_v < B,z_v= " << z_v << exit(FatalError);
+        }
+        else
+        {
+            scalar dg = log((z_l - B) / (z_v - B)) + A / (B * 2 * sqrt2) * log((z_l + B * (1 + sqrt2)) * (z_v + B * (1 - sqrt2)) / (z_l + B * (1 - sqrt2)) / (z_v + B * (1 + sqrt2))) - (z_l - z_v);
+
+            if (dg < 0.0)
+            {
+                z_ret = z_v;
+                isVapor = true;
+            }
+            else
+            {
+                z_ret = z_l;
+                isVapor = false;
+            }
+        }
+    }
+    return std::make_tuple(z_ret, isVapor);
 }
 
 template <class ThermoMixture>

@@ -272,7 +272,9 @@ namespace Foam
         autoPtr<solution> TPn_flash_New_TPD(scalar p, scalar T) const;
         inline tuple<bool, autoPtr<scalarList>, bool> solveTPD_BFGS(scalar p, scalar T) const;
         inline tuple<bool, Foam::autoPtr<List<scalarList>>, bool, autoPtr<scalarList>> solveTPD_BFGS_v2(scalar p, scalar T, const scalarList &Xinp) const;
+        inline tuple<bool, Foam::autoPtr<List<scalarList>>, bool, autoPtr<scalarList>> solveTPD_BFGS_v3(scalar p, scalar T, const scalarList &Xinp) const;
         inline tuple<bool, Foam::autoPtr<List<scalarList>>, bool, autoPtr<scalarList>> solveTPD_BFGS_v2(scalar p, scalar T) const { return solveTPD_BFGS_v2(p, T, this->X_); };
+        inline tuple<bool, Foam::autoPtr<List<scalarList>>, bool, autoPtr<scalarList>> solveTPD_BFGS_v3(scalar p, scalar T) const { return solveTPD_BFGS_v3(p, T, this->X_); };
         void TPn_validation(scalar p, scalar T) const;
 
         //HPX system
