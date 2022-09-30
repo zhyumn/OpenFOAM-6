@@ -676,16 +676,16 @@ inline std::tuple<int, double, double, double> Foam::PengRobinsonMixture<ThermoM
         {
 
             if (a0 < a2 * a1 / 3.0 - 2.0 * a2 * a2 * a2 / 27.0 - 2.0 * sqrt(-Q3))
-                return std::make_tuple(1, -1, -1, root);
+                return std::make_tuple(1, root, root, root); //return std::make_tuple(1, -1, -1, root);
             else
-                return std::make_tuple(1, root, -1, -1);
+                return std::make_tuple(1, root, root, root); //return std::make_tuple(1, root, -1, -1);
         }
         else
         {
             if (27 * a0 > a2 * (9 * a1 - 2 * a2 * a2))
-                return std::make_tuple(1, root, root, root);//std::make_tuple(1, root, -1, -1);
+                return std::make_tuple(1, root, root, root); //std::make_tuple(1, root, -1, -1);
             else
-                return std::make_tuple(1, root, root, root);//std::make_tuple(1, -1, -1, root);
+                return std::make_tuple(1, root, root, root); //std::make_tuple(1, -1, -1, root);
         }
     }
     return std::make_tuple(1, root, root, root);
@@ -1289,8 +1289,10 @@ inline Foam::autoPtr<scalarList> Foam::PengRobinsonMixture<ThermoMixture>::Ln_fu
 
     //this->ABZmix(p, T, comp_inp, Amixz, Bmixz, Amix2, Bz);
     scalar Z0, Zmix0; //1.4664289920576903  1.4664289920576903
-    std::tie(Z0, Zmix0) = Z_opt2(p, T, Amixz, Xinp);
-    Zmix = (pf == 0) ? Z0 : Zmix0;
+    bool isVapor;
+    //std::tie(Z0, Zmix0) = Z_opt2(p, T, Amixz, Xinp);
+    //Zmix = (pf == 0) ? Z0 : Zmix0;
+    std::tie(isVapor, Zmix) = Z_gibbs2(p, T, Xinp);
 
     //Zmix = this->Z(p, T, Xinp, pf);
 
