@@ -211,6 +211,7 @@ namespace Foam
         inline std::tuple<double, double> Z_opt2(scalar p, scalar T, const scalarList &Xinp) const;
         inline std::tuple<int, double, double, double> Z_full(scalar p, scalar T, const scalarList &Xinp) const;
         inline scalar Z_gibbs(scalar p, scalar T, const scalarList &Xinp) const;
+        inline scalar Z_gibbs_mix(scalar p, scalar T, const scalarList &Xinp) const;
         inline std::tuple<double, bool> Z_gibbs2(scalar p, scalar T, const scalarList &Xinp) const;
         inline scalar vol_gibbs(scalar p, scalar T, const scalarList *Xinp) const;
 

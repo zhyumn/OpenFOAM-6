@@ -592,6 +592,28 @@ double solver_new::dHsdXi(int di)
     Mtype::solution ret(thermo->Mtype::TPn_flash(P_, T_)());
     return thermo->dHsdXi(P_, T_, di, ret);
 }
+
+std::vector<double> solver_new::eps(std::vector<double> K)
+{
+    //autoPtr<scalarList> ret, Kof;
+    Foam::scalarList ret(K.size(), Foam::Zero), Kof(K.size(), Foam::Zero);
+    for (unsigned int i = 0; i < ret.size(); i++)
+    {
+        Kof[i] = K[i];
+    }
+    bool suc = thermo->TPn_flash_Matheis_test(P_, T_, thermo->X_, Kof, ret);
+    if (!suc)
+        for (unsigned int i = 0; i < ret.size(); i++)
+        {
+            ret[i] = 0;
+        }
+    std::vector<double> ret2(K.size());
+    for (unsigned int i = 0; i < ret.size(); i++)
+    {
+        ret2[i] = ret[i];
+    }
+    return ret2;
+}
 void solver_new::Ln_fugacityCoefficient()
 {
     autoPtr<scalarList> fugcoef;

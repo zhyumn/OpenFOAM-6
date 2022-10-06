@@ -342,9 +342,17 @@ namespace Foam
         inline scalar c_noVLE(scalar p, scalar T, solution &sol) const;
         inline scalar c_noVLE(scalar p, scalar T) const;
 
+        inline bool TPn_flash_Matheis_test(
+            scalar p,
+            scalar T,
+            const scalarList &Xinp,
+            const scalarList &K,
+            scalarList &ret) const;
+
 #ifdef USEOPT
 
-        scalar p_opt, T_opt;
+        scalar p_opt,
+            T_opt;
         scalarList X_opt;
 
         calculate(scalar p, scalar T)

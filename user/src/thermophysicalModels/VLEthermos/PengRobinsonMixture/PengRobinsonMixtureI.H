@@ -837,6 +837,57 @@ inline std::tuple<int, double, double, double> Foam::PengRobinsonMixture<ThermoM
 }
 
 template <class ThermoMixture>
+inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::Z_gibbs_mix(
+    scalar p,
+    scalar T,
+    const scalarList &Xinp) const
+{
+    int nr;
+    scalar r1, r2, r3;
+    std::tie(r1, r3) = Z_opt2(p, T, Xinp);
+    scalar z_ret;
+    scalar sqrt2 = sqrt(2.0);
+    if (r1 <= 0)
+    {
+        return r3;
+    }
+    else
+    {
+        scalar z_v = r3;
+        scalar z_l = r1;
+        scalar A = this->A(p, T, Xinp), B = this->B(p, T, Xinp);
+        if (z_l < B)
+        {
+            z_ret = z_v;
+            if (z_v < B)
+                FatalErrorInFunction << "z_v < B,z_v= " << z_v << exit(FatalError);
+        }
+        else
+        {
+            scalar bmix = this->b(p, T, Xinp);
+            const scalar cc1 = 1.0 + sqrt(2.0);
+            const scalar cc2 = 1.0 - sqrt(2.0);
+            scalar a = this->a(p, T, Xinp);
+            scalar VVl = (z_l * RR * 1.0e-03 * T) / p;
+            scalar VVv = (z_v * RR * 1.0e-03 * T) / p;
+            scalar xxxl = ((VVl + cc1 * bmix) / (VVl + cc2 * bmix));
+            scalar xxxv = ((VVv + cc1 * bmix) / (VVv + cc2 * bmix));
+
+            scalar dGl = (z_l - 1) * RR * 1e-3 * T - log(z_l - B) * RR * 1e-3 * T + ((-a) / (2.0 * sqrt(2.0) * bmix)) * log(xxxl);
+            scalar dGv = (z_l - 1) * RR * 1e-3 * T - log(z_l - B) * RR * 1e-3 * T + ((-a) / (2.0 * sqrt(2.0) * bmix)) * log(xxxv);
+
+            scalar dg = log((z_l - B) / (z_v - B)) + A / (B * 2 * sqrt2) * log((z_l + B * (1 + sqrt2)) * (z_v + B * (1 - sqrt2)) / (z_l + B * (1 - sqrt2)) / (z_v + B * (1 + sqrt2))) - (z_l - z_v);
+
+            if (dGv < dGl)
+                z_ret = z_v;
+            else
+                z_ret = z_l;
+        }
+    }
+    return z_ret;
+}
+
+template <class ThermoMixture>
 inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::Z_gibbs(
     scalar p,
     scalar T,
@@ -1292,7 +1343,8 @@ inline Foam::autoPtr<scalarList> Foam::PengRobinsonMixture<ThermoMixture>::Ln_fu
     bool isVapor;
     //std::tie(Z0, Zmix0) = Z_opt2(p, T, Amixz, Xinp);
     //Zmix = (pf == 0) ? Z0 : Zmix0;
-    std::tie(isVapor, Zmix) = Z_gibbs2(p, T, Xinp);
+    //std::tie(isVapor, Zmix) = Z_gibbs2(p, T, Xinp);
+    Zmix = Z_gibbs_mix(p, T, Xinp);
 
     //Zmix = this->Z(p, T, Xinp, pf);
 

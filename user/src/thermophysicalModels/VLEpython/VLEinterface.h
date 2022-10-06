@@ -112,6 +112,8 @@ public:
     double Cp();
     double c();
 
+    std::vector<double> eps(std::vector<double>);
+
     std::vector<double> Z_coe();
     std::vector<double> Z_coe(std::vector<double> Xout);
     std::vector<double> X_gas();
