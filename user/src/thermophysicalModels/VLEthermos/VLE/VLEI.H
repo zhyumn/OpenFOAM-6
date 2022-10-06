@@ -1214,7 +1214,7 @@ inline Foam::autoPtr<typename Foam::VLE<ThermoMixture>::solution> Foam::VLE<Ther
     const int itermax_inner = 100;
 
     const double tol_inner = 1e-9;
-    const double tol_outer = 1e-8;
+    const double tol_outer = 1e-9;
     success = false;
 
     autoPtr<solution> pS(new solution());
@@ -1265,14 +1265,14 @@ inline Foam::autoPtr<typename Foam::VLE<ThermoMixture>::solution> Foam::VLE<Ther
     double eps_outer = 0;
     while (iter_outer <= itermax_outer)
     {
-        /*
-        Info << '[' << K[0];
+
+        /*Info << '[' << K[0];
         for (int i = 1; i < this->N_; i++)
         {
             Info << ',' << K[i];
         }
         Info << "]," << endl;
-        */
+*/
         //Info << '[' << K[0] << ',' << K[1] << "]," << endl;
         scalar sum1 = 0, sum2 = 0;
         for (int i = 0; i < this->N_; i++)
@@ -1371,10 +1371,19 @@ inline Foam::autoPtr<typename Foam::VLE<ThermoMixture>::solution> Foam::VLE<Ther
         else
             FatalErrorInFunction << "TPn_flash_Matheis" << exit(FatalError);
 
-        if (vf > 0.999999 || vf < 0.0000001)
+        if (iter_outer > 0 && (vf > 0.99999 || vf < 0.00001))
         {
-            break;
+            if (vf > 0.99999)
+                vf = 1.0;
+            else
+                vf = 0.0;
+            for (int i = 0; i < this->N_; i++)
+            {
+                Sol.X_liq()[i] = Xinp[i];
+                Sol.X_gas()[i] = Xinp[i];
+            }
             success = true;
+            break;
         }
 
         //Ln_fugcoef_liq.reset(this->Ln_fugacityCoefficient(p, T, Sol.X_liq(), 0).ptr()); //todo optimize
@@ -1438,7 +1447,7 @@ inline Foam::autoPtr<typename Foam::VLE<ThermoMixture>::solution> Foam::VLE<Ther
                     }
                     relax /= 2;
 
-                } while ((sum1 < 1.0 || sum2 < 1) && relax > 0.01);
+                } while ((sum1 < 1.0 || sum2 < 1) && relax > 0.0001);
                 for (int i = 0; i < this->N_; i++)
                 {
                     //Ktmp[i] = exp(Ln_fugcoef_liq()[i] - Ln_fugcoef_gas()[i]);
@@ -1464,7 +1473,6 @@ inline Foam::autoPtr<typename Foam::VLE<ThermoMixture>::solution> Foam::VLE<Ther
     //    success = true;
 
     return pS;
-   
 }
 
 template <class ThermoMixture>
@@ -1704,7 +1712,7 @@ inline Foam::autoPtr<typename Foam::VLE<ThermoMixture>::solution> Foam::VLE<Ther
             if (K_init[i] < minK)
                 minK = K_init[i];
 
-            //K_init[i] *= max((*this)[i].Pc_ / p, 1);
+            K_init[i] *= max((*this)[i].Pc_ / p, 1);
         }
         //Info << endl;
         scalar rat = sqrt(maxK / minK), mid = sqrt(sqrt(maxK * minK));
@@ -1732,18 +1740,40 @@ inline Foam::autoPtr<typename Foam::VLE<ThermoMixture>::solution> Foam::VLE<Ther
         ggas1 = this->G_Mole(p, T, sol().X_gas());
         gliq1 = this->G_Mole(p, T, sol().X_liq());
         g1 = sol().vaporfra * ggas1 + (1 - sol().vaporfra) * gliq1;
+        scalar Zgas1 = this->Z_gibbs_mix(p, T, sol().X_gas());
+        scalar Bgas1 = this->B(p, T, sol().X_gas());
+        scalar Zliq1 = this->Z_gibbs_mix(p, T, sol().X_liq());
+        scalar Bliq1 = this->B(p, T, sol().X_liq());
+        if (Zliq1 > 1 && Zgas1 > 1 && sol().vaporfra < 0.99999 && sol().vaporfra > 0.00001)
+        {
+            g1 += 1000;
+        }
         //Info << "G=" << g1 << endl;
+        //if (sol().vaporfra < 0.000001 || sol().vaporfra > 0.99999)
+        //    g1 -= 0.1;
     }
 
     K_init[0] = 1 / K_init[0];
     bool success2 = false;
     scalar ggas2, gliq2, g2;
     autoPtr<solution> sol2 = TPn_flash_Matheis(p, T, Xinp, stable, isVapor, K_init, success2);
-    if (success)
+    if (success2)
     {
+
         ggas2 = this->G_Mole(p, T, sol2().X_gas());
+        scalar Zgas2 = this->Z_gibbs_mix(p, T, sol2().X_gas());
+        scalar Bgas2 = this->B(p, T, sol2().X_gas());
         gliq2 = this->G_Mole(p, T, sol2().X_liq());
+
+        scalar Zliq2 = this->Z_gibbs_mix(p, T, sol2().X_liq());
+        scalar Bliq2 = this->B(p, T, sol2().X_liq());
         g2 = sol2().vaporfra * ggas2 + (1 - sol2().vaporfra) * gliq2;
+        if (Zliq2 > 1 && Zgas2 > 1 && sol2().vaporfra < 0.99999 && sol2().vaporfra > 0.00001)
+        {
+            g2 += 1000;
+        }
+        //if (sol2().vaporfra < 0.000001 || sol2().vaporfra > 0.99999)
+        //    g2 -= 0.1;
         //Info << "G=" << g2 << endl;
     }
     if (success2 && success)
