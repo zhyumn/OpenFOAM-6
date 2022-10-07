@@ -19,13 +19,13 @@ libs            ("libISATVLERhoThermo.so");
 
 application     rhoCentralRealgasFoam;
 
-startFrom       latestTime;
+startFrom       startTime;
 
 startTime       0;
 
 stopAt          endTime;
 
-endTime         0.0005;
+endTime         0.0004;
 
 deltaT          1e-6;
 

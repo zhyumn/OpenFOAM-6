@@ -114,7 +114,7 @@ C12H26
 {
     specie
     {
-        molWeight       170.33start8;
+        molWeight       170.338;
     }
     equationOfState
     {

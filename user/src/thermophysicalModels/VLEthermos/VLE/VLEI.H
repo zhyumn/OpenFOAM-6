@@ -1741,9 +1741,9 @@ inline Foam::autoPtr<typename Foam::VLE<ThermoMixture>::solution> Foam::VLE<Ther
         gliq1 = this->G_Mole(p, T, sol().X_liq());
         g1 = sol().vaporfra * ggas1 + (1 - sol().vaporfra) * gliq1;
         scalar Zgas1 = this->Z_gibbs_mix(p, T, sol().X_gas());
-        scalar Bgas1 = this->B(p, T, sol().X_gas());
+
         scalar Zliq1 = this->Z_gibbs_mix(p, T, sol().X_liq());
-        scalar Bliq1 = this->B(p, T, sol().X_liq());
+
         if (Zliq1 > 1 && Zgas1 > 1 && sol().vaporfra < 0.99999 && sol().vaporfra > 0.00001)
         {
             g1 += 1000;
@@ -1762,11 +1762,11 @@ inline Foam::autoPtr<typename Foam::VLE<ThermoMixture>::solution> Foam::VLE<Ther
 
         ggas2 = this->G_Mole(p, T, sol2().X_gas());
         scalar Zgas2 = this->Z_gibbs_mix(p, T, sol2().X_gas());
-        scalar Bgas2 = this->B(p, T, sol2().X_gas());
+        //scalar Bgas2 = this->B(p, T, sol2().X_gas());
         gliq2 = this->G_Mole(p, T, sol2().X_liq());
 
         scalar Zliq2 = this->Z_gibbs_mix(p, T, sol2().X_liq());
-        scalar Bliq2 = this->B(p, T, sol2().X_liq());
+        //scalar Bliq2 = this->B(p, T, sol2().X_liq());
         g2 = sol2().vaporfra * ggas2 + (1 - sol2().vaporfra) * gliq2;
         if (Zliq2 > 1 && Zgas2 > 1 && sol2().vaporfra < 0.99999 && sol2().vaporfra > 0.00001)
         {
