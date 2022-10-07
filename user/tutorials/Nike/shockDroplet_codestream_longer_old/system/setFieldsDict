@@ -11,50 +11,30 @@ FoamFile
     format      ascii;
     class       dictionary;
     location    "system";
-    object      fvSchemes;
+    object      setFieldsDict;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-fluxScheme      Kurganov;
-divScheme       Doubleflux;
 
-ddtSchemes
-{
-    default         Euler;
-}
+defaultFieldValues
+(
+    volScalarFieldValue T 311.0
+    volVectorFieldValue U (0 0 0)
+);
 
-gradSchemes
-{
-    default         Gauss linear;
-}
+regions
+(
+    
+    boxToCell
+    {
+	    box (-0.5 0 0) (-0.2 1 1);
+        fieldValues
+        (
+            volScalarFieldValue p 80e+6 
+        );
+    }
 
-divSchemes
-{
-    default         Gauss linear;//none;
-    div(tauMC)      Gauss linear;
-}
-
-laplacianSchemes
-{
-    default         Gauss linear corrected;
-}
-
-interpolationSchemes
-{
-    default         linear;
-    reconstruct(rho) vanLeer;
-    reconstruct(U)  vanLeerV;
-    reconstruct(DF) upwind;
-    reconstruct(Yi) vanLeer;
-    reconstruct(rPsi) vanLeer;
-    reconstruct(e) vanLeer;
-    reconstruct(soundspeed) vanLeer;
-}
-
-snGradSchemes
-{
-    default         corrected;
-}
+);
 
 
 // ************************************************************************* //

@@ -41,7 +41,7 @@ THvfctree_XrhoP
 }
 Erhovfctree_XTP
 {
-    noISAT false;//true;
+    noISAT true;
     checkInterval  20;
     maxDepthFactor   2;
 
@@ -52,10 +52,10 @@ Erhovfctree_XTP
         type const; //adaptive 
         value 1000;
     }
-    NtimeTag 5;
-    maxLeafsize (0.3 50 1e6);
-    toleranceOut (1e2 1e-1 1e-2 5);//BUG input!!(1e-10 1e-10 1e-10);//(1e-0 1e-0 1e-3);//(1e-1 1e-8 1e-3);
-    initToleranceIn (1e-4 1e-3 10);
-    scaleIn (1 100 1e7);//(1 1 1 1);//(1 1 2.3e+07 500);
+    NtimeTag 10;
+    maxLeafsize (0.3 1e6 50);
+    toleranceOut (1e-0 1e-5 1e-2 5);//BUG input!!(1e-10 1e-10 1e-10);//(1e-0 1e-0 1e-3);//(1e-1 1e-8 1e-3);
+    initToleranceIn (1e-4 1e-1 1);
+    scaleIn (1 100 100000);//(1 1 1 1);//(1 1 2.3e+07 500);
 }
 

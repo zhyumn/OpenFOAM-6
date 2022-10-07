@@ -26,10 +26,10 @@ decomposePar -latestTime -force
 mpirun -np 128 rhoCentralRealgasFoam  -parallel
 reconstructPar -latestTime
 rm -r 0
-mv  0.0005 0
+mv  0.0004 0
 setFields
 decomposePar -latestTime   -force
 
-sed -i 's/endTime         0.0005;/endTime         0.005;/' system/controlDict 
+sed -i 's/endTime         0.0004;/endTime         0.005;/' system/controlDict 
 mpirun -np 128 rhoCentralRealgasFoam  -parallel
 reconstructPar -newTimes

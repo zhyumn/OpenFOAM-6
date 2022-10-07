@@ -11,49 +11,46 @@ FoamFile
     format      ascii;
     class       dictionary;
     location    "system";
-    object      fvSchemes;
+    object      fvSolution;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-fluxScheme      Kurganov;
-divScheme       Doubleflux;
-
-ddtSchemes
+solvers
 {
-    default         Euler;
-}
+    "(rho|rhoU|rhoE|rhoYi|thermo:rho)"
+    {
+        solver          diagonal;
+    }
 
-gradSchemes
-{
-    default         Gauss linear;
-}
+    U
+    {
+        solver          smoothSolver;
+        smoother        GaussSeidel;
+        nSweeps         2;
+        tolerance       1e-09;
+        relTol          0.01;
+    }
 
-divSchemes
-{
-    default         Gauss linear;//none;
-    div(tauMC)      Gauss linear;
-}
+    h
+    {
+        $U;
+        tolerance       1e-10;
+        relTol          0;
+    }
+    e
+    {
+        $U;
+        tolerance       1e-10;
+        relTol          0;
+    }
+    Yi
+    {
+        solver          PBiCGStab;
+        preconditioner  DILU;
+        tolerance       1e-6;
+        relTol          0;
+    }
 
-laplacianSchemes
-{
-    default         Gauss linear corrected;
-}
-
-interpolationSchemes
-{
-    default         linear;
-    reconstruct(rho) vanLeer;
-    reconstruct(U)  vanLeerV;
-    reconstruct(DF) upwind;
-    reconstruct(Yi) vanLeer;
-    reconstruct(rPsi) vanLeer;
-    reconstruct(e) vanLeer;
-    reconstruct(soundspeed) vanLeer;
-}
-
-snGradSchemes
-{
-    default         corrected;
 }
 
 

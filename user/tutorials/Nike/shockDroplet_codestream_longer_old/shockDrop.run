@@ -1,7 +1,7 @@
 #!/bin/bash
 # HEADER for Parallel job using 80 processors:
 #SBATCH --nodes=1           # number of nodes
-#SBATCH --ntasks-per-node=64    # number of processors per node
+#SBATCH --ntasks-per-node=128    # number of processors per node
 #SBATCH --cpus-per-task=1       # number of cpus per task
 #SBATCH -t 148:00:00      # run for 3 hr max
 #SBATCH --partition=ROME
@@ -23,13 +23,13 @@
 blockMesh
 cp -r 0.orig 0
 decomposePar -latestTime -force
-mpirun -np 64 rhoCentralRealgasFoam  -parallel
+mpirun -np 128 rhoCentralRealgasFoam  -parallel
 reconstructPar -latestTime
 rm -r 0
-mv  0.0004 0
+mv  0.0005 0
 setFields
 decomposePar -latestTime   -force
 
-sed -i 's/endTime         0.0004;/endTime         0.0022;/' system/controlDict 
-mpirun -np 64 rhoCentralRealgasFoam  -parallel
+sed -i 's/endTime         0.0005;/endTime         0.005;/' system/controlDict 
+mpirun -np 128 rhoCentralRealgasFoam  -parallel
 reconstructPar -newTimes

@@ -1,0 +1,2 @@
+path=$(pwd)
+cp -r $path  $FOAM_USER_DIR/run/

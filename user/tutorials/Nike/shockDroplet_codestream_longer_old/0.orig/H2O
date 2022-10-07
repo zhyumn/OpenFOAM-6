@@ -10,16 +10,14 @@ FoamFile
     version     2.0;
     format      ascii;
     class       volScalarField;
-    location    "0";
-    object      p;
+    location    "0.00011";
+    object      H2O;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-dimensions      [1 -1 -2 0 0 0 0];
+dimensions      [0 0 0 0 0 0 0];
 
-internalField  uniform 20e6;
-/*
-internalField  #codeStream
+internalField   #codeStream
 {
     
         codeInclude
@@ -41,24 +39,33 @@ internalField  #codeStream
             const IOdictionary & d = static_cast<const IOdictionary&>(dict);
             const fvMesh& mesh = refCast<const fvMesh>(d.db());
 
+            double r = 0.125;
+            double x_center = 0.5;
+            double y_center = 0.5;
+            double thickness = 1.0/15;
+            double omega=0.01;
+            double Hlow=0.0001;
+            double Hhigh=0.05;
 
-            double plow=2e7;
-            double phigh=8e7;
-
-            scalarField p(mesh.nCells(), plow);
-            forAll(p, i)
+            scalarField H2O(mesh.nCells(), Hhigh);
+            forAll(H2O, i)
             {
                 const scalar x = mesh.C()[i][0];
-                //const scalar y = mesh.C()[i][1];
+                const scalar y = mesh.C()[i][1];
                 //const scalar z = mesh.C()[i][2];
-                if (x < 0.2)
+                scalar r_tmp=sqrt(sqr(y - y_center)+sqr(x-x_center));
+                if (r_tmp < r-thickness/2)
                 {
-                    p[i] = phigh;
+                    H2O[i] = Hlow;
+                }
+                else if (r_tmp < r+thickness/2)
+                {
+                    H2O[i] =0.5*(Hlow+Hhigh)+0.5*(-Hlow+Hhigh)*tanh((r_tmp-r)/omega);
                 }
             }
-            p.writeEntry( "", os);
+            H2O.writeEntry( "", os);
         #};
-};*/
+};
 
 boundaryField
 {
@@ -66,7 +73,7 @@ boundaryField
     {
         type            empty;
     }
-        top
+    top
     {
         type            zeroGradient;
     }
