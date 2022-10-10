@@ -1744,9 +1744,9 @@ inline Foam::autoPtr<typename Foam::VLE<ThermoMixture>::solution> Foam::VLE<Ther
 
         scalar Zliq1 = this->Z_gibbs_mix(p, T, sol().X_liq());
 
-        if (Zliq1 > 1 && Zgas1 > 1 && sol().vaporfra < 0.99999 && sol().vaporfra > 0.00001)
+        if (Zliq1 > 0.97 && Zgas1 > 0.97 && sol().vaporfra < 0.99999 && sol().vaporfra > 0.00001)
         {
-            g1 += 1000;
+            g1 += 10000;
         }
         //Info << "G=" << g1 << endl;
         //if (sol().vaporfra < 0.000001 || sol().vaporfra > 0.99999)
@@ -1768,9 +1768,9 @@ inline Foam::autoPtr<typename Foam::VLE<ThermoMixture>::solution> Foam::VLE<Ther
         scalar Zliq2 = this->Z_gibbs_mix(p, T, sol2().X_liq());
         //scalar Bliq2 = this->B(p, T, sol2().X_liq());
         g2 = sol2().vaporfra * ggas2 + (1 - sol2().vaporfra) * gliq2;
-        if (Zliq2 > 1 && Zgas2 > 1 && sol2().vaporfra < 0.99999 && sol2().vaporfra > 0.00001)
+        if (Zliq2 > 0.97 && Zgas2 > 0.97 && sol2().vaporfra < 0.99999 && sol2().vaporfra > 0.00001)
         {
-            g2 += 1000;
+            g2 += 10000;
         }
         //if (sol2().vaporfra < 0.000001 || sol2().vaporfra > 0.99999)
         //    g2 -= 0.1;
