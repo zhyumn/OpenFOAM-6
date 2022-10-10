@@ -653,9 +653,12 @@ Foam::chemistryTabulationMethods::ISAT<CompType, ThermoType>::writePerformance()
         nAddFile_()
             << runTime_.timeOutputValue() << "    " << nAdd_ << endl;
         nAdd_ = 0;
+        
+        scalar size_temp= this->size();
+        reduce(size_temp, sumOp<scalar>());
 
         sizeFile_()
-            << runTime_.timeOutputValue() << "    " << this->size() << endl;
+            << runTime_.timeOutputValue() << "    " << size_temp <<"    "<<  this->size() << endl;
     }
 }
 

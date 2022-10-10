@@ -42,6 +42,7 @@ internalField   #codeStream
             double r = 0.125;
             double x_center = 0.5;
             double y_center = 0.5;
+            double z_center = 0.5;
             double thickness = 1.0/15;
             double omega=0.01;
             double Hlow=0.0001;
@@ -52,8 +53,8 @@ internalField   #codeStream
             {
                 const scalar x = mesh.C()[i][0];
                 const scalar y = mesh.C()[i][1];
-                //const scalar z = mesh.C()[i][2];
-                scalar r_tmp=sqrt(sqr(y - y_center)+sqr(x-x_center));
+                const scalar z = mesh.C()[i][2];
+                scalar r_tmp=sqrt(sqr(y - y_center)+sqr(x-x_center) + sqr(z-z_center));
                 if (r_tmp < r-thickness/2)
                 {
                     H2O[i] = Hlow;
