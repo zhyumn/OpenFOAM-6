@@ -1,0 +1,159 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  6
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version         2.0;
+    format          ascii;
+    class           dictionary;
+    object          blockMeshDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+convertToMeters 1e-3;
+/*
+vertices
+(
+    ( 0  -14  -14)
+    ( 56  -14  -14)
+    ( 56   14  -14)
+    ( 0   14  -14)
+    ( 0  -14   14)
+    ( 56  -14   14)
+    ( 56   14   14)
+    ( 0   14   14)
+
+);
+*/
+radius 14;
+Xmin -14;
+Xmax 18;//56;
+Ymin #calc "-$radius";
+Ymax $radius;
+Zmin #calc "-$radius";
+Zmax $radius;
+
+radiusR2Pos #calc "$radius * sin(degToRad(45))";
+radiusR2Neg #calc "$radius * -sin(degToRad(45))";
+radiusPos $radius;
+radiusNeg #calc "-$radius";
+
+vertices
+(
+    /*
+    (  0  -9.89949493661  -9.89949493661) //0
+    (  56  -9.89949493661  -9.89949493661) //1
+    (  56  9.89949493661  -9.89949493661) //2
+    (  0  9.89949493661  -9.89949493661) //3
+    (  0  -9.89949493661  9.89949493661) //4
+    (  56  -9.89949493661  9.89949493661) //5
+    (  56  9.89949493661  9.89949493661) //6
+    (  0  9.89949493661  9.89949493661) //7
+    */
+    (  0  -2  -2) //0
+    (  8  -2  -2) //1
+    (  8   2  -2) //2
+    (  0   2  -2) //3
+    (  0  -2   2) //4
+    (  8  -2   2) //5
+    (  8   2   2) //6
+    (  0   2   2) //7
+
+
+);
+
+blocks
+(
+    hex (0 1 2 3 4 5 6 7) (20 10 10) simpleGrading (1 1 1)
+);
+
+edges
+(
+    /*
+    arc 7 4   (0 0 14)
+    arc 4 0   (0 -14 0)
+    arc 0 3   (0 0 -14)
+    arc 3 7   (0 14 0)
+
+    arc 6 5   (56 0 14)
+    arc 5 1   (56 -14 0)
+    arc 1 2   (56 0 -14)
+    arc 2 6   (56 14 0)
+    */
+);
+
+boundary
+(
+    outlet
+    {
+        type patch;
+        faces
+        (
+            (2 6 5 1)
+
+            (1 5 4 0)
+            (3 7 6 2)
+
+
+
+            (0 3 2 1)
+
+            (4 5 6 7)
+        );
+    }
+    walls
+    {
+        type wall;
+        faces
+        (
+            (0 4 7 3)
+        );
+    }
+
+    /*
+    sides
+    {
+        type patch;
+        faces
+        (
+            (1 5 4 0)
+            (3 7 6 2)
+        );
+    }
+    inlet
+    {
+        type patch;
+        faces
+        (
+            (0 4 7 3)
+        );
+    }
+    ground
+    {
+        type wall;
+        faces
+        (
+            (0 3 2 1)
+        );
+    }
+    top
+    {
+        type patch;
+        faces
+        (
+            (4 5 6 7)
+        );
+    }
+    */
+);
+
+mergePatchPairs
+(
+);
+
+
+// ************************************************************************* //

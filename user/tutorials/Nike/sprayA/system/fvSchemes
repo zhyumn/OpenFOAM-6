@@ -1,0 +1,88 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  6
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      fvSchemes;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+fluxScheme      Kurganov;
+divScheme       Doubleflux;
+
+ddtSchemes
+{
+    default         CrankNicolson 0;//Euler;
+}
+
+gradSchemes
+{
+    default          none;//Gauss linear;
+    grad(thermo:rho) Gauss linear;
+    grad(rhoU)       Gauss linear;
+    grad(rPsi)       Gauss linear;
+    grad(e)          Gauss linear;
+    grad(soundspeed) Gauss linear;
+    grad(U)          Gauss linear;
+    grad(Wmix)       Gauss linear;
+    grad(N2)         Gauss linear;
+    grad(C12H26)     Gauss linear;
+    grad(epsilon)    Gauss linear;
+    grad(k)          Gauss linear;
+    grad(gammaStar)  Gauss linear;
+    grad(eStar)      Gauss linear;
+}
+
+divSchemes
+{
+    default           none;//Gauss linear;//none; 
+    div(phi,epsilon)  Gauss linear;
+    div(phi,k)        Gauss linear;
+    //div(tauMC)      Gauss linear;
+}
+
+laplacianSchemes
+{
+    default         none;//Gauss linear corrected;
+    laplacian(((N2*thermo:rho)*Dimix_N2),N2) Gauss linear corrected;
+    laplacian(((((N2*thermo:rho)*Dimix_N2)*N2)|Wmix),Wmix) Gauss linear corrected;
+    laplacian(((N2*thermo:rho)*Dimix_C12H26),C12H26) Gauss linear corrected;
+    laplacian(((((N2*thermo:rho)*Dimix_C12H26)*C12H26)|Wmix),Wmix) Gauss linear corrected;
+    laplacian(((C12H26*thermo:rho)*Dimix_N2),N2) Gauss linear corrected;
+    laplacian(((((C12H26*thermo:rho)*Dimix_N2)*N2)|Wmix),Wmix) Gauss linear corrected;
+    laplacian(((C12H26*thermo:rho)*Dimix_C12H26),C12H26)  Gauss linear corrected;
+    laplacian(((((C12H26*thermo:rho)*Dimix_C12H26)*C12H26)|Wmix),Wmix)  Gauss linear corrected;
+    laplacian((thermo:rho*DepsilonEff),epsilon)  Gauss linear corrected;
+    laplacian((thermo:rho*DkEff),k)  Gauss linear corrected;
+}
+
+interpolationSchemes
+{
+    default                 none;//linear;
+    //reconstruct(rho) vanLeer;
+    dotInterpolate(S,tauMC) linear;
+    flux(rhoU)              linear;
+    interpolate(muEff)      linear;
+    interpolate(thermo:rho) linear;
+    reconstruct(thermo:rho) vanLeer;
+    reconstruct(U)          vanLeerV;
+    reconstruct(T)          vanLeer;
+    reconstruct(gammaStar)  upwind;
+    reconstruct(eStar)      upwind;
+}
+
+snGradSchemes
+{
+    default         corrected;
+}
+
+
+// ************************************************************************* //

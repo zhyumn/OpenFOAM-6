@@ -312,21 +312,6 @@ int main(int argc, char *argv[])
 #include "YEqn.H"
 
         // --- Solve energy
-        surfaceScalarField sigmaDotU(
-            "sigmaDotU",
-            (
-                fvc::interpolate(muEff) * mesh.magSf() * fvc::snGrad(U) + fvc::dotInterpolate(mesh.Sf(), tauMC)) &
-                (a_pos * U_pos + a_neg * U_neg));
-        surfaceScalarField sigmaDotU_pos(
-            "sigmaDotU_pos",
-            (
-                fvc::interpolate(muEff) * mesh.magSf() * fvc::snGrad(U) + fvc::dotInterpolate(mesh.Sf(), tauMC)) &
-                (a_pos_pos * U_pos + a_pos_neg * U_neg));
-        surfaceScalarField sigmaDotU_neg(
-            "sigmaDotU_neg",
-            (
-                fvc::interpolate(muEff) * mesh.magSf() * fvc::snGrad(U) + fvc::dotInterpolate(mesh.Sf(), tauMC)) &
-                (a_neg_pos * U_pos + a_neg_neg * U_neg));
 
         fvScalarMatrix rhoEEqn(
             fvm::ddt(rhoE));
@@ -368,7 +353,30 @@ int main(int argc, char *argv[])
         }
         if (!inviscid)
         {
-            rhoEEqn -= fvc::div(sigmaDotU);
+
+            if (divScheme == "Doubleflux")
+            {
+                surfaceScalarField sigmaDotU_pos(
+                    "sigmaDotU_pos",
+                    (
+                        fvc::interpolate(muEff) * mesh.magSf() * fvc::snGrad(U) + fvc::dotInterpolate(mesh.Sf(), tauMC)) &
+                        (a_pos_pos * U_pos + a_pos_neg * U_neg));
+                surfaceScalarField sigmaDotU_neg(
+                    "sigmaDotU_neg",
+                    (
+                        fvc::interpolate(muEff) * mesh.magSf() * fvc::snGrad(U) + fvc::dotInterpolate(mesh.Sf(), tauMC)) &
+                        (a_neg_pos * U_pos + a_neg_neg * U_neg));
+                rhoEEqn -= fvc::div_doubleflux(sigmaDotU_pos, sigmaDotU_neg);
+            }
+            else if (divScheme == "Conservativeflux")
+            {
+                surfaceScalarField sigmaDotU(
+                    "sigmaDotU",
+                    (
+                        fvc::interpolate(muEff) * mesh.magSf() * fvc::snGrad(U) + fvc::dotInterpolate(mesh.Sf(), tauMC)) &
+                        (a_pos * U_pos + a_neg * U_neg));
+                rhoEEqn -= fvc::div(sigmaDotU);
+            }
         }
         solve(rhoEEqn);
 

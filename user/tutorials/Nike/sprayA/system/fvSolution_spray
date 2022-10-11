@@ -1,0 +1,148 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  6
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      fvSolution;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+/*
+solvers
+{
+    "(p|U|e|h).*"
+    {
+/*
+        solver          smoothSolver;
+        smoother        symGaussSeidel;
+        tolerance       1e-12;
+        relTol          0;
+* /
+
+        solver          PBiCGStab;
+        preconditioner  DILU;
+        tolerance       1e-12;
+        relTol          0.0;		//0.001	
+	minIter 	2;
+    }
+
+    "rho.*"
+    {
+
+        solver          PCG;
+        preconditioner  DIC;
+        tolerance       1e-12;
+        relTol          0;
+
+
+	//solver          diagonal;
+    }
+}
+*/
+solvers
+{
+    rho
+    {
+        solver          PCG;
+        preconditioner  DIC;
+        tolerance       1e-012;
+        relTol          0.1;
+    }
+
+    rhoFinal
+    {
+        $rho;
+        tolerance       1e-012;
+        relTol          0;
+    }
+
+    "(U|k|epsilon)"
+    {
+        solver          smoothSolver;
+        smoother        symGaussSeidel;
+        tolerance       1e-012;
+        relTol          0.1;
+    }
+
+    p
+    {
+        solver          GAMG;
+        tolerance       1e-012;
+        relTol          0.1;
+        smoother        GaussSeidel;
+    }
+
+    pFinal
+    {
+        $p;
+        tolerance       1e-012;
+        relTol          0.0;
+    }
+
+    "(U|k|epsilon|Yi)Final"
+    {
+        $U;
+        tolerance       1e-012;
+        relTol          0;
+    }
+
+    "(Yi|O2|N2|H2O)"
+    {
+        solver          PBiCGStab;
+        preconditioner  none;
+        //smoother        GaussSeidel;
+        tolerance       1e-12;
+        relTol          0;
+    }
+
+    "(h|e)"
+    {
+        $Yi;
+        relTol          0.1;
+    }
+
+    hFinal
+    {
+        $Yi;
+    }
+    eFinal
+    {
+        $Yi;
+    }
+}
+
+PIMPLE
+{
+    transonic yes;			//Enable to have the same behaviour as in sonicFoam (OF6 and below)
+    consistent yes;
+
+    nOuterCorrectors     3;		//1 - 3 - 2
+    nCorrectors          1;		//1 - 1 - 2
+    nNonOrthogonalCorrectors 1;		//0 - 1 - 1
+}
+/*
+PIMPLE
+{
+    transonic       no;
+    nCorrectors     1;
+    nNonOrthogonalCorrectors 0;
+    momentumPredictor yes;
+}
+*/
+
+relaxationFactors
+{
+    equations
+    {
+        ".*Final"       0.01;
+    }
+}
+
+// ************************************************************************* //

@@ -1698,9 +1698,10 @@ inline Foam::autoPtr<typename Foam::VLE<ThermoMixture>::solution> Foam::VLE<Ther
     autoPtr<solution> sol_min;
     autoPtr<scalarList> p_TPD_star;
     scalarList K_init(Xinp.size());
-    //if (inputK == false)
+    if (inputK == false)
     {
-        scalar maxK = 1, minK = 1;
+        scalar maxK = -1, minK = 1e10;
+        int maxI, minI;
         //Info << "Wil=";
         for (int i = 0; i < Xinp.size(); i++)
         {
@@ -1708,9 +1709,15 @@ inline Foam::autoPtr<typename Foam::VLE<ThermoMixture>::solution> Foam::VLE<Ther
             K_init[i] = (*this)[i].Pc_ / p * exp(5.373 * (1.0 + (*this)[i].omega_) * (1.0 - (*this)[i].Tc_ / T));
             //Info << K_init[i] << " ,";
             if (K_init[i] > maxK)
+            {
                 maxK = K_init[i];
+                maxI = i;
+            }
             if (K_init[i] < minK)
+            {
                 minK = K_init[i];
+                minI = i;
+            }
 
             K_init[i] *= max((*this)[i].Pc_ / p, 1);
         }
@@ -1732,7 +1739,7 @@ inline Foam::autoPtr<typename Foam::VLE<ThermoMixture>::solution> Foam::VLE<Ther
             K_init[i] = Kinit[i];
         }
     }
-    scalar ggas1, gliq1, g1;
+    scalar ggas1, gliq1, g1,Zliq1,Zgas1;
     autoPtr<solution> sol = TPn_flash_Matheis(p, T, Xinp, stable, isVapor, K_init, success);
 
     if (success)
@@ -1740,11 +1747,11 @@ inline Foam::autoPtr<typename Foam::VLE<ThermoMixture>::solution> Foam::VLE<Ther
         ggas1 = this->G_Mole(p, T, sol().X_gas());
         gliq1 = this->G_Mole(p, T, sol().X_liq());
         g1 = sol().vaporfra * ggas1 + (1 - sol().vaporfra) * gliq1;
-        scalar Zgas1 = this->Z_gibbs_mix(p, T, sol().X_gas());
+        Zgas1 = this->Z_gibbs_mix(p, T, sol().X_gas());
 
-        scalar Zliq1 = this->Z_gibbs_mix(p, T, sol().X_liq());
+        Zliq1 = this->Z_gibbs_mix(p, T, sol().X_liq());
 
-        if (Zliq1 > 0.97 && Zgas1 > 0.97 && sol().vaporfra < 0.99999 && sol().vaporfra > 0.00001)
+        if (Zliq1 > 0.87 && Zgas1 > 0.95 && sol().vaporfra < 0.99999 && sol().vaporfra > 0.00001)
         {
             g1 += 10000;
         }
@@ -1755,20 +1762,20 @@ inline Foam::autoPtr<typename Foam::VLE<ThermoMixture>::solution> Foam::VLE<Ther
 
     K_init[0] = 1 / K_init[0];
     bool success2 = false;
-    scalar ggas2, gliq2, g2;
+    scalar ggas2, gliq2, g2,Zgas2,Zliq2;
     autoPtr<solution> sol2 = TPn_flash_Matheis(p, T, Xinp, stable, isVapor, K_init, success2);
     if (success2)
     {
 
         ggas2 = this->G_Mole(p, T, sol2().X_gas());
-        scalar Zgas2 = this->Z_gibbs_mix(p, T, sol2().X_gas());
+        Zgas2 = this->Z_gibbs_mix(p, T, sol2().X_gas());
         //scalar Bgas2 = this->B(p, T, sol2().X_gas());
         gliq2 = this->G_Mole(p, T, sol2().X_liq());
 
-        scalar Zliq2 = this->Z_gibbs_mix(p, T, sol2().X_liq());
+        Zliq2 = this->Z_gibbs_mix(p, T, sol2().X_liq());
         //scalar Bliq2 = this->B(p, T, sol2().X_liq());
         g2 = sol2().vaporfra * ggas2 + (1 - sol2().vaporfra) * gliq2;
-        if (Zliq2 > 0.97 && Zgas2 > 0.97 && sol2().vaporfra < 0.99999 && sol2().vaporfra > 0.00001)
+        if (Zliq2 > 0.87 && Zgas2 > 0.95 && sol2().vaporfra < 0.99999 && sol2().vaporfra > 0.00001)
         {
             g2 += 10000;
         }
