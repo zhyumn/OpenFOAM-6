@@ -266,7 +266,7 @@ namespace Foam
         autoPtr<solution> TPn_flash(scalar p, scalar T) const;
         autoPtr<solution> TPn_flash_New(scalar p, scalar T) const;
         autoPtr<solution> TPn_flash_New2(scalar p, scalar T, bool stable, bool isVapor, Foam::scalarList &K_init) const;
-        autoPtr<solution> TPn_flash_Matheis(scalar p, scalar T, const scalarList &Xinp, bool stable, bool isVapor, Foam::scalarList &K_init, bool &success) const;
+        autoPtr<solution> TPn_flash_Matheis(scalar p, scalar T, const scalarList &Xinp, bool stable, bool isVapor, Foam::scalarList &K_init, bool &success, scalar &Z_l, scalar &Z_g, scalar &dg) const;
         autoPtr<solution> TPn_flash_New_TPD_Tudisco(scalar p, scalar T, const scalarList &Xinp) const;
         autoPtr<solution> TPn_flash_New_TPD_Tudisco(scalar p, scalar T) const { return TPn_flash_New_TPD_Tudisco(p, T, this->X_); };
         autoPtr<solution> TPn_flash_New_TPD(scalar p, scalar T) const;
@@ -333,6 +333,7 @@ namespace Foam
         inline scalar alphaP(scalar p, scalar T, solution &sol) const;
         inline scalar kappaS(scalar p, scalar T, solution &sol) const;
         inline scalar c_opt(scalar p, scalar T, scalar rho, solution &sol) const;
+        inline scalar c_opt_full(scalar p, scalar T, scalar rho, solution &sol) const;
         inline scalar c(scalar p, scalar T, solution &sol) const;
         inline scalar c(scalar p, scalar T) const;
 

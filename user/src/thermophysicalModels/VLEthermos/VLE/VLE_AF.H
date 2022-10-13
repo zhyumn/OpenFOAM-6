@@ -418,8 +418,6 @@ Foam::VLE<ThermoMixture>::dvidP(scalar p, scalar T, solution &sol, scalarSquareM
         return autoPtr<scalarList>(&b);
     }
     autoPtr<scalarList> ddP_Ln_fugcoef_G_, ddP_Ln_fugcoef_L_;
-    List<autoPtr<scalarList>> ddxi_Ln_fugcoef_G_(this->X_.size()),
-        ddxi_Ln_fugcoef_L_(this->X_.size());
 
     ddP_Ln_fugcoef_G_.reset(
         (this->ddP_Ln_fugacityCoefficient(p, T, sol.X_gas(), 1)).ptr());
@@ -1020,25 +1018,511 @@ template <class ThermoMixture>
 inline Foam::scalar
 Foam::VLE<ThermoMixture>::c_opt(scalar p, scalar T, scalar rho_, solution &sol) const
 {
+    scalar W_ = this->W();
     scalar Z_M_ = Z(p, T, sol);
     autoPtr<scalarSquareMatrix> pA(A_dvid_(p, T, sol));
     labelList pivotIndices(pA().m());
     LUDecompose(pA(), pivotIndices);
     scalar dZdP_M_ = dZdP(p, T, sol, pA(), pivotIndices);
-    scalar drhodP_ = this->W() / (Z_M_ * RR * 1.0e-03 * T) -
-                     p * this->W() / (Z_M_ * Z_M_ * RR * 1.0e-03 * T) * dZdP_M_;
+    scalar drhodP_ = W_ / (Z_M_ * RR * 1.0e-03 * T) - p * W_ / (Z_M_ * Z_M_ * RR * 1.0e-03 * T) * dZdP_M_;
     scalar kappaT_ = drhodP_ / rho_;
     scalar Cp_ = Cp(p, T, sol, pA(), pivotIndices);
     scalar dZdT_M_ = dZdT(p, T, sol, pA(), pivotIndices);
-    scalar drhodT_ = -p * this->W() / (Z_M_ * Z_M_ * RR * 1.0e-03 * T * T) *
-                     (dZdT_M_ * T + Z_M_);
+    scalar drhodT_ = -p * W_ / (Z_M_ * Z_M_ * RR * 1.0e-03 * T * T) * (dZdT_M_ * T + Z_M_);
     scalar alphaP_ = -drhodT_ / rho_;
     scalar kappaS_ = kappaT_ - T * alphaP_ * alphaP_ / (rho_ * Cp_);
     if (kappaS_ < 0)
-    { 
+    {
         //return c_noVLE(p, T, sol);
         FatalErrorInFunction << " kappaS_ =" << kappaS_
                              << ",p=" << p << ",T=" << T << ",X=" << this->X_ << exit(FatalError);
+    }
+    return sqrt(1.0 / (kappaS_ * rho_));
+}
+
+template <class ThermoMixture>
+inline Foam::scalar
+Foam::VLE<ThermoMixture>::c_opt_full(scalar p, scalar T, scalar rho_, solution &sol) const
+{
+    const scalar sqrt2 = sqrt(2.0);
+    const scalar cc0 = 2 * sqrt(2.0);
+    const scalar cc1 = 1.0 + sqrt(2.0);
+    const scalar cc2 = 1.0 - sqrt(2.0);
+
+    const scalar small8 = 1.e-08; //PY: need to be noticed
+
+    scalar W_ = this->W();
+    scalar vf_ = sol.vaporfra;
+
+    scalar A_G_ = this->ThermoMixture::A(p, T, sol.X_gas());
+    scalar A_L_ = this->ThermoMixture::A(p, T, sol.X_liq());
+
+    scalar B_G_ = this->ThermoMixture::B(p, T, sol.X_gas());
+    scalar B_L_ = this->ThermoMixture::B(p, T, sol.X_liq());
+
+    scalar B_G_2 = B_G_ * B_G_;
+    scalar B_L_2 = B_L_ * B_L_;
+
+    scalar Z_G_ = this->ThermoMixture::Z(p, T, A_G_, B_G_, sol.X_gas(), 1);
+    scalar Z_L_ = this->ThermoMixture::Z(p, T, A_L_, B_L_, sol.X_liq(), 0);
+    scalar Z_M_ = vf_ * Z_G_ + (1 - vf_) * Z_L_;
+
+    scalar Z_G_2 = Z_G_ * Z_G_;
+    scalar Z_L_2 = Z_L_ * Z_L_;
+
+    scalar a2_G_ = B_G_ - 1.0;
+    scalar a2_L_ = B_L_ - 1.0;
+
+    scalar a1_G_ = A_G_ - 2.0 * B_G_ - 3.0 * B_G_ * B_G_;
+    scalar a1_L_ = A_L_ - 2.0 * B_L_ - 3.0 * B_L_ * B_L_;
+
+    scalar dAdP_G_ = this->dAdP(p, T, sol.X_gas()), dBdP_G_ = this->dBdP(p, T, sol.X_gas());
+    scalar dAdP_L_ = this->dAdP(p, T, sol.X_liq()), dBdP_L_ = this->dBdP(p, T, sol.X_liq());
+
+    scalar da2dP_G_ = dBdP_G_;
+    scalar da2dP_L_ = dBdP_L_;
+
+    scalar da1dP_G_ = dAdP_G_ - 2.0 * dBdP_G_ - 6.0 * B_G_ * dBdP_G_;
+    scalar da1dP_L_ = dAdP_L_ - 2.0 * dBdP_L_ - 6.0 * B_L_ * dBdP_L_;
+
+    scalar da0dP_G_ = -(dAdP_G_ * B_G_ + A_G_ * dBdP_G_) + 2 * B_G_ * dBdP_G_ + 3 * B_G_2 * dBdP_G_;
+    scalar da0dP_L_ = -(dAdP_L_ * B_L_ + A_L_ * dBdP_L_) + 2 * B_L_ * dBdP_L_ + 3 * B_L_2 * dBdP_L_;
+
+    scalar dZdP_G_0 = -(da2dP_G_ * Z_G_2 + da1dP_G_ * Z_G_ + da0dP_G_) / (3 * Z_G_2 + 2 * Z_G_ * a2_G_ + a1_G_);
+    scalar dZdP_L_0 = -(da2dP_L_ * Z_L_2 + da1dP_L_ * Z_L_ + da0dP_L_) / (3 * Z_L_2 + 2 * Z_L_ * a2_L_ + a1_L_);
+
+    scalar dAdT_G_ = this->ThermoMixture::dAdT(p, T, sol.X_gas()), dBdT_G_ = this->ThermoMixture::dBdT(p, T, sol.X_gas());
+    scalar dAdT_L_ = this->ThermoMixture::dAdT(p, T, sol.X_liq()), dBdT_L_ = this->ThermoMixture::dBdT(p, T, sol.X_liq());
+
+    scalar da2dT_G_ = dBdT_G_;
+    scalar da2dT_L_ = dBdT_L_;
+
+    scalar da1dT_G_ = dAdT_G_ - 2.0 * dBdT_G_ - 6.0 * B_G_ * dBdT_G_;
+    scalar da1dT_L_ = dAdT_L_ - 2.0 * dBdT_L_ - 6.0 * B_L_ * dBdT_L_;
+
+    scalar da0dT_G_ = -(dAdT_G_ * B_G_ + A_G_ * dBdT_G_) + 2 * B_G_ * dBdT_G_ + 3 * B_G_2 * dBdT_G_;
+    scalar da0dT_L_ = -(dAdT_L_ * B_L_ + A_L_ * dBdT_L_) + 2 * B_L_ * dBdT_L_ + 3 * B_L_2 * dBdT_L_;
+
+    scalar dZdT_G_0 = -(da2dT_G_ * Z_G_2 + da1dT_G_ * Z_G_ + da0dT_G_) / (3 * Z_G_2 + 2 * Z_G_ * a2_G_ + a1_G_);
+    scalar dZdT_L_0 = -(da2dT_L_ * Z_L_2 + da1dT_L_ * Z_L_ + da0dT_L_) / (3 * Z_L_2 + 2 * Z_L_ * a2_L_ + a1_L_);
+
+    scalarSquareMatrix A(this->X_.size(), Zero);
+
+    List<autoPtr<scalarList>> ddxi_Ln_fugcoef_G_(this->X_.size()),
+        ddxi_Ln_fugcoef_L_(this->X_.size());
+
+    scalarList Bi(this->N_);
+    scalarList dBidP(this->N_);
+    scalarList dBidT(this->N_);
+    for (int i = 0; i < this->X_.size(); i++)
+    {
+        Bi[i] = (*this)[i].B(p, T);
+        dBidP[i] = (*this)[i].dBdP(p, T);
+        dBidT[i] = (*this)[i].dBdT(p, T);
+    }
+
+    scalarList dzdxi_G_(this->N_);
+    scalarList dzdxi_L_(this->N_);
+    scalarList dAdxi_G_(this->N_);
+    scalarList dAdxi_L_(this->N_);
+    scalarList dBdxi_G_(this->N_);
+    scalarList dBdxi_L_(this->N_);
+    for (int i = 0; i < this->X_.size(); i++)
+    {
+        dAdxi_G_[i] = this->dAdxi(p, T, i, sol.X_gas());
+        dBdxi_G_[i] = this->dBdxi(p, T, i, sol.X_gas());
+        dAdxi_L_[i] = this->dAdxi(p, T, i, sol.X_liq());
+        dBdxi_L_[i] = this->dBdxi(p, T, i, sol.X_liq());
+
+        scalar da2dxi_G_ = dBdxi_G_[i];
+        scalar da2dxi_L_ = dBdxi_L_[i];
+
+        scalar da1dxi_G_ = dAdxi_G_[i] - 2.0 * dBdxi_G_[i] - 6.0 * B_G_ * dBdxi_G_[i];
+        scalar da1dxi_L_ = dAdxi_L_[i] - 2.0 * dBdxi_L_[i] - 6.0 * B_L_ * dBdxi_L_[i];
+
+        scalar da0dxi_G_ = -(dAdxi_G_[i] * B_G_ + A_G_ * dBdxi_G_[i]) + 2 * B_G_ * dBdxi_G_[i] + 3 * B_G_ * B_G_ * dBdxi_G_[i];
+        scalar da0dxi_L_ = -(dAdxi_L_[i] * B_L_ + A_L_ * dBdxi_L_[i]) + 2 * B_L_ * dBdxi_L_[i] + 3 * B_L_ * B_L_ * dBdxi_L_[i];
+
+        dzdxi_G_[i] = -(da2dxi_G_ * Z_G_2 + da1dxi_G_ * Z_G_ + da0dxi_G_) / (3 * Z_G_2 + 2 * Z_G_ * a2_G_ + a1_G_);
+        dzdxi_L_[i] = -(da2dxi_L_ * Z_L_2 + da1dxi_L_ * Z_L_ + da0dxi_L_) / (3 * Z_L_2 + 2 * Z_L_ * a2_L_ + a1_L_);
+    }
+
+    scalar xxx_G_ = ((Z_G_ + cc1 * B_G_) / (Z_G_ + cc2 * B_G_));
+    scalar xxx_L_ = ((Z_L_ + cc1 * B_L_) / (Z_L_ + cc2 * B_L_));
+    scalar logxxx_G_ = log(xxx_G_);
+    scalar logxxx_L_ = log(xxx_L_);
+
+    autoPtr<scalarList> pA2_G_(this->A2(p, T, sol.X_gas()));
+    const scalarList &A2_G_ = pA2_G_();
+    autoPtr<scalarList> pA2_L_(this->A2(p, T, sol.X_liq()));
+    const scalarList &A2_L_ = pA2_L_();
+
+    for (int i = 0; i < this->X_.size(); i++)
+    {
+        scalarList &ddxi_Ln_fugcoef = *(new scalarList(this->N_));
+        ddxi_Ln_fugcoef_G_[i].reset(&ddxi_Ln_fugcoef);
+        scalar dAmixzdxi = dAdxi_G_[i];
+        scalar dBmixzdxi = dBdxi_G_[i];
+
+        autoPtr<scalarList> pdAmix2dxi(this->dA2dxi(p, T, i, sol.X_gas()));
+        const scalarList &dAmix2dxi = pdAmix2dxi();
+
+        scalar zfactor00 = Z_G_;
+        scalar ZMB = zfactor00 - B_G_;
+
+        if (ZMB <= 0.0)
+        {
+            FatalErrorInFunction << "ZMB <= 0.0" << exit(FatalError);
+            zfactor00 = B_G_ + small8;
+            ZMB = small8;
+        }
+        forAll(this->X_, spid)
+        {
+            ddxi_Ln_fugcoef[spid] = -Bi[spid] / (B_G_2)*dBmixzdxi * (Z_G_ - 1) + Bi[spid] / B_G_ * dzdxi_G_[i];
+            ddxi_Ln_fugcoef[spid] -= (dzdxi_G_[i] - dBmixzdxi) / (Z_G_ - B_G_);
+            ddxi_Ln_fugcoef[spid] -= (dAmix2dxi[spid] / (sqrt2 * B_G_) - A2_G_[spid] * dBmixzdxi / (sqrt2 * B_G_2) - (dAmixzdxi * Bi[spid]) / (cc0 * B_G_2) + (A_G_ * Bi[spid] * dBmixzdxi) / (sqrt2 * B_G_2 * B_G_)) * logxxx_G_;
+            ddxi_Ln_fugcoef[spid] -= (A2_G_[spid] / (sqrt2 * B_G_) - A_G_ * Bi[spid] / (cc0 * B_G_2)) * ((dzdxi_G_[i] + cc1 * dBmixzdxi) / (Z_G_ + cc1 * B_G_) - (dzdxi_G_[i] + cc2 * dBmixzdxi) / (Z_G_ + cc2 * B_G_));
+        }
+    }
+
+    for (int i = 0; i < this->X_.size(); i++)
+    {
+        scalarList &ddxi_Ln_fugcoef = *(new scalarList(this->N_));
+        ddxi_Ln_fugcoef_L_[i].reset(&ddxi_Ln_fugcoef);
+        scalar dAmixzdxi = dAdxi_L_[i];
+        scalar dBmixzdxi = dBdxi_L_[i];
+
+        autoPtr<scalarList> pdAmix2dxi(this->dA2dxi(p, T, i, sol.X_liq()));
+        const scalarList &dAmix2dxi = pdAmix2dxi();
+
+        scalar zfactor00 = Z_L_;
+        scalar ZMB = zfactor00 - B_L_;
+
+        if (ZMB <= 0.0)
+        {
+            FatalErrorInFunction << "ZMB <= 0.0" << exit(FatalError);
+            zfactor00 = B_L_ + small8;
+            ZMB = small8;
+        }
+        forAll(this->X_, spid)
+        {
+            ddxi_Ln_fugcoef[spid] = -Bi[spid] / (B_L_2)*dBmixzdxi * (Z_L_ - 1) + Bi[spid] / B_L_ * dzdxi_L_[i];
+            ddxi_Ln_fugcoef[spid] -= (dzdxi_L_[i] - dBmixzdxi) / (Z_L_ - B_L_);
+            ddxi_Ln_fugcoef[spid] -= (dAmix2dxi[spid] / (sqrt2 * B_L_) - A2_L_[spid] * dBmixzdxi / (sqrt2 * B_L_2) - (dAmixzdxi * Bi[spid]) / (cc0 * B_L_2) + (A_L_ * Bi[spid] * dBmixzdxi) / (sqrt2 * B_L_2 * B_L_)) * logxxx_L_;
+            ddxi_Ln_fugcoef[spid] -= (A2_L_[spid] / (sqrt2 * B_L_) - A_L_ * Bi[spid] / (cc0 * B_L_2)) * ((dzdxi_L_[i] + cc1 * dBmixzdxi) / (Z_L_ + cc1 * B_L_) - (dzdxi_L_[i] + cc2 * dBmixzdxi) / (Z_L_ + cc2 * B_L_));
+        }
+    }
+    for (int i = 0; i < this->X_.size(); i++)
+    {
+        for (int j = 0; j < this->X_.size(); j++)
+        {
+            A(i, j) = 1;
+            if (i == j)
+                A(i, j) -= this->X_[i] / (sol.X_gas()[i] * sol.X_liq()[i]);
+            for (int k = 0; k < this->X_.size(); k++)
+            {
+                if (j == k)
+                    A(i, j) +=
+                        (1 - vf_) * ddxi_Ln_fugcoef_G_[k]()[i] * (sol.X_gas()[k] - 1);
+                else
+                    A(i, j) += (1 - vf_) * ddxi_Ln_fugcoef_G_[k]()[i] * sol.X_gas()[k];
+                if (j == k)
+                    A(i, j) += vf_ * ddxi_Ln_fugcoef_L_[k]()[i] * (sol.X_liq()[k] - 1);
+                else
+                    A(i, j) += vf_ * ddxi_Ln_fugcoef_L_[k]()[i] * sol.X_liq()[k];
+            }
+        }
+    }
+
+    labelList pivotIndices(A.m());
+    LUDecompose(A, pivotIndices);
+
+    autoPtr<scalarList> dvidp(new scalarList(this->X_.size()));
+
+    int n_sp = 0;
+    for (int i = 0; i < this->X_.size(); i++)
+    {
+        if (this->X_[i] > 0)
+            n_sp++;
+    }
+    if (n_sp == 1)
+    {
+        for (int i = 0; i < this->X_.size(); i++)
+            dvidp()[i] = 0;
+    }
+    else
+    {
+        autoPtr<scalarList> ddP_Ln_fugcoef_G_(new scalarList(this->N_)), ddP_Ln_fugcoef_L_(new scalarList(this->N_));
+        {
+
+            autoPtr<scalarList> pdAmix2dP(this->dA2dP(p, T, sol.X_gas()));
+            const scalarList &dAmix2dP = pdAmix2dP();
+
+            scalar zfactor00 = Z_G_;
+            scalar ZMB = zfactor00 - B_G_;
+
+            if (ZMB <= 0.0)
+            {
+                FatalErrorInFunction << "ZMB <= 0.0" << exit(FatalError);
+                zfactor00 = B_G_ + small8;
+                ZMB = small8;
+            }
+            forAll(this->X_, spid)
+            {
+                ddP_Ln_fugcoef_G_()[spid] = dBidP[spid] / B_G_ * (Z_G_ - 1) - Bi[spid] / (B_G_2)*dBdP_G_ * (Z_G_ - 1) + Bi[spid] / B_G_ * dZdP_G_0;
+                ddP_Ln_fugcoef_G_()[spid] -= (dZdP_G_0 - dBdP_G_) / (Z_G_ - B_G_);
+                ddP_Ln_fugcoef_G_()[spid] -= (dAmix2dP[spid] / (sqrt2 * B_G_) - A2_G_[spid] * dBdP_G_ / (sqrt2 * B_G_2) - (dAdP_G_ * Bi[spid] + A_G_ * dBidP[spid]) / (cc0 * B_G_2) + (A_G_ * Bi[spid] * dBdP_G_) / (sqrt2 * B_G_2 * B_G_)) * logxxx_G_;
+                ddP_Ln_fugcoef_G_()[spid] -= (A2_G_[spid] / (sqrt2 * B_G_) - A_G_ * Bi[spid] / (cc0 * B_G_2)) * ((dZdP_G_0 + cc1 * dBdP_G_) / (Z_G_ + cc1 * B_G_) - (dZdP_G_0 + cc2 * dBdP_G_) / (Z_G_ + cc2 * B_G_));
+            }
+        }
+
+        {
+
+            autoPtr<scalarList> pdAmix2dP(this->dA2dP(p, T, sol.X_liq()));
+            const scalarList &dAmix2dP = pdAmix2dP();
+
+            scalar zfactor00 = Z_L_;
+            scalar ZMB = zfactor00 - B_L_;
+
+            if (ZMB <= 0.0)
+            {
+                FatalErrorInFunction << "ZMB <= 0.0" << exit(FatalError);
+                zfactor00 = B_L_ + small8;
+                ZMB = small8;
+            }
+            forAll(this->X_, spid)
+            {
+                ddP_Ln_fugcoef_L_()[spid] = dBidP[spid] / B_L_ * (Z_L_ - 1) - Bi[spid] / (B_L_2)*dBdP_L_ * (Z_L_ - 1) + Bi[spid] / B_L_ * dZdP_L_0;
+                ddP_Ln_fugcoef_L_()[spid] -= (dZdP_L_0 - dBdP_L_) / (Z_L_ - B_L_);
+                ddP_Ln_fugcoef_L_()[spid] -= (dAmix2dP[spid] / (sqrt2 * B_L_) - A2_L_[spid] * dBdP_L_ / (sqrt2 * B_L_2) - (dAdP_L_ * Bi[spid] + A_L_ * dBidP[spid]) / (cc0 * B_L_2) + (A_L_ * Bi[spid] * dBdP_L_) / (sqrt2 * B_L_2 * B_L_)) * logxxx_L_;
+                ddP_Ln_fugcoef_L_()[spid] -= (A2_L_[spid] / (sqrt2 * B_L_) - A_L_ * Bi[spid] / (cc0 * B_L_2)) * ((dZdP_L_0 + cc1 * dBdP_L_) / (Z_L_ + cc1 * B_L_) - (dZdP_L_0 + cc2 * dBdP_L_) / (Z_L_ + cc2 * B_L_));
+            }
+        }
+
+        for (int i = 0; i < this->X_.size(); i++)
+            dvidp()[i] = (1 - vf_) * vf_ * (ddP_Ln_fugcoef_G_()[i] - ddP_Ln_fugcoef_L_()[i]);
+
+        LUBacksubstitute(A, pivotIndices, dvidp());
+    }
+
+    autoPtr<scalarList> dXdP_G_(this->dXdP_gas(p, T, sol, dvidp));
+    autoPtr<scalarList> dXdP_L_(this->dXdP_liq(p, T, sol, dvidp));
+    scalar dvfdP_ = this->dvfdP(p, T, sol, dvidp());
+
+    scalar dZdP_G_ = dZdP_G_0; //this->ThermoMixture::dZdP(p, T, sol.X_gas(), 1);
+    scalar dZdP_L_ = dZdP_L_0; //this->ThermoMixture::dZdP(p, T, sol.X_liq(), 0);
+
+    for (int i = 0; i < this->X_.size(); i++)
+    {
+        dZdP_G_ += dzdxi_G_[i] * dXdP_G_()[i];
+        dZdP_L_ += dzdxi_L_[i] * dXdP_L_()[i];
+    }
+
+    scalar dZdP_M_ = dvfdP_ * (Z_G_ - Z_L_) + vf_ * dZdP_G_ + (1 - vf_) * dZdP_L_;
+
+    scalar drhodP_ = W_ / (Z_M_ * RR * 1.0e-03 * T) - p * W_ / (Z_M_ * Z_M_ * RR * 1.0e-03 * T) * dZdP_M_;
+    scalar kappaT_ = drhodP_ / rho_;
+
+    autoPtr<scalarList> dvidt(new scalarList(this->X_.size()));
+
+    if (n_sp == 1 || vf_ == 0 || vf_ == 1)
+    {
+        for (int i = 0; i < this->X_.size(); i++)
+            dvidt()[i] = 0;
+    }
+    else
+    {
+        autoPtr<scalarList> ddT_Ln_fugcoef_G_(new scalarList(this->N_)), ddT_Ln_fugcoef_L_(new scalarList(this->N_));
+        {
+
+            autoPtr<scalarList> pdAmix2dT(this->dA2dT(p, T, sol.X_gas()));
+            const scalarList &dAmix2dT = pdAmix2dT();
+
+            scalar zfactor00 = Z_G_;
+            scalar ZMB = zfactor00 - B_G_;
+
+            if (ZMB <= 0.0)
+            {
+                FatalErrorInFunction << "ZMB <= 0.0" << exit(FatalError);
+                zfactor00 = B_G_ + small8;
+                ZMB = small8;
+            }
+            forAll(this->X_, spid)
+            {
+                ddT_Ln_fugcoef_G_()[spid] = dBidT[spid] / B_G_ * (Z_G_ - 1) - Bi[spid] / (B_G_2)*dBdT_G_ * (Z_G_ - 1) + Bi[spid] / B_G_ * dZdT_G_0;
+                ddT_Ln_fugcoef_G_()[spid] -= (dZdT_G_0 - dBdT_G_) / (Z_G_ - B_G_);
+                ddT_Ln_fugcoef_G_()[spid] -= (dAmix2dT[spid] / (sqrt2 * B_G_) - A2_G_[spid] * dBdT_G_ / (sqrt2 * B_G_2) - (dAdT_G_ * Bi[spid] + A_G_ * dBidT[spid]) / (cc0 * B_G_2) + (A_G_ * Bi[spid] * dBdT_G_) / (sqrt2 * B_G_2 * B_G_)) * logxxx_G_;
+                ddT_Ln_fugcoef_G_()[spid] -= (A2_G_[spid] / (sqrt2 * B_G_) - A_G_ * Bi[spid] / (cc0 * B_G_2)) * ((dZdT_G_0 + cc1 * dBdT_G_) / (Z_G_ + cc1 * B_G_) - (dZdT_G_0 + cc2 * dBdT_G_) / (Z_G_ + cc2 * B_G_));
+            }
+        }
+
+        {
+
+            autoPtr<scalarList> pdAmix2dT(this->dA2dT(p, T, sol.X_liq()));
+            const scalarList &dAmix2dT = pdAmix2dT();
+
+            scalar zfactor00 = Z_L_;
+            scalar ZMB = zfactor00 - B_L_;
+
+            if (ZMB <= 0.0)
+            {
+                FatalErrorInFunction << "ZMB <= 0.0" << exit(FatalError);
+                zfactor00 = B_L_ + small8;
+                ZMB = small8;
+            }
+            forAll(this->X_, spid)
+            {
+                ddT_Ln_fugcoef_L_()[spid] = dBidT[spid] / B_L_ * (Z_L_ - 1) - Bi[spid] / (B_L_2)*dBdT_L_ * (Z_L_ - 1) + Bi[spid] / B_L_ * dZdT_L_0;
+                ddT_Ln_fugcoef_L_()[spid] -= (dZdT_L_0 - dBdT_L_) / (Z_L_ - B_L_);
+                ddT_Ln_fugcoef_L_()[spid] -= (dAmix2dT[spid] / (sqrt2 * B_L_) - A2_L_[spid] * dBdT_L_ / (sqrt2 * B_L_2) - (dAdT_L_ * Bi[spid] + A_L_ * dBidT[spid]) / (cc0 * B_L_2) + (A_L_ * Bi[spid] * dBdT_L_) / (sqrt2 * B_L_2 * B_L_)) * logxxx_L_;
+                ddT_Ln_fugcoef_L_()[spid] -= (A2_L_[spid] / (sqrt2 * B_L_) - A_L_ * Bi[spid] / (cc0 * B_L_2)) * ((dZdT_L_0 + cc1 * dBdT_L_) / (Z_L_ + cc1 * B_L_) - (dZdT_L_0 + cc2 * dBdT_L_) / (Z_L_ + cc2 * B_L_));
+            }
+        }
+
+        for (int i = 0; i < this->X_.size(); i++)
+            dvidt()[i] = (1 - vf_) * vf_ * (ddT_Ln_fugcoef_G_()[i] - ddT_Ln_fugcoef_L_()[i]);
+
+        LUBacksubstitute(A, pivotIndices, dvidt());
+    }
+
+    autoPtr<scalarList> dXdT_G_(this->dXdT_gas(p, T, sol, dvidt));
+    autoPtr<scalarList> dXdT_L_(this->dXdT_liq(p, T, sol, dvidt));
+    scalar dvfdT_ = this->dvfdT(p, T, sol, dvidt());
+
+    scalar dZdT_G_ = dZdT_G_0;
+    scalar dZdT_L_ = dZdT_L_0;
+    for (int i = 0; i < this->X_.size(); i++)
+    {
+        dZdT_G_ += dzdxi_G_[i] * dXdT_G_()[i];
+        dZdT_L_ += dzdxi_L_[i] * dXdT_L_()[i];
+    }
+
+    scalar dZdT_M_ = dvfdT_ * (Z_G_ - Z_L_) + vf_ * dZdT_G_ + (1 - vf_) * dZdT_L_;
+
+    scalar W_G_ = this->W(sol.X_gas());
+    scalar W_L_ = this->W(sol.X_liq());
+
+    scalar dmw_gasdT = this->dWdT_gas(p, T, sol, dvidt);
+
+    scalar ygas = sol.vaporfra * W_G_ / W_;
+
+    scalarList dHadxi_G_(this->N_);
+    scalarList dHadxi_L_(this->N_);
+
+    scalar ddxi_dH_G_, dH_G_;
+    scalar ddxi_dH_L_, dH_L_;
+
+    for (int i = 0; i < this->X_.size(); i++)
+    {
+        scalar dBmixdxi = Bi[i];
+
+        if (xxx_G_ > 0)
+        {
+            dH_G_ = (Z_G_ - 1) * RR * 1e-3 * T + RR * 1e-3 * T * ((T * dAdT_G_ + A_G_) / (cc0 * B_G_)) * logxxx_G_;
+
+            ddxi_dH_G_ = dzdxi_G_[i] * RR * 1e-3 * T;
+
+            ddxi_dH_G_ += RR * 1e-3 * T * ((T * this->d2AdTdxi(p, T, i, sol.X_gas()) + this->dAdxi(p, T, i, sol.X_gas())) / (cc0 * B_G_)) * logxxx_G_;
+            ddxi_dH_G_ -= RR * 1e-3 * T * ((T * dAdT_G_ + A_G_) / (cc0 * B_G_2) * dBmixdxi) * logxxx_G_;
+            ddxi_dH_G_ += RR * 1e-3 * T * ((T * dAdT_G_ + A_G_) / (cc0 * B_G_)) * ((dzdxi_G_[i] + cc1 * dBmixdxi) / (Z_G_ + cc1 * B_G_) - (dzdxi_G_[i] + cc2 * dBmixdxi) / (Z_G_ + cc2 * B_G_));
+            ddxi_dH_G_ = ddxi_dH_G_ / W_G_ - dH_G_ / (W_G_ * W_G_) * (*this)[i].W() * 1e-3;
+
+            dHadxi_G_[i] = ddxi_dH_G_ + this->dHidealdxi(p, T, i, sol.X_gas());
+        }
+        else
+        {
+            ddxi_dH_G_ = dzdxi_G_[i] * RR * 1e-3 * T;
+            dH_G_ = (Z_G_ - 1) * RR * 1e-3 * T;
+            ddxi_dH_G_ = ddxi_dH_G_ / W_G_ - dH_G_ / (W_G_ * W_G_) * (*this)[i].W() * 1e-3;
+
+            dHadxi_G_[i] = ddxi_dH_G_ + this->dHidealdxi(p, T, i, sol.X_gas());
+        }
+        if (xxx_L_ > 0)
+        {
+            dH_L_ = (Z_L_ - 1) * RR * 1e-3 * T + RR * 1e-3 * T * ((T * dAdT_L_ + A_L_) / (cc0 * B_L_)) * logxxx_L_;
+
+            ddxi_dH_L_ = dzdxi_L_[i] * RR * 1e-3 * T;
+
+            ddxi_dH_L_ += RR * 1e-3 * T * ((T * this->d2AdTdxi(p, T, i, sol.X_liq()) + this->dAdxi(p, T, i, sol.X_liq())) / (cc0 * B_L_)) * logxxx_L_;
+            ddxi_dH_L_ -= RR * 1e-3 * T * ((T * dAdT_L_ + A_L_) / (cc0 * B_L_2) * dBmixdxi) * logxxx_L_;
+            ddxi_dH_L_ += RR * 1e-3 * T * ((T * dAdT_L_ + A_L_) / (cc0 * B_L_)) * ((dzdxi_L_[i] + cc1 * dBmixdxi) / (Z_L_ + cc1 * B_L_) - (dzdxi_L_[i] + cc2 * dBmixdxi) / (Z_L_ + cc2 * B_L_));
+            ddxi_dH_L_ = ddxi_dH_L_ / W_L_ - dH_L_ / (W_L_ * W_L_) * (*this)[i].W() * 1e-3;
+
+            dHadxi_L_[i] = ddxi_dH_L_ + this->dHidealdxi(p, T, i, sol.X_liq());
+        }
+        else
+        {
+            ddxi_dH_L_ = dzdxi_L_[i] * RR * 1e-3 * T;
+            dH_L_ = (Z_L_ - 1) * RR * 1e-3 * T;
+            ddxi_dH_L_ = ddxi_dH_L_ / W_L_ - dH_L_ / (W_L_ * W_L_) * (*this)[i].W() * 1e-3;
+
+            dHadxi_L_[i] = ddxi_dH_L_ + this->dHidealdxi(p, T, i, sol.X_liq());
+        }
+    }
+
+    scalar dygasdT = (dvfdT_ * W_G_ + sol.vaporfra * dmw_gasdT) / W_;
+
+    scalar bmix_G_ = this->b(p, T, sol.X_gas());
+
+    scalar ddT_dH_G_;
+
+    if (xxx_G_ > 0)
+    {
+        ddT_dH_G_ = dZdT_G_0 * RR * 1e-3 * T + (Z_G_ - 1) * RR * 1e-3;
+        ddT_dH_G_ += ((T * this->d2adt2(p, T, sol.X_gas())) / (cc0 * bmix_G_)) * logxxx_G_;
+        ddT_dH_G_ += ((T * this->dadt(p, T, sol.X_gas()) - this->a(p, T, sol.X_gas())) / (cc0 * bmix_G_)) * ((dZdT_G_0 - cc1 * B_G_ / T) / (Z_G_ + cc1 * B_G_) - (dZdT_G_0 - cc2 * B_G_ / T) / (Z_G_ + cc2 * B_G_));
+    }
+    else
+    {
+        ddT_dH_G_ = dZdT_G_0 * RR * 1e-3 * T + (Z_G_ - 1) * RR * 1e-3;
+    }
+
+    ddT_dH_G_ = ddT_dH_G_ / W_G_; // J/kg
+                                  // Based on Eq.12, Internal energy is estimated based on ideal(close to absolute 0 T) + departure
+
+    scalar bmix_L_ = this->b(p, T, sol.X_liq());
+
+    scalar ddT_dH_L_;
+
+    if (xxx_L_ > 0)
+    {
+        ddT_dH_L_ = dZdT_L_0 * RR * 1e-3 * T + (Z_L_ - 1) * RR * 1e-3;
+        ddT_dH_L_ += ((T * this->d2adt2(p, T, sol.X_liq())) / (cc0 * bmix_L_)) * logxxx_L_;
+        ddT_dH_L_ += ((T * this->dadt(p, T, sol.X_liq()) - this->a(p, T, sol.X_liq())) / (cc0 * bmix_L_)) * ((dZdT_L_0 - cc1 * B_L_ / T) / (Z_L_ + cc1 * B_L_) - (dZdT_L_0 - cc2 * B_L_ / T) / (Z_L_ + cc2 * B_L_));
+    }
+    else
+    {
+        ddT_dH_L_ = dZdT_L_0 * RR * 1e-3 * T + (Z_L_ - 1) * RR * 1e-3;
+    }
+
+    ddT_dH_L_ = ddT_dH_L_ / W_L_; // J/kg
+
+    scalar dHadT_gas = ddT_dH_G_ + this->dHidealdT(p, T, sol.X_gas());
+
+    scalar dHadT_liq = ddT_dH_L_ + this->dHidealdT(p, T, sol.X_liq());
+
+    for (int i = 0; i < this->X_.size(); i++)
+    {
+        dHadT_gas += dHadxi_G_[i] * dXdT_G_()[i];
+    }
+
+    for (int i = 0; i < this->X_.size(); i++)
+    {
+        dHadT_liq += dHadxi_L_[i] * dXdT_L_()[i];
+    }
+    scalar Ha_G_ = dH_G_ / W_G_ + this->Hideal(p, T, sol.X_gas()), Ha_L_ = dH_L_ / W_L_ + this->Hideal(p, T, sol.X_liq());
+
+    scalar Cp_ = Ha_G_ * dygasdT + dHadT_gas * ygas - Ha_L_ * dygasdT + dHadT_liq * (1.0 - ygas);
+
+    //scalar Cp_ = this->ThermoMixture::Ha(p, T, sol.X_gas(), 1) * dygasdT + dHadT_gas * ygas - this->ThermoMixture::Ha(p, T, sol.X_liq(), 0) * dygasdT + dHadT_liq * (1.0 - ygas);
+
+    scalar drhodT_ = -p * W_ / (Z_M_ * Z_M_ * RR * 1.0e-03 * T * T) * (dZdT_M_ * T + Z_M_);
+    scalar alphaP_ = -drhodT_ / rho_;
+    scalar kappaS_ = kappaT_ - T * alphaP_ * alphaP_ / (rho_ * Cp_);
+    if (kappaS_ < 0)
+    {
+        //return c_noVLE(p, T, sol);
+        FatalErrorInFunction << " kappaS_ =" << kappaS_ << ",p=" << p << ",T=" << T << ",X=" << this->X_ << exit(FatalError);
     }
     return sqrt(1.0 / (kappaS_ * rho_));
 }

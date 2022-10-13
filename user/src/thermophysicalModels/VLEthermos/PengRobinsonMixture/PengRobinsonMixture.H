@@ -122,6 +122,7 @@ namespace Foam
         inline scalar dAdT(scalar p, scalar T, const scalarList &Xinp) const;
         inline scalar dAdP(scalar p, scalar T, const scalarList &Xinp) const;
         inline scalar dAdxi(scalar p, scalar T, label di, const scalarList &Xinp) const;
+        inline scalar d2AdTdxi(scalar p, scalar T, label di, const scalarList &Xinp) const;
         inline scalar B(scalar p, scalar T, const scalarList &Xinp) const;
         inline scalar B(scalar p, scalar T) const { return B(p, T, this->X_); }
         inline scalar dBdT(scalar p, scalar T, const scalarList &Xinp) const;
@@ -157,6 +158,7 @@ namespace Foam
         inline scalar dHadT(scalar p, scalar T, const scalarList &Xinp, const label pf = 2) const;
         inline scalar dHadP(scalar p, scalar T, const scalarList &Xinp, const label pf = 2) const;
         inline scalar dHadxi(scalar p, scalar T, label di, const scalarList &Xinp, const label pf = 2) const;
+        inline scalar dHadxi_opt(scalar p, scalar T, label di, const scalarList &Xinp, const label pf = 2) const;
         inline scalar dHsdT(scalar p, scalar T, const scalarList &Xinp, const label pf = 2) const;
         inline scalar dHsdP(scalar p, scalar T, const scalarList &Xinp, const label pf = 2) const;
         inline scalar dHsdxi(scalar p, scalar T, label di, const scalarList &Xinp, const label pf = 2) const;
@@ -204,14 +206,17 @@ namespace Foam
 
         //- Return compression factor []
         inline scalar Z(scalar p, scalar T, const scalarList &Xinp, const label pf = 2) const;
+        inline scalar Z(scalar p, scalar T, scalar A_, scalar B_, const scalarList &Xinp, const label pf = 2) const;
         inline scalar Z(scalar p, scalar T, const label pf = 2) const { return Z(p, T, this->X_, pf); }
         inline std::tuple<scalar, scalar, scalar> Z_coe(scalar p, scalar T, const scalarList &Xinp) const;
         inline std::tuple<double, double> Z_opt(scalar p, scalar T, scalar A, const scalarList &Xinp) const;
         inline std::tuple<double, double> Z_opt2(scalar p, scalar T, scalar A, const scalarList &Xinp) const;
+        inline std::tuple<double, double> Z_opt2(scalar p, scalar T, scalar A, scalar B, const scalarList &Xinp) const;
         inline std::tuple<double, double> Z_opt2(scalar p, scalar T, const scalarList &Xinp) const;
         inline std::tuple<int, double, double, double> Z_full(scalar p, scalar T, const scalarList &Xinp) const;
         inline scalar Z_gibbs(scalar p, scalar T, const scalarList &Xinp) const;
         inline scalar Z_gibbs_mix(scalar p, scalar T, const scalarList &Xinp) const;
+        inline scalar Z_gibbs_mix(scalar p, scalar T, scalar A_, scalar B_, const scalarList &Xinp) const;
         inline std::tuple<double, bool> Z_gibbs2(scalar p, scalar T, const scalarList &Xinp) const;
         inline scalar vol_gibbs(scalar p, scalar T, const scalarList *Xinp) const;
 
@@ -231,6 +236,7 @@ namespace Foam
         inline autoPtr<scalarList> fugacityCoefficient(scalar p, scalar T, const scalarList &Xinp, const label pf = 2) const;
         inline autoPtr<scalarList> fugacityCoefficient(scalar p, scalar T, const label pf = 2) const { return fugacityCoefficient(p, T, this->X_, pf); };
         inline autoPtr<scalarList> Ln_fugacityCoefficient(scalar p, scalar T, const scalarList &Xinp, const label pf = 2) const;
+        inline bool Ln_fugacityCoefficient_opt(scalar p, scalar T, const scalarList &Xinp, scalarList &fugcoef, scalarList &B_, scalarList &Tsqrt_AbyP_, scalar &z, scalar &g, const label pf) const;
         inline bool Ln_fugacityCoefficient_opt(scalar p, scalar T, const scalarList &Xinp, scalarList &fugcoef, scalarList &B_, scalarList &Tsqrt_AbyP_, const label pf) const;
         inline autoPtr<scalarList> Ln_fugacityCoefficient(scalar p, scalar T, const label pf = 2) const { return Ln_fugacityCoefficient(p, T, this->X_, pf); }
         inline autoPtr<scalarList> ln_fugacityCoefficient(scalar p, scalar T, scalar z, const scalarList &Xinp) const;
