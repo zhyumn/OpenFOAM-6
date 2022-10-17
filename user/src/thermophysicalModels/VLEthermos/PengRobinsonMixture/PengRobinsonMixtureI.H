@@ -1712,7 +1712,8 @@ inline bool Foam::PengRobinsonMixture<ThermoMixture>::Ln_fugacityCoefficient_opt
     scalar coe_b = (zfactor00 - 1.0) / Bmixz + coe_tt / Bmixz;
     //scalar coe_0 = -logZMB;
     scalar coe_Amix2 = -coe_tt * 2.0 / Amixz;
-    dg = (Zmix - 1 - logZMB) * RR * 1e-3 * T * RR * 1e-3 * T + (-Amixz / (cc0 * Bmixz)) * logX;
+    dg = (Zmix - 1 - logZMB) * RR * 1e-3 * T + RR * 1e-3 * T * (-Amixz / (cc0 * Bmixz)) * logX;
+
     forAll(Xinp, spid)
     {
         fugcoef[spid] = B_[spid] * coe_b + coe_Amix2 * Amix2[spid] - logZMB;

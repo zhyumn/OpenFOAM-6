@@ -79,6 +79,7 @@ namespace Foam
         : public ThermoMixture
     {
     public:
+        typedef ThermoMixture singlePhaseMixtureThermoType;
         typedef typename ThermoMixture::SingleThermoType SingleThermoType;
         // Constructors
 
@@ -114,7 +115,7 @@ namespace Foam
         struct solution
         {
             autoPtr<scalarList> X_liq, X_gas, equalconstant;
-            scalar vaporfra;
+            scalar vaporfra, Z_G_, Z_L_;
             solution() : X_liq(), X_gas(), equalconstant(), vaporfra(0){};
             solution(const solution &ref) : X_liq(ref.X_liq), X_gas(ref.X_gas), equalconstant(ref.equalconstant), vaporfra(ref.vaporfra){};
             void reset(const solution &ref)
@@ -315,13 +316,16 @@ namespace Foam
         inline autoPtr<scalarRectangularMatrix> dTrhoPvfcdXHP_HsP(scalar p, scalar T, solution &sol) const;
         inline autoPtr<scalarRectangularMatrix> dTrhoPvfcsoldXHP_HsP(scalar p, scalar T, solution &sol) const;
         inline autoPtr<scalarRectangularMatrix> dTPvfdXErho(scalar p, scalar T, solution &sol) const;
+        
         inline autoPtr<scalarRectangularMatrix> dTPvfdXErho_constC(scalar p, scalar T, solution &sol) const;
         //inline autoPtr<scalarRectangularMatrix> dTPvfsoldXErho_constC(scalar p, scalar T, solution& sol) const;
         inline autoPtr<scalarRectangularMatrix> dTPvfdXErho_simp(scalar p, scalar T, solution &sol) const;
         inline autoPtr<scalarRectangularMatrix> dTHvfcdXrhoP(scalar p, scalar T, solution &sol) const;
+        inline autoPtr<scalarRectangularMatrix> dTHvfc_G_rhoY_dXrhoP(scalar p, scalar T, solution &sol) const;
 
         inline autoPtr<scalarRectangularMatrix> dErhovfcdXTP_simp(scalar p, scalar T, solution &sol) const;
         inline autoPtr<scalarRectangularMatrix> dErhovfcdXTP(scalar p, scalar T, solution &sol) const;
+        inline autoPtr<scalarRectangularMatrix> dErhovfc_G_rhoY_dXTP(scalar p, scalar T, solution &sol) const;
 
         inline tuple<scalar, scalar, scalar, scalar> dTPdErho(scalar p, scalar T, solution &sol) const;
 

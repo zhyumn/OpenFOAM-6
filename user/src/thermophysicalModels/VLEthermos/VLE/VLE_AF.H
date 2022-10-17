@@ -1409,8 +1409,8 @@ Foam::VLE<ThermoMixture>::c_opt_full(scalar p, scalar T, scalar rho_, solution &
     scalarList dHadxi_G_(this->N_);
     scalarList dHadxi_L_(this->N_);
 
-    scalar ddxi_dH_G_, dH_G_;
-    scalar ddxi_dH_L_, dH_L_;
+    scalar ddxi_dH_G_ = 0, dH_G_ = 0;
+    scalar ddxi_dH_L_ = 0, dH_L_ = 0;
 
     for (int i = 0; i < this->X_.size(); i++)
     {

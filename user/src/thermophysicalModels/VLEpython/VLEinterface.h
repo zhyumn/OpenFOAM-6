@@ -111,6 +111,9 @@ public:
     double rho();
     double Cp();
     double c();
+    double kappaS();
+    double kappaT();
+    double alphaP();
 
     std::vector<double> eps(std::vector<double>);
 
@@ -122,6 +125,8 @@ public:
 
     double drhodP();
     double drhodT();
+    double dZdP();
+    double Z();
     const std::vector<double> &X();
     const std::vector<double> &K();
     void setKinit(const std::vector<double> &);
@@ -153,7 +158,7 @@ private:
     double dvfdP_HsP();
     double dvfdXi_HsP(int);
     double drhodXi_HP(int);
-    double Z();
+    //double Z();
     double Gibbs_single();
     double G_departure_Mole();
     double Gideal_Mole();

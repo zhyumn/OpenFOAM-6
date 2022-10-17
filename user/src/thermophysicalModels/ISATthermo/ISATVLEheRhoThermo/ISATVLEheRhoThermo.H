@@ -48,60 +48,55 @@ namespace Foam
                              Class ISATVLEheRhoThermo Declaration
     \*---------------------------------------------------------------------------*/
 
-    template<class BasicPsiThermo, class MixtureType>
+    template <class BasicPsiThermo, class MixtureType>
     class ISATVLEheRhoThermo
-        :
-        public heThermo<BasicPsiThermo, MixtureType>
+        : public heThermo<BasicPsiThermo, MixtureType>
     {
 
         volScalarField vaporfrac_;
         volScalarField soundspeed_;
         volScalarField kappa_;
+        volScalarField rho_G_;
 
         //- Store list of mass diffusion coefficients
         PtrList<volScalarField> Dimix_; //
 
         PtrList<volScalarField> heList_;
         PtrList<volScalarField> WList_;
+        PtrList<volScalarField> Y_G_List_;
+
         bool inviscid_;
         bool noVLE_;
 
         // Private Member Functions
 
-            //- Calculate the thermo variables
+        //- Calculate the thermo variables
         void calculate_init();
 
         void calculate();
 
         //- Construct as copy (not implemented)
-        ISATVLEheRhoThermo(const ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>&);
+        ISATVLEheRhoThermo(const ISATVLEheRhoThermo<BasicPsiThermo, MixtureType> &);
 
     public:
-
         //- Runtime type information
         TypeName("ISATVLEheRhoThermo");
 
-
         // Constructors
 
-            //- Construct from mesh and phase name
-        ISATVLEheRhoThermo
-        (
-            const fvMesh&,
-            const word& phaseName
-        );
-
+        //- Construct from mesh and phase name
+        ISATVLEheRhoThermo(
+            const fvMesh &,
+            const word &phaseName);
 
         //- Destructor
         virtual ~ISATVLEheRhoThermo();
 
-
         // Member functions
 
-            //- Update properties
+        //- Update properties
         virtual void correct();
     };
-
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
