@@ -525,6 +525,22 @@ double solver_new::c()
     TPn_flash_update();
     return thermo->c_opt(P_, T_, rho(), sol);
 }
+
+double solver_new::kappaS()
+{
+    TPn_flash_update();
+    return thermo->kappaS(P_, T_, sol);
+}
+double solver_new::kappaT()
+{
+    TPn_flash_update();
+    return thermo->kappaT(P_, T_, sol);
+}
+double solver_new::alphaP()
+{
+    TPn_flash_update();
+    return thermo->alphaP(P_, T_, sol);
+}
 void solver_new::setKinit(const std::vector<double> &Kinit)
 {
     if (Kinit.size() != n_species)
@@ -1245,7 +1261,7 @@ double solver_new::dSdP()
     Mtype::solution so(thermo->Mtype::TPn_flash(P_, T_)());
     return thermo->dSdP(P_, T_, so);
 }
-
+/*
 double solver_new::Z()
 {
     Foam::scalarList comp_of(comp.size(), Foam::Zero);
@@ -1258,7 +1274,7 @@ double solver_new::Z()
     thermo->setX(comp_of);
     Mtype::solution so(thermo->Mtype::TPn_flash(P_, T_)());
     return thermo->Z(P_, T_, so);
-}
+}*/
 double solver_new::drhodT()
 {
     TPn_flash_update();
@@ -1269,6 +1285,16 @@ double solver_new::drhodP()
 {
     TPn_flash_update();
     return thermo->drhodP(P_, T_, sol);
+}
+double solver_new::dZdP()
+{
+    TPn_flash_update();
+    return thermo->dZdP(P_, T_, sol);
+}
+double solver_new::Z()
+{
+    TPn_flash_update();
+    return thermo->Z(P_, T_, sol);
 }
 
 double solver_new::drhodXi(int di)
