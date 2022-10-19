@@ -17,22 +17,60 @@ FoamFile
 
 thermoType
 {
-    type            hePsiThermo;
-    mixture         reactingMixtureS;
-    transport       sutherland;
+    type            ISATVLEheRhoThermo;//ISATVLEhePsiThermo;//hePsiThermo;//HYhePsiThermo;//
+    mixture         nLreactingMixture;//nLreactingMixture;//reactingMixture;//HYreactingMixture;
+    transport       chung;//sutherland;//
     thermo          janaf;
-    energy          sensibleEnthalpy;
-    equationOfState perfectGas;
+    energy          sensibleInternalEnergy;//
+    equationOfState PengRobinson;//perfectGas;//PengRobinson;//
     specie          specie;
 }
 
-inertSpecie N2;
+dpdt yes;
+chemistryReader foamChemistryReader;
 
-chemistryReader foamChemistryReaderS;
+foamChemistryFile "$FOAM_CASE/constant/chem";
 
-foamChemistryFile "$FOAM_CASE/constant/reactions";
+foamChemistryThermoFile "$FOAM_CASE/constant/thermo";
 
-foamChemistryThermoFile "$FOAM_CASE/constant/thermo.compressibleGas";
+CHEMKINFile     "$FOAM_CASE/chemkin/chem.inp";
+CHEMKINThermoFile "$FOAM_CASE/chemkin/therm.dat";
+CHEMKINTransportFile "$FOAM_CASE/chemkin/transportProperties";
+
+ISATDictFile "$FOAM_CASE/constant/ISATDict";
+
+newFormat       yes;
+
+inertSpecie     N2;//CO2;
+
+inviscid true;//false;//true;
+
+liquids
+{
+    C12H26;
+}
+inputK false;
+Kinit (898871489.0830865 28337.84530200413 0.0014273249038749681);
+solids
+{}
+
+BinaryInteractionParameter
+{
+    specielist (N2       C12H26  CO2     CH4     H2O     O2      C7H16   H2      H2S      C6H14   CO);
+    
+    matrix     (0.0      0.19    -0.0192 0.5     0.1738  -0.0129 0.12    0.103   0.000   0.02     0.0     //N2
+                0.19     0.0     0.000   0.000   0.000   0.000   0.000   0.000   0.000   0.000    0.0    //C12H26
+                -0.011   0.000   0.0     0.103   0.137   0.115   0.000   0.000   0.000   0.000    0.0    //CO2        
+                0.5      0.000   0.103   0.0     0.0312  0.0305  0.000   0.000   0.08    0.000    0.0    //CH4        
+                0.0      0.000   0.137   0.17    0.0     0.0     0.000   0.000   0.000   0.000    0.0    //H2O
+                -0.00978 0.000   0.1188  0.0305  0.0     0.0     0.000   0.000   0.000   0.000    0.0    //O2          
+                0.12     0.000   0.000   0.000   0.000   0.000   0.000   0.000   0.000   0.000    0.0    //C7H16                
+                0.103    0.000   0.000   0.000   0.000   0.000   0.000   0.000   0.000   0.000    0.0    //H2
+                0.000    0.000   0.000   0.08    0.000   0.000   0.000   0.000   0.000   0.000    0.0    //H2S
+                0.02     0.000   0.000   0.000   0.000   0.000   0.000   0.000   0.000   0.000    0.0    //C6H14 
+                0.0      0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0      0.0);  //CO 
+} 
+
 
 
 // ************************************************************************* //

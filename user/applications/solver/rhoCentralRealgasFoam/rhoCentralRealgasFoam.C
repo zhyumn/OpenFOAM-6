@@ -63,24 +63,10 @@ int main(int argc, char *argv[])
 
     // Courant numbers used to adjust the time-step
     scalar CoNum = 0.0;
-    scalar meanCoNum = 0.0;
-
-    /* int procID;
-
-     if (UPstream::parRun())
-     {
-         procID = UPstream::myProcNo();
-     }
-     */
-
+    
     Info << "\nStarting time loop\n"
          << endl;
 
-    /*if (UPstream::parRun())
-    {
-        Pout << procID << endl;
-    }
-    */
 
     while (runTime.run())
     {

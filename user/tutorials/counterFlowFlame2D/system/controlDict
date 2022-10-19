@@ -14,8 +14,8 @@ FoamFile
     object      controlDict;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-libs ("libChemistryReaders.so");
-
+//libs ("libChemistryReaders.so");
+libs            ("libISATVLERhoReactingThermo.so");
 application     reactingFoam;
 
 startFrom       startTime;

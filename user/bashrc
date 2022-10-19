@@ -28,7 +28,7 @@
 
 #export FOAM_DIR=/work/07137/tg864362/frontera/OpenFOAM-6
 export FOAM_DIR=$(cd $(dirname ${BASH_SOURCE:-$0})/.. && pwd -P)
-export FOAM_PY_PATH=/home/zhy/anaconda3/envs/cantera/include/python3.8
+export FOAM_PY_PATH=/scratch.nike/srini237/anaconda3/include/python3.9
 #source $FOAM_DIR/etc/bashrc
 #source $FOAM_DIR/user/etc/bashrc
 

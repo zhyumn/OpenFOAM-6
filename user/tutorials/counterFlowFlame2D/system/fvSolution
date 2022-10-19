@@ -17,52 +17,40 @@ FoamFile
 
 solvers
 {
-    "rho.*"
+    "(rho|rhoU|rhoE|rhoYi|thermo:rho)"
     {
         solver          diagonal;
     }
 
-    p
+    U
     {
-        solver           PCG;
-        preconditioner   DIC;
-        tolerance        1e-6;
-        relTol           0.1;
+        solver          smoothSolver;
+        smoother        GaussSeidel;
+        nSweeps         2;
+        tolerance       1e-09;
+        relTol          0.01;
     }
 
-    pFinal
+    h
     {
-        $p;
-        tolerance        1e-6;
-        relTol           0.0;
+        $U;
+        tolerance       1e-10;
+        relTol          0;
     }
-
-    "(U|h|k|epsilon)"
+    e
+    {
+        $U;
+        tolerance       1e-10;
+        relTol          0;
+    }
+    Yi
     {
         solver          PBiCGStab;
         preconditioner  DILU;
         tolerance       1e-6;
-        relTol          0.1;
-    }
-
-    "(U|h|k|epsilon)Final"
-    {
-        $U;
         relTol          0;
     }
 
-    Yi
-    {
-        $hFinal;
-    }
-}
-
-PIMPLE
-{
-    momentumPredictor no;
-    nOuterCorrectors  1;
-    nCorrectors     2;
-    nNonOrthogonalCorrectors 0;
 }
 
 

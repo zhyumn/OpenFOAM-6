@@ -17,25 +17,17 @@ FoamFile
 
 chemistryType
 {
-    solver            EulerImplicit;
-    method            standardS;
+    solver            ode;
 }
 
-chemistry           on;
+chemistry       on;
 
 initialChemicalTimeStep 1e-07;
 
-EulerImplicitCoeffs
-{
-    cTauChem        1;
-    equilibriumRateLimiter off;
-}
-
 odeCoeffs
 {
-    solver          Rosenbrock43;
-    absTol          1e-8;
-    relTol          0.01;
+    solver          seulex;
+    eps             0.05;
 }
 
 // ************************************************************************* //

@@ -15,12 +15,13 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-combustionModel  laminar;
+combustionModel none;//PaSR;
 
-active  true;
+active          no;//yes;
 
-laminarCoeffs
+PaSRCoeffs
 {
+    Cmix                1.0;
 }
 
 
