@@ -452,28 +452,8 @@ double solver_new::Ha()
     return thermo->Ha(P_, T_);
 }
 
-double solver_new::Hs()
-{
-    Foam::scalarList comp_of(comp.size(), Foam::Zero);
-    for (unsigned int i = 0; i < comp.size(); i++)
-    {
-        comp_of[i] = comp[i];
-    }
-    thermo->setX(comp_of);
-    return thermo->Hs(P_, T_);
-}
-
 double solver_new::Es()
 {
-    /*
-    Foam::scalarList comp_of(comp.size(), Foam::Zero);
-    for (unsigned int i = 0;i < comp.size();i++)
-    {
-        comp_of[i] = comp[i];
-    }
-    thermo->setX(comp_of);
-    return thermo->Es(P_, T_);
-    */
     return Hs() - P_ / rho();
 }
 double solver_new::Ha_singlePhase(int flag, std::vector<double> &in)
@@ -1180,6 +1160,24 @@ std::vector<double> solver_new::Ln_fugacityCoefficient(std::vector<double> Xout,
     return ret;
 }
 
+std::vector<double> solver_new::ddT_Ln_fugacityCoefficient(std::vector<double> Xout, int flag)
+{
+    autoPtr<scalarList> fugcoef;
+    Foam::scalarList comp_of(Xout.size(), Foam::Zero);
+    for (unsigned int i = 0; i < Xout.size(); i++)
+    {
+        comp_of[i] = Xout[i];
+    }
+    fugcoef.reset((thermo->ddT_Ln_fugacityCoefficient(P_, T_, comp_of, flag)).ptr());
+    std::vector<double> ret(comp_of.size());
+
+    for (unsigned int i = 0; i < comp_of.size(); i++)
+    {
+        ret[i] = fugcoef()[i];
+    }
+    return ret;
+}
+
 double solver_new::alphah_dev()
 {
     Foam::scalarList comp_of(comp.size(), Foam::Zero);
@@ -1295,6 +1293,67 @@ double solver_new::Z()
 {
     TPn_flash_update();
     return thermo->Z(P_, T_, sol);
+}
+
+std::vector<std::vector<double>> solver_new::dTHvfc_G_rhoY_dXrhoP()
+{
+    TPn_flash_update();
+    std::vector<std::vector<double>> Grad;
+    Grad.resize(n_species + 2, std::vector<double>(n_species + 5));
+    autoPtr<scalarRectangularMatrix> grad(thermo->dTHvfc_G_rhoY_dXrhoP(P_, T_, sol));
+    for (int i = 0; i < n_species + 2; i++)
+    {
+        for (int j = 0; j < n_species + 5; j++)
+        {
+            Grad[i][j] = grad()[i][j];
+        }
+    }
+    return Grad;
+}
+std::vector<std::vector<double>> solver_new::dErhovfc_G_rhoY_dXTP()
+{
+    TPn_flash_update();
+    std::vector<std::vector<double>> Grad;
+    Grad.resize(n_species + 2, std::vector<double>(n_species + 5));
+    autoPtr<scalarRectangularMatrix> grad(thermo->dErhovfc_G_rhoY_dXTP(P_, T_, sol));
+    for (int i = 0; i < n_species + 2; i++)
+    {
+        for (int j = 0; j < n_species + 5; j++)
+        {
+            Grad[i][j] = grad()[i][j];
+        }
+    }
+    return Grad;
+}
+
+double solver_new::Hs()
+{
+    TPn_flash_update();
+    return thermo->Hs(P_, T_, sol);
+}
+
+double solver_new::rho_G()
+{
+    TPn_flash_update();
+    return P_ * thermo->W(sol.X_gas()) / (thermo->singlePhaseMixtureThermoType::Z(P_, T_, sol.X_gas(), 1) * RR * 1.0e-03 * T_);
+}
+
+double solver_new::W_G()
+{
+    TPn_flash_update();
+    return thermo->W(sol.X_gas());
+}
+
+std::vector<double> solver_new::Y_G()
+{
+    TPn_flash_update();
+    double W_G = thermo->W(sol.X_gas());
+    std::vector<double> ret(n_species);
+    for (int i = 0; i < n_species; i++)
+    {
+        ret[i] = (*thermo)[i].W() * 1e-3 * sol.X_gas()[i] / W_G;
+    }
+    return ret;
 }
 
 double solver_new::drhodXi(int di)

@@ -126,6 +126,17 @@ namespace Foam
                 vaporfra = ref.vaporfra;
             }
         };
+
+        struct VLE_data
+        {
+            typename ThermoMixture::Basic_data basic;
+            typename ThermoMixture::Phase_data Liq, Gas;
+
+            scalarList K;
+            scalar vaporFraction, dg;
+            VLE_data(label nspecie) : basic(nspecie), Liq(nspecie, basic), Gas(nspecie, basic), K(nspecie), vaporFraction(0){};
+        };
+
         // Fundamental properties
 
         //- Is the equation of state is incompressible i.e. rho != f(p)
@@ -148,6 +159,13 @@ namespace Foam
         inline scalar drrhodT(scalar p, scalar T) const;
         inline scalar drhodP(scalar p, scalar T, solution &sol) const;
         inline scalar drhodXi(scalar p, scalar T, label di, solution &sol) const;
+
+        inline scalar d2rhodP2(scalar p, scalar T, solution &sol) const;
+        inline scalar d2rhodTdP(scalar p, scalar T, solution &sol) const;
+        inline scalar d2rhodT2(scalar p, scalar T, solution &sol) const;
+
+        inline scalar dcdT(scalar p, scalar T, solution &sol) const;
+        inline scalar dcdP(scalar p, scalar T, solution &sol) const;
 
         inline scalar rho_noVLE(scalar p, scalar T, solution &sol) const;
         inline scalar drhodT_noVLE(scalar p, scalar T, solution &sol) const;
@@ -268,9 +286,12 @@ namespace Foam
         autoPtr<solution> TPn_flash_New(scalar p, scalar T) const;
         autoPtr<solution> TPn_flash_New2(scalar p, scalar T, bool stable, bool isVapor, Foam::scalarList &K_init) const;
         autoPtr<solution> TPn_flash_Matheis(scalar p, scalar T, const scalarList &Xinp, bool stable, bool isVapor, Foam::scalarList &K_init, bool &success, scalar &Z_l, scalar &Z_g, scalar &dg) const;
+
         autoPtr<solution> TPn_flash_New_TPD_Tudisco(scalar p, scalar T, const scalarList &Xinp) const;
         autoPtr<solution> TPn_flash_New_TPD_Tudisco(scalar p, scalar T) const { return TPn_flash_New_TPD_Tudisco(p, T, this->X_); };
         autoPtr<solution> TPn_flash_New_TPD(scalar p, scalar T) const;
+        void TPn_flash_New_TPD_Tudisco_NIO(scalar p, scalar T, const scalarList &Xinp, VLE_data *&solution) const;
+        bool TPn_flash_Matheis_NIO(scalar p, scalar T, const scalarList &Xinp, Foam::scalarList &K_init, VLE_data &solution) const;
         inline tuple<bool, autoPtr<scalarList>, bool> solveTPD_BFGS(scalar p, scalar T) const;
         inline tuple<bool, Foam::autoPtr<List<scalarList>>, bool, autoPtr<scalarList>> solveTPD_BFGS_v2(scalar p, scalar T, const scalarList &Xinp) const;
         inline tuple<bool, Foam::autoPtr<List<scalarList>>, bool, autoPtr<scalarList>> solveTPD_BFGS_v3(scalar p, scalar T, const scalarList &Xinp) const;
@@ -316,7 +337,7 @@ namespace Foam
         inline autoPtr<scalarRectangularMatrix> dTrhoPvfcdXHP_HsP(scalar p, scalar T, solution &sol) const;
         inline autoPtr<scalarRectangularMatrix> dTrhoPvfcsoldXHP_HsP(scalar p, scalar T, solution &sol) const;
         inline autoPtr<scalarRectangularMatrix> dTPvfdXErho(scalar p, scalar T, solution &sol) const;
-        
+
         inline autoPtr<scalarRectangularMatrix> dTPvfdXErho_constC(scalar p, scalar T, solution &sol) const;
         //inline autoPtr<scalarRectangularMatrix> dTPvfsoldXErho_constC(scalar p, scalar T, solution& sol) const;
         inline autoPtr<scalarRectangularMatrix> dTPvfdXErho_simp(scalar p, scalar T, solution &sol) const;

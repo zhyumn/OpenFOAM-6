@@ -3,6 +3,7 @@
 %include <std_vector.i>
 %include <std_string.i>
 %template(DoubleVector) std::vector<double>;
+%template(DoubleVector2D) std::vector<std::vector<double>>;
 %template(StringVector) std::vector<std::string>;
 %naturalvar solver::X;
 %naturalvar solver::specie;
@@ -14,6 +15,7 @@
     for (int i = 0; i < $1.size(); ++i)
         PyList_SET_ITEM($result,i,PyFloat_FromDouble($1[i]));
 %}
+
 
 %naturalvar solver_new::comp;
 %naturalvar solver_new::equalconstant;

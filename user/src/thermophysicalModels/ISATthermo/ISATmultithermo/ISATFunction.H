@@ -62,6 +62,9 @@ namespace Foam
                 //scalar T = p->T(1 / rho, P, T0, &Type::rrho, &Type::drrhodT, &Type::limit);
                 scalar T = p->Tsol(1 / rho, P, T0, &Type::rrho, &Type::drrhodT, &Type::limit, sol);
 
+                //typename Type::VLE_data *psolution;
+                //p->TPn_flash_New_TPD_Tudisco_NIO(P, T, p->X(), psolution);
+                
                 //autoPtr<typename Type::solution> sol(p->TPN(P, T));
                 /*scalarList in_test(3);
                 in_test[0] = 0.301188931652;
@@ -86,7 +89,7 @@ namespace Foam
                 out[4] = P * W_G_ / (p->Type::singlePhaseMixtureThermoType::Z(P, T, sol().X_gas(), 1) * RR * 1.0e-03 * T);
                 for (int i = 0; i < sol().X_gas().size(); i++)
                 {
-                    out[i + 5] = sol().X_gas()[i] * (*p)[i].W() / W_G_;
+                    out[i + 5] = sol().X_gas()[i] * (*p)[i].W() * 1e-3 / W_G_;
                 }
                 /*
                 scalar xx = p->c_opt(P, T, rho, sol());
@@ -283,7 +286,7 @@ namespace Foam
                 out[4] = P * W_G_ / (p->Type::singlePhaseMixtureThermoType::Z(P, T, sol().X_gas(), 1) * RR * 1.0e-03 * T);
                 for (int i = 0; i < sol().X_gas().size(); i++)
                 {
-                    out[i + 5] = sol().X_gas()[i] * (*p)[i].W() / W_G_;
+                    out[i + 5] = sol().X_gas()[i] * (*p)[i].W() * 1e-3 / W_G_;
                 }
                 /*
                 FatalErrorInFunction

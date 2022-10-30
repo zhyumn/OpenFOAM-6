@@ -113,6 +113,19 @@ namespace Foam
         {
             return word(ThermoMixture::typeName());
         }
+        struct Basic_data
+        {
+            scalar sqrtT;
+            scalarList B, Tsqrt_AbyP;
+            Basic_data(label nspecie) : sqrtT(0), B(nspecie), Tsqrt_AbyP(nspecie){};
+        };
+        struct Phase_data
+        {
+            Basic_data &basic;
+            scalarList X;
+            scalar Z, dg, A, B;
+            Phase_data(label nspecie, Basic_data &basic_in) : basic(basic_in), X(nspecie), Z(0), dg(0){};
+        };
 
         // Fundamental properties
         inline scalar A(scalar p, scalar T, const scalarList &Xinp) const;
@@ -237,6 +250,7 @@ namespace Foam
         inline autoPtr<scalarList> fugacityCoefficient(scalar p, scalar T, const label pf = 2) const { return fugacityCoefficient(p, T, this->X_, pf); };
         inline autoPtr<scalarList> Ln_fugacityCoefficient(scalar p, scalar T, const scalarList &Xinp, const label pf = 2) const;
         inline bool Ln_fugacityCoefficient_opt(scalar p, scalar T, const scalarList &Xinp, scalarList &fugcoef, scalarList &B_, scalarList &Tsqrt_AbyP_, scalar &z, scalar &g, const label pf) const;
+        inline void Ln_fugacityCoefficient_opt_NIO(scalar p, scalar T, const scalarList &Xinp, scalarList &fugcoef, Phase_data &phaseData) const;
         inline bool Ln_fugacityCoefficient_opt(scalar p, scalar T, const scalarList &Xinp, scalarList &fugcoef, scalarList &B_, scalarList &Tsqrt_AbyP_, const label pf) const;
         inline autoPtr<scalarList> Ln_fugacityCoefficient(scalar p, scalar T, const label pf = 2) const { return Ln_fugacityCoefficient(p, T, this->X_, pf); }
         inline autoPtr<scalarList> ln_fugacityCoefficient(scalar p, scalar T, scalar z, const scalarList &Xinp) const;

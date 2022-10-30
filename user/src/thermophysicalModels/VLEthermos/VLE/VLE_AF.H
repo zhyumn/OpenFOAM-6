@@ -771,6 +771,50 @@ Foam::VLE<ThermoMixture>::drhodT(scalar p, scalar T, solution &sol) const
 
 template <class ThermoMixture>
 inline Foam::scalar
+Foam::VLE<ThermoMixture>::d2rhodT2(scalar p, scalar T, solution &sol) const
+{
+    scalar Z_M_ = Z(p, T, sol);
+
+    scalar d2ZdT2_M_ = 0;
+    scalar dZdT_M_ = dZdT(p, T, sol);
+    scalar W_M_ = this->W();
+    scalar d2rhodT2_M_ = 2 * p * W_M_ / (RR * 1.0e-03 * T * T * T * Z_M_) + 2 * p * W_M_ * dZdT_M_ / (RR * 1.0e-03 * T * T * Z_M_ * Z_M_) +
+                         2 * p * W_M_ * dZdT_M_ * dZdT_M_ / (RR * 1.0e-03 * T * Z_M_ * Z_M_ * Z_M_) - p * W_M_ * d2ZdT2_M_ / (RR * 1.0e-03 * T * Z_M_ * Z_M_);
+    return d2rhodT2_M_;
+}
+
+template <class ThermoMixture>
+inline Foam::scalar
+Foam::VLE<ThermoMixture>::d2rhodTdP(scalar p, scalar T, solution &sol) const
+{
+    scalar Z_M_ = Z(p, T, sol);
+
+    scalar d2ZdTdP_M_ = 0;
+    scalar dZdT_M_ = dZdT(p, T, sol);
+    scalar dZdP_M_ = dZdP(p, T, sol);
+    scalar W_M_ = this->W();
+    scalar d2rhodTdP_M_ = -W_M_ / (RR * 1.0e-03 * T * T * Z_M_) + p * W_M_ * dZdP_M_ / (RR * 1.0e-03 * T * T * Z_M_ * Z_M_) -
+                          W_M_ * dZdT_M_ / (RR * 1.0e-03 * T * Z_M_ * Z_M_) + 2 * p * W_M_ * dZdP_M_ * dZdT_M_ / (RR * 1.0e-03 * T * Z_M_ * Z_M_ * Z_M_) -
+                          p * W_M_ * d2ZdTdP_M_ / (RR * 1.0e-03 * T * Z_M_ * Z_M_);
+    return d2rhodTdP_M_;
+}
+
+template <class ThermoMixture>
+inline Foam::scalar
+Foam::VLE<ThermoMixture>::d2rhodP2(scalar p, scalar T, solution &sol) const
+{
+    scalar Z_M_ = Z(p, T, sol);
+
+    scalar d2ZdP2_M_ = 0;
+    scalar dZdP_M_ = dZdP(p, T, sol);
+    scalar W_M_ = this->W();
+    scalar d2rhodP2_M_ = -2 * W_M_ * dZdP_M_ / (RR * 1.0e-03 * T * Z_M_ * Z_M_) + 2 * p * W_M_ * dZdP_M_ * dZdP_M_ / (RR * 1.0e-03 * T * Z_M_ * Z_M_ * Z_M_) -
+                         p * W_M_ * d2ZdP2_M_ / (RR * 1.0e-03 * T * Z_M_ * Z_M_);
+    return d2rhodP2_M_;
+}
+
+template <class ThermoMixture>
+inline Foam::scalar
 Foam::VLE<ThermoMixture>::drhodT_noVLE(scalar p, scalar T, solution &sol) const
 {
     scalar Z_M_ = this->ThermoMixture::Z(p, T, sol.X_gas(), 1);
@@ -779,6 +823,7 @@ Foam::VLE<ThermoMixture>::drhodT_noVLE(scalar p, scalar T, solution &sol) const
                        (dZdT_M_ * T + Z_M_);
     return drhodT_M_;
 }
+
 template <class ThermoMixture>
 inline Foam::scalar
 Foam::VLE<ThermoMixture>::drhodP(scalar p, scalar T, solution &sol) const
@@ -1012,6 +1057,37 @@ Foam::VLE<ThermoMixture>::c(scalar p, scalar T, solution &sol) const
                              << ",p=" << p << ",T=" << T << ",X=" << this->X_ << exit(FatalError);
     }
     return sqrt(1.0 / (kappaS_ * rho_));
+}
+
+template <class ThermoMixture>
+inline Foam::scalar
+Foam::VLE<ThermoMixture>::dcdT(scalar p, scalar T, solution &sol) const
+{
+    scalar c_ = c(p, T, sol);
+    scalar drhodT_M_ = drhodT(p, T, sol);
+    scalar Cp_ = Cp(p, T, sol);
+    scalar rho_ = rho(p, T, sol);
+    scalar dCpdT_ = 0;
+    scalar d2rhodTdP_M_ = d2rhodTdP(p, T, sol);
+    scalar d2rhodT2_M_ = d2rhodT2(p, T, sol);
+    scalar dcdT = -0.5 * c_ * c_ * c_ * (-drhodT_M_ * drhodT_M_ / (Cp_ * rho_ * rho_) + T * dCpdT_ * drhodT_M_ * drhodT_M_ / (Cp_ * Cp_ * rho_ * rho_) + 2 * T * drhodT_M_ * drhodT_M_ * drhodT_M_ / (Cp_ * rho_ * rho_ * rho_) + d2rhodTdP_M_ - 2 * T * drhodT_M_ * d2rhodT2_M_ / (Cp_ * rho_ * rho_));
+    return dcdT;
+}
+
+template <class ThermoMixture>
+inline Foam::scalar
+Foam::VLE<ThermoMixture>::dcdP(scalar p, scalar T, solution &sol) const
+{
+    scalar c_ = c(p, T, sol);
+    scalar drhodP_M_ = drhodP(p, T, sol);
+    scalar drhodT_M_ = drhodT(p, T, sol);
+    scalar Cp_ = Cp(p, T, sol);
+    scalar rho_ = rho(p, T, sol);
+    scalar dCpdP_ = 0;
+    scalar d2rhodTdP_M_ = d2rhodTdP(p, T, sol);
+    scalar d2rhodP2_M_ = d2rhodP2(p, T, sol);
+    scalar dcdP = -0.5 * c_ * c_ * c_ * (d2rhodP2_M_ + T * dCpdP_ * drhodT_M_ * drhodT_M_ / (Cp_ * Cp_ * rho_ * rho_) + 2 * T * drhodP_M_ * drhodT_M_ * drhodT_M_ / (Cp_ * rho_ * rho_ * rho_) - 2 * T * drhodT_M_ * d2rhodTdP_M_ / (Cp_ * rho_ * rho_));
+    return dcdP;
 }
 
 template <class ThermoMixture>

@@ -114,6 +114,11 @@ public:
     double kappaS();
     double kappaT();
     double alphaP();
+    double Hs();
+    double rho_G();
+    double W_G();
+    double Es();
+    std::vector<double> Y_G();
 
     std::vector<double> eps(std::vector<double>);
 
@@ -122,6 +127,7 @@ public:
     std::vector<double> X_gas();
     std::vector<double> X_liq();
     std::vector<double> Ln_fugacityCoefficient(std::vector<double> Xout, int flag);
+    std::vector<double> ddT_Ln_fugacityCoefficient(std::vector<double> Xout, int flag);
 
     double drhodP();
     double drhodT();
@@ -131,6 +137,8 @@ public:
     const std::vector<double> &K();
     void setKinit(const std::vector<double> &);
     const std::vector<std::string> &specie();
+    std::vector<std::vector<double>> dTHvfc_G_rhoY_dXrhoP();
+    std::vector<std::vector<double>> dErhovfc_G_rhoY_dXTP();
 
 private:
     //void solve(bool flag);
@@ -185,8 +193,7 @@ private:
     double B();
     double dBdT();
     double Ha();
-    double Es();
-    double Hs();
+
     double Ha_singlePhase(int, std::vector<double> &);
     double dHadT_singlePhase(int, std::vector<double> &);
     double Hideal(std::vector<double> &);

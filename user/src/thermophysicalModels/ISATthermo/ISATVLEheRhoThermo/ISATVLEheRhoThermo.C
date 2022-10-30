@@ -44,40 +44,21 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate_init()
     scalarField &rho_G_Cells = this->rho_G_.primitiveFieldRef();
     scalar p_temp, T_temp, he_temp;
     scalarList Y_temp(MixtureType::Y().size());
-    if (noVLE_)
-    {
-        forAll(TCells, celli)
-        {
-            const typename MixtureType::thermoType &mixture_ =
-                this->cellMixture(celli);
-            auto sol(mixture_.TPN(pCells[celli], TCells[celli]));
-            rhoCells[celli] = mixture_.rho_noVLE(pCells[celli], TCells[celli], sol());
-            soundspeedCells[celli] = mixture_.c_noVLE(pCells[celli], TCells[celli], sol());
-            psiCells[celli] = rhoCells[celli] / pCells[celli];
-            vaporfracCells[celli] = 1;
-            rho_G_Cells[celli] = rhoCells[celli];
-            for (int i = 0; i < Y_temp.size(); i++)
-            {
-                Y_G_List_[i][celli] = MixtureType::Y()[i][celli];
-            }
-        }
-    }
-    else
-    {
-        forAll(TCells, celli)
-        {
-            const typename MixtureType::thermoType &mixture_ =
-                this->cellMixture(celli);
 
-            //std::tie(rhoCells[celli], vaporfracCells[celli], soundspeedCells[celli]) = mixture_.rhovfc_ISAT(pCells[celli], TCells[celli]);
-            std::tie(he_temp, rhoCells[celli], vaporfracCells[celli], soundspeedCells[celli], rho_G_Cells[celli]) = mixture_.Erhovfc_G_rhoY_ISAT(pCells[celli], TCells[celli], Y_temp);
-            for (int i = 0; i < Y_temp.size(); i++)
-            {
-                Y_G_List_[i][celli] = Y_temp[i];
-            }
-            psiCells[celli] = rhoCells[celli] / pCells[celli];
+    forAll(TCells, celli)
+    {
+        const typename MixtureType::thermoType &mixture_ =
+            this->cellMixture(celli);
+
+        //std::tie(rhoCells[celli], vaporfracCells[celli], soundspeedCells[celli]) = mixture_.rhovfc_ISAT(pCells[celli], TCells[celli]);
+        std::tie(he_temp, rhoCells[celli], vaporfracCells[celli], soundspeedCells[celli], rho_G_Cells[celli]) = mixture_.Erhovfc_G_rhoY_ISAT(pCells[celli], TCells[celli], Y_temp);
+        for (int i = 0; i < Y_temp.size(); i++)
+        {
+            Y_G_List_[i][celli] = Y_temp[i];
         }
+        psiCells[celli] = rhoCells[celli] / pCells[celli];
     }
+
     if (!inviscid_)
     {
         forAll(TCells, celli)
@@ -151,79 +132,37 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate_init()
         fvPatchScalarField &pkappa = kappaBf[patchi];
         fvPatchScalarField &prho_G = rho_G_Bf[patchi];
         // fvPatchScalarField& pentropy = entropyBf[patchi];
-        if (noVLE_)
-        {
-            if (pT.fixesValue())
-            {
-                forAll(pT, facei)
-                {
-                    const typename MixtureType::thermoType &mixture_ =
-                        this->patchFaceMixture(patchi, facei);
 
-                    auto sol(mixture_.TPN(pp[facei], pT[facei]));
-                    prho[facei] = mixture_.rho_noVLE(pp[facei], pT[facei], sol());
-                    psoundspeed[facei] = mixture_.c_noVLE(pp[facei], pT[facei], sol());
-                    ppsi[facei] = prho[facei] / pp[facei];
-                    pvaporfrac[facei] = 1;
-                    prho_G[facei] = prho[facei];
-                    for (int i = 0; i < Y_temp.size(); i++)
-                    {
-                        Y_G_List_[i].boundaryFieldRef()[patchi][facei] = MixtureType::Y()[i].boundaryFieldRef()[patchi][facei];
-                    }
-                }
-            }
-            else
+        if (pT.fixesValue())
+        {
+            forAll(pT, facei)
             {
-                forAll(pT, facei)
+                const typename MixtureType::thermoType &mixture_ =
+                    this->patchFaceMixture(patchi, facei);
+                //std::tie(prho[facei], pvaporfrac[facei], psoundspeed[facei]) = mixture_.rhovfc_ISAT(pp[facei], pT[facei]);
+                std::tie(he_temp, prho[facei], pvaporfrac[facei], psoundspeed[facei], prho_G[facei]) = mixture_.Erhovfc_G_rhoY_ISAT(pp[facei], pT[facei], Y_temp);
+                for (int i = 0; i < Y_temp.size(); i++)
                 {
-                    const typename MixtureType::thermoType &mixture_ =
-                        this->patchFaceMixture(patchi, facei);
-                    auto sol(mixture_.TPN(pp[facei], pT[facei]));
-                    prho[facei] = mixture_.rho_noVLE(pp[facei], pT[facei], sol());
-                    psoundspeed[facei] = mixture_.c_noVLE(pp[facei], pT[facei], sol());
-                    // std::tie(rhoCells[celli], vaporfracCells[celli], soundspeedCells[celli]) = mixture_.rhovfc_ISAT(pCells[celli], TCells[celli]);
-                    ppsi[facei] = prho[facei] / pp[facei];
-                    pvaporfrac[facei] = 1;
-                    prho_G[facei] = prho[facei];
-                    for (int i = 0; i < Y_temp.size(); i++)
-                    {
-                        Y_G_List_[i].boundaryFieldRef()[patchi][facei] = MixtureType::Y()[i].boundaryFieldRef()[patchi][facei];
-                    }
+                    Y_G_List_[i].boundaryFieldRef()[patchi][facei] = Y_temp[i];
                 }
+                ppsi[facei] = prho[facei] / pp[facei];
             }
         }
         else
         {
-            if (pT.fixesValue())
+            forAll(pT, facei)
             {
-                forAll(pT, facei)
+                const typename MixtureType::thermoType &mixture_ =
+                    this->patchFaceMixture(patchi, facei);
+                std::tie(he_temp, prho[facei], pvaporfrac[facei], psoundspeed[facei], prho_G[facei]) = mixture_.Erhovfc_G_rhoY_ISAT(pp[facei], pT[facei], Y_temp);
+                for (int i = 0; i < Y_temp.size(); i++)
                 {
-                    const typename MixtureType::thermoType &mixture_ =
-                        this->patchFaceMixture(patchi, facei);
-                    //std::tie(prho[facei], pvaporfrac[facei], psoundspeed[facei]) = mixture_.rhovfc_ISAT(pp[facei], pT[facei]);
-                    std::tie(he_temp, prho[facei], pvaporfrac[facei], psoundspeed[facei], prho_G[facei]) = mixture_.Erhovfc_G_rhoY_ISAT(pp[facei], pT[facei], Y_temp);
-                    for (int i = 0; i < Y_temp.size(); i++)
-                    {
-                        Y_G_List_[i].boundaryFieldRef()[patchi][facei] = Y_temp[i];
-                    }
-                    ppsi[facei] = prho[facei] / pp[facei];
+                    Y_G_List_[i].boundaryFieldRef()[patchi][facei] = Y_temp[i];
                 }
-            }
-            else
-            {
-                forAll(pT, facei)
-                {
-                    const typename MixtureType::thermoType &mixture_ =
-                        this->patchFaceMixture(patchi, facei);
-                    std::tie(he_temp, prho[facei], pvaporfrac[facei], psoundspeed[facei], prho_G[facei]) = mixture_.Erhovfc_G_rhoY_ISAT(pp[facei], pT[facei], Y_temp);
-                    for (int i = 0; i < Y_temp.size(); i++)
-                    {
-                        Y_G_List_[i].boundaryFieldRef()[patchi][facei] = Y_temp[i];
-                    }
-                    ppsi[facei] = prho[facei] / pp[facei];
-                }
+                ppsi[facei] = prho[facei] / pp[facei];
             }
         }
+
         if (!inviscid_)
         {
             if (pT.fixesValue())
@@ -326,44 +265,25 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
     if (!boundary_flag)
     {
         this->newTimeStep();
-        if (noVLE_)
-        {
-            forAll(TCells, celli)
-            {
-                const typename MixtureType::thermoType &mixture_ =
-                    this->cellMixture(celli);
-                TCells[celli] = mixture_.THP(hCells[celli] + pCells[celli] / rhoCells[celli], pCells[celli], TCells[celli]);
-                vaporfracCells[celli] = 1;
-                soundspeedCells[celli] = mixture_.c_noVLE(pCells[celli], TCells[celli]); //, sol());
-                // std::tie(TCells[celli], temppsi, vaporfracCells[celli], soundspeedCells[celli]) = mixture_.Tpsivfc_XHP(hCells[celli] + pCells[celli] / rhoCells[celli], pCells[celli], TCells[celli]);
-                psiCells[celli] = rhoCells[celli] / pCells[celli];
-                rho_G_Cells[celli] = rhoCells[celli];
-                for (int i = 0; i < Y_temp.size(); i++)
-                {
-                    Y_G_List_[i][celli] = MixtureType::Y()[i][celli];
-                }
-            }
-        }
-        else
-        {
-            forAll(TCells, celli)
-            {
-                const typename MixtureType::thermoType &mixture_ = this->cellMixture(celli);
 
-                // std::tie(TCells[celli], psiCells[celli], vaporfracCells[celli], soundspeedCells[celli]) = mixture_.Tpsivfc_XHP(hCells[celli] + pCells[celli] / rhoCells[celli], pCells[celli], TCells[celli]);
-                std::tie(TCells[celli], hCells[celli], vaporfracCells[celli], soundspeedCells[celli], rho_G_[celli]) = mixture_.THvfc_G_rhoY_XrhoP(rhoCells[celli], pCells[celli], TCells[celli], Y_temp);
-                //hCells[celli] = mixture_.HE(pCells[celli], TCells[celli]);
-                hCells[celli] -= pCells[celli] / rhoCells[celli];
-                for (int i = 0; i < Y_temp.size(); i++)
-                {
-                    Y_G_List_[i][celli] = Y_temp[i];
-                }
-                // autoPtr<typename MixtureType::thermoType::solution> sol;
-                // std::tie(TCells[celli], temppsi, vaporfracCells[celli], soundspeedCells[celli], sol) = mixture_.Tpsivfcsol_XHP(hCells[celli] + pCells[celli] / rhoCells[celli], pCells[celli], TCells[celli]);
-                // rhoCells[celli] = psiCells[celli] * pCells[celli];
-                psiCells[celli] = rhoCells[celli] / pCells[celli];
+        forAll(TCells, celli)
+        {
+            const typename MixtureType::thermoType &mixture_ = this->cellMixture(celli);
+
+            // std::tie(TCells[celli], psiCells[celli], vaporfracCells[celli], soundspeedCells[celli]) = mixture_.Tpsivfc_XHP(hCells[celli] + pCells[celli] / rhoCells[celli], pCells[celli], TCells[celli]);
+            std::tie(TCells[celli], hCells[celli], vaporfracCells[celli], soundspeedCells[celli], rho_G_[celli]) = mixture_.THvfc_G_rhoY_XrhoP(rhoCells[celli], pCells[celli], TCells[celli], Y_temp);
+            //hCells[celli] = mixture_.HE(pCells[celli], TCells[celli]);
+            hCells[celli] -= pCells[celli] / rhoCells[celli];
+            for (int i = 0; i < Y_temp.size(); i++)
+            {
+                Y_G_List_[i][celli] = Y_temp[i];
             }
+            // autoPtr<typename MixtureType::thermoType::solution> sol;
+            // std::tie(TCells[celli], temppsi, vaporfracCells[celli], soundspeedCells[celli], sol) = mixture_.Tpsivfcsol_XHP(hCells[celli] + pCells[celli] / rhoCells[celli], pCells[celli], TCells[celli]);
+            // rhoCells[celli] = psiCells[celli] * pCells[celli];
+            psiCells[celli] = rhoCells[celli] / pCells[celli];
         }
+
         if (!inviscid_)
         {
             forAll(TCells, celli)
@@ -437,96 +357,42 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
             fvPatchScalarField &psoundspeed = soundspeedBf[patchi];
             fvPatchScalarField &pkappa = kappaBf[patchi];
             fvPatchScalarField &prho_G = rho_G_Bf[patchi];
-            if (noVLE_) // todo add transport for no VLE
+
+            if (pT.fixesValue())
             {
-                if (pT.fixesValue())
+                forAll(pT, facei)
                 {
-                    forAll(pT, facei)
+                    const typename MixtureType::thermoType &mixture_ =
+                        this->patchFaceMixture(patchi, facei);
+                    //std::tie(prho[facei], pvaporfrac[facei], psoundspeed[facei]) = mixture_.rhovfc_ISAT(pp[facei], pT[facei]);
+                    std::tie(phe[facei], prho[facei], pvaporfrac[facei], psoundspeed[facei], prho_G[facei]) = mixture_.Erhovfc_G_rhoY_ISAT(pp[facei], pT[facei], Y_temp);
+                    for (int i = 0; i < Y_temp.size(); i++)
                     {
-                        const typename MixtureType::thermoType &mixture_ =
-                            this->patchFaceMixture(patchi, facei);
-
-                        phe[facei] = mixture_.HE(pp[facei], pT[facei]);
-                        // ppsi[facei] = prho[facei] / pp[facei];
-
-                        auto sol(mixture_.TPN(pp[facei], pT[facei]));
-                        prho[facei] = mixture_.rho_noVLE(pp[facei], pT[facei], sol());
-                        psoundspeed[facei] = mixture_.c_noVLE(pp[facei], pT[facei], sol());
-                        // hCells[celli] =mixture_.HE(pCells[celli], TCells[celli]);
-                        // std::tie(rhoCells[celli], vaporfracCells[celli], soundspeedCells[celli]) = mixture_.rhovfc_ISAT(pCells[celli], TCells[celli]);
-                        ppsi[facei] = prho[facei] / pp[facei];
-                        pvaporfrac[facei] = 1;
-
-                        prho_G[facei] = prho[facei];
-                        for (int i = 0; i < Y_temp.size(); i++)
-                        {
-                            Y_G_List_[i].boundaryFieldRef()[patchi][facei] = MixtureType::Y()[i].boundaryFieldRef()[patchi][facei];
-                        }
+                        Y_G_List_[i].boundaryFieldRef()[patchi][facei] = Y_temp[i];
                     }
-                }
-                else
-                {
-                    forAll(pT, facei)
-                    {
-                        const typename MixtureType::thermoType &mixture_ =
-                            this->patchFaceMixture(patchi, facei);
-                        phe[facei] = mixture_.HE(pp[facei], pT[facei]);
-                        auto sol(mixture_.TPN(pp[facei], pT[facei]));
-                        prho[facei] = mixture_.rho_noVLE(pp[facei], pT[facei], sol());
-                        psoundspeed[facei] = mixture_.c_noVLE(pp[facei], pT[facei], sol());
-                        //pT[facei] = mixture_.THP(phe[facei] + pp[facei] / prho[facei], pp[facei], pT[facei]);
-                        pvaporfrac[facei] = 1;
-                        psoundspeed[facei] = mixture_.c_noVLE(pp[facei], pT[facei]);
-                        // std::tie(pT[facei], temppsi, pvaporfrac[facei], psoundspeed[facei]) = mixture_.Tpsivfc_XHP(phe[facei] - pp[facei] / prho[facei], pp[facei], pT[facei]);
 
-                        //phe[facei] = mixture_.HE(pp[facei], pT[facei]);
-                        ppsi[facei] = prho[facei] / pp[facei];
-
-                        prho_G[facei] = prho[facei];
-                        for (int i = 0; i < Y_temp.size(); i++)
-                        {
-                            Y_G_List_[i].boundaryFieldRef()[patchi][facei] = MixtureType::Y()[i].boundaryFieldRef()[patchi][facei];
-                        }
-                    }
+                    //phe[facei] = mixture_.HE(pp[facei], pT[facei]);
+                    ppsi[facei] = prho[facei] / pp[facei];
                 }
             }
             else
             {
-                if (pT.fixesValue())
+                forAll(pT, facei)
                 {
-                    forAll(pT, facei)
+                    const typename MixtureType::thermoType &mixture_ =
+                        this->patchFaceMixture(patchi, facei);
+
+                    //std::tie(phe[facei], prho[facei], pvaporfrac[facei], psoundspeed[facei]) = mixture_.Erhovfc_ISAT(pp[facei], pT[facei]);
+                    std::tie(phe[facei], prho[facei], pvaporfrac[facei], psoundspeed[facei], prho_G[facei]) = mixture_.Erhovfc_G_rhoY_ISAT(pp[facei], pT[facei], Y_temp);
+                    for (int i = 0; i < Y_temp.size(); i++)
                     {
-                        const typename MixtureType::thermoType &mixture_ =
-                            this->patchFaceMixture(patchi, facei);
-                        //std::tie(prho[facei], pvaporfrac[facei], psoundspeed[facei]) = mixture_.rhovfc_ISAT(pp[facei], pT[facei]);
-                        std::tie(phe[facei], prho[facei], pvaporfrac[facei], psoundspeed[facei], prho_G[facei]) = mixture_.Erhovfc_G_rhoY_ISAT(pp[facei], pT[facei], Y_temp);
-                        for (int i = 0; i < Y_temp.size(); i++)
-                        {
-                            Y_G_List_[i].boundaryFieldRef()[patchi][facei] = Y_temp[i];
-                        }
-
-                        //phe[facei] = mixture_.HE(pp[facei], pT[facei]);
-                        ppsi[facei] = prho[facei] / pp[facei];
+                        Y_G_List_[i].boundaryFieldRef()[patchi][facei] = Y_temp[i];
                     }
-                }
-                else
-                {
-                    forAll(pT, facei)
-                    {
-                        const typename MixtureType::thermoType &mixture_ =
-                            this->patchFaceMixture(patchi, facei);
 
-                        //std::tie(phe[facei], prho[facei], pvaporfrac[facei], psoundspeed[facei]) = mixture_.Erhovfc_ISAT(pp[facei], pT[facei]);
-                        std::tie(phe[facei], prho[facei], pvaporfrac[facei], psoundspeed[facei], prho_G[facei]) = mixture_.Erhovfc_G_rhoY_ISAT(pp[facei], pT[facei], Y_temp);
-                        for (int i = 0; i < Y_temp.size(); i++)
-                        {
-                            Y_G_List_[i].boundaryFieldRef()[patchi][facei] = Y_temp[i];
-                        }
-
-                        ppsi[facei] = prho[facei] / pp[facei];
-                    }
+                    ppsi[facei] = prho[facei] / pp[facei];
                 }
             }
+
             if (!inviscid_)
             {
                 forAll(pT, facei)
@@ -641,8 +507,8 @@ Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::ISATVLEheRhoThermo(
             IOobject::NO_WRITE,
             false));
     inviscid_ = thermoDict.lookupOrDefault<bool>("inviscid", false);
-    noVLE_ = thermoDict.lookupOrDefault<bool>("noVLE", false);
-    MixtureType::thermoType::noVLE = noVLE_;
+    //noVLE_ = thermoDict.lookupOrDefault<bool>("noVLE", false);
+    //MixtureType::thermoType::noVLE = noVLE_;
     // FatalErrorInFunction
     //     << "inviscid_:" <<inviscid_
     //     << exit(FatalError);
