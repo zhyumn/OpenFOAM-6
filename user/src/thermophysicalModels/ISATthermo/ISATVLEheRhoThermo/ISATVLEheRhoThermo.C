@@ -470,12 +470,16 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
                     {
                         const typename MixtureType::thermoType &mixture_ =
                             this->patchFaceMixture(patchi, facei);
-                        pT[facei] = mixture_.THP(phe[facei] + pp[facei] / prho[facei], pp[facei], pT[facei]);
+                        phe[facei] = mixture_.HE(pp[facei], pT[facei]);
+                        auto sol(mixture_.TPN(pp[facei], pT[facei]));
+                        prho[facei] = mixture_.rho_noVLE(pp[facei], pT[facei], sol());
+                        psoundspeed[facei] = mixture_.c_noVLE(pp[facei], pT[facei], sol());
+                        //pT[facei] = mixture_.THP(phe[facei] + pp[facei] / prho[facei], pp[facei], pT[facei]);
                         pvaporfrac[facei] = 1;
                         psoundspeed[facei] = mixture_.c_noVLE(pp[facei], pT[facei]);
                         // std::tie(pT[facei], temppsi, pvaporfrac[facei], psoundspeed[facei]) = mixture_.Tpsivfc_XHP(phe[facei] - pp[facei] / prho[facei], pp[facei], pT[facei]);
 
-                        phe[facei] = mixture_.HE(pp[facei], pT[facei]);
+                        //phe[facei] = mixture_.HE(pp[facei], pT[facei]);
                         ppsi[facei] = prho[facei] / pp[facei];
 
                         prho_G[facei] = prho[facei];
