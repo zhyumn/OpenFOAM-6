@@ -103,15 +103,15 @@ public:
         //- Return the composition of the multi-component mixture
         virtual const basicSpecieMixture& composition() const = 0;
 	
-	virtual void customChemistry(scalar temperature, scalar pressure, scalar density){};
-        virtual void setThermo(scalar temperature, scalar pressure, scalar density){};
-        virtual void setY(scalar Y, label speciesLabel){};
-        virtual void setConc(){};
-        virtual void setRate(){};
-        virtual scalar RR(label speciesLabel){};
-        virtual scalar Qdot(){};
-        virtual scalar gasPhaseRho(scalar pressure, scalar temperature){};
-        virtual scalar gasPhaseY(label celli, label speciesLabel){};
+	virtual void customChemistry(scalar temperature, scalar pressure, scalar density)=0;
+        virtual void setThermo(scalar temperature, scalar pressure, scalar density)=0;
+        virtual void setY(scalar Y, label speciesLabel)=0;
+        virtual void setConc()=0;
+        virtual void setRate()=0;
+        virtual scalar RR(label speciesLabel)=0;
+        virtual scalar Qdot()=0;
+        virtual scalar gasPhaseRho(scalar pressure, scalar temperature)=0;
+        virtual scalar gasPhaseY(label celli, label speciesLabel)=0;
 };
 
 
