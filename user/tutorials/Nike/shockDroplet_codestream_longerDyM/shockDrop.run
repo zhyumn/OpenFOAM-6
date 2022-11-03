@@ -23,8 +23,14 @@
 blockMesh
 cp -r 0.orig 0
 setFields
+rhoCentralRealgasDyMFoam
+cp -r 1e-05/polyMesh 0
+cp  1e-05/cellLevel 0
+rm -r 1e-05
+sed -i 's/endTime         1e-05;/endTime         0.005;/' system/controlDict 
 decomposePar -latestTime -force
 mpirun -np 256 rhoCentralRealgasDyMFoam  -parallel
+reconstructParMesh -newTimes
 reconstructPar -newTimes
 #reconstructPar -latestTime
 #rm -r 0
