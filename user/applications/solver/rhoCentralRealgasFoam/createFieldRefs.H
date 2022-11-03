@@ -16,6 +16,7 @@ inviscid = true;
 
 volScalarField &alpha = mesh.objectRegistry::lookupObjectRef<volScalarField>("thermo:alpha");
 volScalarField &rho_G = mesh.objectRegistry::lookupObjectRef<volScalarField>("thermo:rho_G");
+//volScalarField &Z = mesh.objectRegistry::lookupObjectRef<volScalarField>("thermo:Z");
 
 UPtrList<volScalarField> Y_G(Y.size());
 forAll(Y_G, i)

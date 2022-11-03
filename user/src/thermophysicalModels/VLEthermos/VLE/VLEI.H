@@ -3676,6 +3676,14 @@ inline Foam::scalar Foam::VLE<ThermoMixture>::Hc() const
     return this->ThermoMixture::Hc(this->X_);
 }
 
+template <class ThermoMixture>
+inline Foam::scalar Foam::VLE<ThermoMixture>::Hs_ideal(
+    const scalar p,
+    const scalar T) const
+{
+    return this->ThermoMixture::Hideal(p, T, this->X_) - this->ThermoMixture::Hc(this->X_);
+}
+
 //Sensible enthalpy
 template <class ThermoMixture>
 inline Foam::scalar Foam::VLE<ThermoMixture>::Hs(

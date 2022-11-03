@@ -60,11 +60,13 @@ namespace Foam
                 p->setX(in);
                 //scalar T = p->T(rho, P, T0, &Type::rho, &Type::drhodT, &Type::limit);
                 //scalar T = p->T(1 / rho, P, T0, &Type::rrho, &Type::drrhodT, &Type::limit);
+
+                //scalar T = P * p->W() / (RR * 1.0e-03 * rho);
                 scalar T = p->Tsol(1 / rho, P, T0, &Type::rrho, &Type::drrhodT, &Type::limit, sol);
 
                 //typename Type::VLE_data *psolution;
                 //p->TPn_flash_New_TPD_Tudisco_NIO(P, T, p->X(), psolution);
-                
+
                 //autoPtr<typename Type::solution> sol(p->TPN(P, T));
                 /*scalarList in_test(3);
                 in_test[0] = 0.301188931652;
@@ -75,10 +77,19 @@ namespace Foam
                 P = 53365896.3196;
                 */
 
-                sol.reset(p->TPN(P, T).ptr());
+                //sol.reset(p->TPN(P, T).ptr());
 
                 out.resize(5 + p->X_.size());
 
+                /*
+                out[0] = T;
+                out[1] = p->Hs_ideal(P, T);
+                out[2] = 1;
+                //out[3] = p->c_opt(P, T, rho, sol());
+                out[3] = p->c_ideal(P, T);
+                */
+
+                
                 out[0] = T;
                 out[1] = p->Hs(P, T, sol());
                 out[2] = sol().vaporfra;
@@ -91,6 +102,9 @@ namespace Foam
                 {
                     out[i + 5] = sol().X_gas()[i] * (*p)[i].W() * 1e-3 / W_G_;
                 }
+                
+
+
                 /*
                 scalar xx = p->c_opt(P, T, rho, sol());
 
@@ -275,19 +289,34 @@ namespace Foam
                     temp[i] = in[i];
                 }
                 */
+
                 p->setX(in);
+
+/*
+                out[0] = p->Hs_ideal(P, T) - P / p->rho_ideal(P, T);
+                out[1] = p->rho_ideal(P, T);
+                out[2] = 1;
+                out[3] = p->c_ideal(P, T);
+                */
+
+                
                 sol.reset(p->TPN(P, T).ptr());
                 //autoPtr<typename Type::solution> sol(p->TPN(P, T));
                 out[0] = p->Hs(P, T, sol()) - P / p->rho(P, T, sol());
                 out[1] = p->rho(P, T, sol());
                 out[2] = sol().vaporfra;
                 out[3] = p->c(P, T, sol());
+                
+
+
                 scalar W_G_ = p->W(sol().X_gas());
                 out[4] = P * W_G_ / (p->Type::singlePhaseMixtureThermoType::Z(P, T, sol().X_gas(), 1) * RR * 1.0e-03 * T);
                 for (int i = 0; i < sol().X_gas().size(); i++)
                 {
                     out[i + 5] = sol().X_gas()[i] * (*p)[i].W() * 1e-3 / W_G_;
                 }
+                
+
                 /*
                 FatalErrorInFunction
                     << "Es1: " << E1

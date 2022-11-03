@@ -79,6 +79,16 @@ Foam::VLE<ThermoMixture>::rho(scalar p, scalar T) const
 
 template <class ThermoMixture>
 inline Foam::scalar
+Foam::VLE<ThermoMixture>::rho_ideal(scalar p, scalar T) const
+{
+    // autoPtr<solution> sol(TPn_flash(p, T));
+
+    scalar rho_M_ = p * this->W() / (RR * 1.0e-03 * T);
+    return rho_M_;
+}
+
+template <class ThermoMixture>
+inline Foam::scalar
 Foam::VLE<ThermoMixture>::rrho(scalar p, scalar T) const
 {
     // autoPtr<solution> sol(TPn_flash(p, T));
@@ -1092,19 +1102,16 @@ Foam::VLE<ThermoMixture>::dcdP(scalar p, scalar T, solution &sol) const
 
 template <class ThermoMixture>
 inline Foam::scalar
-Foam::VLE<ThermoMixture>::c_opt(scalar p, scalar T, scalar rho_, solution &sol) const
+Foam::VLE<ThermoMixture>::c_ideal(scalar p, scalar T) const
 {
     scalar W_ = this->W();
-    scalar Z_M_ = Z(p, T, sol);
-    autoPtr<scalarSquareMatrix> pA(A_dvid_(p, T, sol));
-    labelList pivotIndices(pA().m());
-    LUDecompose(pA(), pivotIndices);
-    scalar dZdP_M_ = dZdP(p, T, sol, pA(), pivotIndices);
-    scalar drhodP_ = W_ / (Z_M_ * RR * 1.0e-03 * T) - p * W_ / (Z_M_ * Z_M_ * RR * 1.0e-03 * T) * dZdP_M_;
+
+    scalar rho_= W_*p / ( RR * 1.0e-03 * T);
+    scalar drhodP_ = W_ / ( RR * 1.0e-03 * T);
     scalar kappaT_ = drhodP_ / rho_;
-    scalar Cp_ = Cp(p, T, sol, pA(), pivotIndices);
-    scalar dZdT_M_ = dZdT(p, T, sol, pA(), pivotIndices);
-    scalar drhodT_ = -p * W_ / (Z_M_ * Z_M_ * RR * 1.0e-03 * T * T) * (dZdT_M_ * T + Z_M_);
+    scalar Cp_ = this->dHidealdT(p,T,this->X_);
+    scalar dZdT_M_ = 0;
+    scalar drhodT_ = -p * W_ / (RR * 1.0e-03 * T * T);
     scalar alphaP_ = -drhodT_ / rho_;
     scalar kappaS_ = kappaT_ - T * alphaP_ * alphaP_ / (rho_ * Cp_);
     if (kappaS_ < 0)

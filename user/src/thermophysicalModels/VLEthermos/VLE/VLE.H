@@ -151,6 +151,7 @@ namespace Foam
 
         //- Return density [kg/m^3]
         inline scalar rho(scalar p, scalar T) const;
+        inline scalar rho_ideal(scalar p, scalar T) const;
         inline scalar rrho(scalar p, scalar T) const;
         inline scalar rrho(scalar p, scalar T, solution &sol) const;
         inline scalar rho(scalar p, scalar T, solution &sol) const;
@@ -235,6 +236,7 @@ namespace Foam
         inline scalar Ha(scalar p, scalar T, solution &sol) const;
         inline scalar Hc() const;
         inline scalar Hs(scalar p, scalar T) const;
+        inline scalar Hs_ideal(scalar p, scalar T) const;
         inline scalar Hs(scalar p, scalar T, solution &sol) const;
         inline scalar G(scalar p, scalar T) const;
         inline scalar dGdT(scalar p, scalar T) const;
@@ -361,6 +363,7 @@ namespace Foam
         inline scalar c_opt_full(scalar p, scalar T, scalar rho, solution &sol) const;
         inline scalar c(scalar p, scalar T, solution &sol) const;
         inline scalar c(scalar p, scalar T) const;
+        inline scalar c_ideal(scalar p, scalar T) const;
 
         inline scalar kappaT_noVLE(scalar p, scalar T, solution &sol) const;
         inline scalar alphaP_noVLE(scalar p, scalar T, solution &sol) const;

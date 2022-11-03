@@ -42,6 +42,7 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate_init()
     scalarField &rhoCells = this->rho_.primitiveFieldRef();
     scalarField &kappaCells = this->kappa_.primitiveFieldRef();
     scalarField &rho_G_Cells = this->rho_G_.primitiveFieldRef();
+    //scalarField &ZCells = this->Z_.primitiveFieldRef();
     scalar p_temp, T_temp, he_temp;
     scalarList Y_temp(MixtureType::Y().size());
 
@@ -52,6 +53,7 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate_init()
 
         //std::tie(rhoCells[celli], vaporfracCells[celli], soundspeedCells[celli]) = mixture_.rhovfc_ISAT(pCells[celli], TCells[celli]);
         std::tie(he_temp, rhoCells[celli], vaporfracCells[celli], soundspeedCells[celli], rho_G_Cells[celli]) = mixture_.Erhovfc_G_rhoY_ISAT(pCells[celli], TCells[celli], Y_temp);
+        //ZCells[celli] = mixture_.Z(pCells[celli], TCells[celli]);
         for (int i = 0; i < Y_temp.size(); i++)
         {
             Y_G_List_[i][celli] = Y_temp[i];
@@ -115,6 +117,9 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate_init()
     volScalarField::Boundary &rho_G_Bf =
         this->rho_G_.boundaryFieldRef();
 
+    //volScalarField::Boundary &ZBf =
+    //    this->Z_.boundaryFieldRef();
+
     // volScalarField::Boundary& entropyBf =
     // this->entropy_.boundaryFieldRef();
 
@@ -131,6 +136,8 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate_init()
         fvPatchScalarField &prho = rhoBf[patchi];
         fvPatchScalarField &pkappa = kappaBf[patchi];
         fvPatchScalarField &prho_G = rho_G_Bf[patchi];
+        //fvPatchScalarField &pZ = ZBf[patchi];
+
         // fvPatchScalarField& pentropy = entropyBf[patchi];
 
         if (pT.fixesValue())
@@ -141,6 +148,7 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate_init()
                     this->patchFaceMixture(patchi, facei);
                 //std::tie(prho[facei], pvaporfrac[facei], psoundspeed[facei]) = mixture_.rhovfc_ISAT(pp[facei], pT[facei]);
                 std::tie(he_temp, prho[facei], pvaporfrac[facei], psoundspeed[facei], prho_G[facei]) = mixture_.Erhovfc_G_rhoY_ISAT(pp[facei], pT[facei], Y_temp);
+                //pZ[facei] = mixture_.Z(pp[facei], pT[facei]);
                 for (int i = 0; i < Y_temp.size(); i++)
                 {
                     Y_G_List_[i].boundaryFieldRef()[patchi][facei] = Y_temp[i];
@@ -155,6 +163,7 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate_init()
                 const typename MixtureType::thermoType &mixture_ =
                     this->patchFaceMixture(patchi, facei);
                 std::tie(he_temp, prho[facei], pvaporfrac[facei], psoundspeed[facei], prho_G[facei]) = mixture_.Erhovfc_G_rhoY_ISAT(pp[facei], pT[facei], Y_temp);
+                //pZ[facei] = mixture_.Z(pp[facei], pT[facei]);
                 for (int i = 0; i < Y_temp.size(); i++)
                 {
                     Y_G_List_[i].boundaryFieldRef()[patchi][facei] = Y_temp[i];
@@ -257,6 +266,7 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
     scalarField &rhoCells = this->rho_.primitiveFieldRef();
     scalarField &kappaCells = this->kappa_.primitiveFieldRef();
     scalarField &rho_G_Cells = this->rho_G_.primitiveFieldRef();
+    //scalarField &ZCells = this->Z_.primitiveFieldRef();
     scalar tempT, tempP, maxdT = 0, maxdP = 0, tempmu, temppsi, tempHe;
     static scalar maxdmu = 0;
     static int timeflag = 0;
@@ -274,6 +284,7 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
             std::tie(TCells[celli], hCells[celli], vaporfracCells[celli], soundspeedCells[celli], rho_G_[celli]) = mixture_.THvfc_G_rhoY_XrhoP(rhoCells[celli], pCells[celli], TCells[celli], Y_temp);
             //hCells[celli] = mixture_.HE(pCells[celli], TCells[celli]);
             hCells[celli] -= pCells[celli] / rhoCells[celli];
+            //ZCells[celli] = mixture_.Z(pCells[celli], TCells[celli]);
             for (int i = 0; i < Y_temp.size(); i++)
             {
                 Y_G_List_[i][celli] = Y_temp[i];
@@ -343,6 +354,9 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
 
         volScalarField::Boundary &rho_G_Bf =
             this->rho_G_.boundaryFieldRef();
+        
+        //volScalarField::Boundary &ZBf =
+        //    this->Z_.boundaryFieldRef();
 
         forAll(this->T_.boundaryField(), patchi)
         {
@@ -357,6 +371,7 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
             fvPatchScalarField &psoundspeed = soundspeedBf[patchi];
             fvPatchScalarField &pkappa = kappaBf[patchi];
             fvPatchScalarField &prho_G = rho_G_Bf[patchi];
+            //fvPatchScalarField &pZ = ZBf[patchi];
 
             if (pT.fixesValue())
             {
@@ -366,6 +381,7 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
                         this->patchFaceMixture(patchi, facei);
                     //std::tie(prho[facei], pvaporfrac[facei], psoundspeed[facei]) = mixture_.rhovfc_ISAT(pp[facei], pT[facei]);
                     std::tie(phe[facei], prho[facei], pvaporfrac[facei], psoundspeed[facei], prho_G[facei]) = mixture_.Erhovfc_G_rhoY_ISAT(pp[facei], pT[facei], Y_temp);
+                    //pZ[facei] = mixture_.Z(pp[facei], pT[facei]);
                     for (int i = 0; i < Y_temp.size(); i++)
                     {
                         Y_G_List_[i].boundaryFieldRef()[patchi][facei] = Y_temp[i];
@@ -384,6 +400,7 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
 
                     //std::tie(phe[facei], prho[facei], pvaporfrac[facei], psoundspeed[facei]) = mixture_.Erhovfc_ISAT(pp[facei], pT[facei]);
                     std::tie(phe[facei], prho[facei], pvaporfrac[facei], psoundspeed[facei], prho_G[facei]) = mixture_.Erhovfc_G_rhoY_ISAT(pp[facei], pT[facei], Y_temp);
+                    //pZ[facei] = mixture_.Z(pp[facei], pT[facei]);
                     for (int i = 0; i < Y_temp.size(); i++)
                     {
                         Y_G_List_[i].boundaryFieldRef()[patchi][facei] = Y_temp[i];
@@ -492,6 +509,15 @@ Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::ISATVLEheRhoThermo(
               IOobject::NO_WRITE),
           mesh,
           dimDensity),
+/*       Z_(
+          IOobject(
+              "thermo:Z",
+              mesh.time().timeName(),
+              mesh,
+              IOobject::NO_READ,
+              IOobject::NO_WRITE),
+          mesh,
+          dimless), */
       Dimix_(MixtureType::Y().size()),
       heList_(MixtureType::Y().size()),
       WList_(MixtureType::Y().size()),

@@ -31,6 +31,7 @@ Description
 \*---------------------------------------------------------------------------*/
 
 #include "fvCFD.H"
+#include "dynamicFvMesh.H"
 #include "rhoReactionThermo.H"
 #include "turbulentFluidThermoModel.H"
 #include "fixedRhoFvPatchScalarField.H"
@@ -38,6 +39,7 @@ Description
 #include "localEulerDdtScheme.H"
 #include "CombustionModel.H"
 #include "fvcSmooth.H"
+#include "motionSolver.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -48,7 +50,7 @@ int main(int argc, char *argv[])
 
 #include "setRootCaseLists.H"
 #include "createTime.H"
-#include "createMesh.H"
+#include "createDynamicFvMesh.H"
 #include "createFields.H"
 #include "createFieldRefs.H"
 #include "createTimeControls.H"
@@ -70,6 +72,20 @@ int main(int argc, char *argv[])
 
     while (runTime.run())
     {
+
+#include "readTimeControls.H"
+
+
+#include "setDeltaT.H"
+        
+
+        runTime++;
+
+        Info << "Time = " << runTime.timeName() << nl << endl;
+
+        // Do any mesh changes
+        mesh.update();
+
         // --- Directed interpolation of primitive fields onto faces
 
         surfaceScalarField rho_pos(interpolate(rho, pos));
@@ -116,6 +132,18 @@ int main(int argc, char *argv[])
 
         surfaceScalarField phiv_neg_pos("phiv_neg_pos", U_pos & mesh.Sf());
         surfaceScalarField phiv_neg_neg("phiv_neg_neg", U_neg & mesh.Sf());
+
+        // Make fluxes relative to mesh-motion
+        if (mesh.moving())
+        {
+            phiv_pos -= mesh.phi();
+            phiv_neg -= mesh.phi();
+
+            phiv_pos_pos -= mesh.phi();
+            phiv_neg_pos -= mesh.phi();
+            phiv_pos_neg -= mesh.phi();
+            phiv_neg_neg -= mesh.phi();
+        }
 
         // volScalarField c("c", sqrt(thermo.Cp() / thermo.Cv() * rPsi)); //REalgas
         // volScalarField c("c", cc); //REalgas
@@ -226,20 +254,7 @@ int main(int argc, char *argv[])
         amaxSf_neg = max(mag(aphiv_neg_pos), mag(aphiv_neg_neg));
 
 #include "centralCourantNo.H"
-#include "readTimeControls.H"
 
-        if (LTS)
-        {
-#include "setRDeltaT.H"
-        }
-        else
-        {
-#include "setDeltaT.H"
-        }
-
-        runTime++;
-
-        Info << "Time = " << runTime.timeName() << nl << endl;
         //scalar t = runTime.value();
 
         volScalarField muEff("muEff", turbulence->muEff());
@@ -265,6 +280,7 @@ int main(int argc, char *argv[])
         }
         else if (divScheme == "Conservativeflux")
         {
+
             phi = aphiv_pos * rho_pos + aphiv_neg * rho_neg;
             surfaceVectorField phiUp(
                 (aphiv_pos * rhoU_pos + aphiv_neg * rhoU_neg) + (a_pos * p_pos + a_neg * p_neg) * mesh.Sf());
@@ -314,6 +330,11 @@ int main(int argc, char *argv[])
                 "phiEp_pos",
                 aphiv_neg_pos * (rho_pos * (e_neg_pos + 0.5 * magSqr(U_pos)) + p_pos) + aphiv_neg_neg * (rho_neg * (e_neg_neg + 0.5 * magSqr(U_neg)) + p_neg) + aSf_neg * p_pos - aSf_neg * p_neg);
 
+            if (mesh.moving())
+            {
+                phiEp_pos += mesh.phi() * (a_pos_pos * p_pos + a_pos_neg * p_neg);
+                phiEp_neg += mesh.phi() * (a_neg_pos * p_pos + a_neg_neg * p_neg);
+            }
             rhoEEqn += fvc::div_doubleflux(phiEp_pos, phiEp_neg);
             /*solve
             (
@@ -329,6 +350,11 @@ int main(int argc, char *argv[])
             surfaceScalarField phiEp(
                 "phiEp",
                 aphiv_pos * (rho_pos * (e_pos + 0.5 * magSqr(U_pos)) + p_pos) + aphiv_neg * (rho_neg * (e_neg + 0.5 * magSqr(U_neg)) + p_neg) + aSf * p_pos - aSf * p_neg);
+
+            if (mesh.moving())
+            {
+                phiEp += mesh.phi() * (a_pos_pos * p_pos + a_neg * p_neg);
+            }
 
             rhoEEqn += fvc::div(phiEp);
             /*solve

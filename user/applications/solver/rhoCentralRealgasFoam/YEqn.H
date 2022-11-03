@@ -171,8 +171,8 @@ PtrList<volScalarField> tempY(Y.size());
             volScalarField &rhoYi = rhoY[i];
             // Central upwind scheme
             // interpolation of Yi to cell faces
-            surfaceScalarField Yi_pos = interpolate(Yi, pos, Yi_name);
-            surfaceScalarField Yi_neg = interpolate(Yi, neg, Yi_name);
+            surfaceScalarField Yi_pos(interpolate(Yi, pos, Yi_name));
+            surfaceScalarField Yi_neg(interpolate(Yi, neg, Yi_name));
             surfaceScalarField phiYi(
                 "phiYi",
                 aphiv_pos * rho_pos * Yi_pos + aphiv_neg * rho_neg * Yi_neg);
@@ -232,7 +232,7 @@ PtrList<volScalarField> tempY(Y.size());
         }
     }
     Y[inertIndex] = scalar(1) - Yt;
-    Y[inertIndex].max(0.0);
+    Y[inertIndex].max(0.00001);
     // update oldY here for CoDAC
     //oldY = tempY;
 }
