@@ -24,7 +24,7 @@ blockMesh
 cp -r 0.orig 0
 setFields
 decomposePar -latestTime -force
-mpirun -np 128 rhoCentralRealgasFoam  -parallel
+mpirun -np 256 rhoCentralRealgasDyMFoam  -parallel
 reconstructPar -newTimes
 #reconstructPar -latestTime
 #rm -r 0
