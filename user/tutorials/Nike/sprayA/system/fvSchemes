@@ -47,6 +47,7 @@ interpolationSchemes
     reconstruct(DF) upwind;
     reconstruct(Yi) vanLeer;
     reconstruct(rPsi) vanLeer;
+    reconstruct(rhoYi) vanLeer;
     reconstruct(e) vanLeer;
     reconstruct(soundspeed) vanLeer;
 }

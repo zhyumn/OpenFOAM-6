@@ -32,9 +32,9 @@ template<class Thermo>
 Foam::chungTransport<Thermo>::chungTransport(const dictionary& dict)
 :
     Thermo(dict),
-    mu_(readScalar(dict.subDict("equationOfState").lookup("mu"))),
-    kappa_(readScalar(dict.subDict("equationOfState").lookup("kappa"))),
-    sigmvi_(readScalar(dict.subDict("equationOfState").lookup("sigmvi")))
+    mu_(readScalar(dict.subDict("transport").lookup("mu"))),
+    kappa_(readScalar(dict.subDict("transport").lookup("kappa"))),
+    sigmvi_(readScalar(dict.subDict("transport").lookup("sigmvi")))
 {}
 
 

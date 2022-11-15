@@ -2,6 +2,7 @@
 
 const word DF_name("DF");
 const word Yi_name("Yi");
+const word rhoYi_name("rhoYi");
 Info << "Reading thermophysical properties\n"
      << endl;
 
@@ -13,7 +14,7 @@ volScalarField &c = mesh.objectRegistry::lookupObjectRef<volScalarField>("sounds
 volScalarField &p = thermo.p();
 basicSpecieMixture &composition = thermo.composition();
 PtrList<volScalarField> &Y = composition.Y();
-
+volScalarField &T = thermo.T();
 // initialize oldY for CoDAC
 ///PtrList<volScalarField>& oldY = composition.oldY();
 //forAll(Y, i)
@@ -253,6 +254,22 @@ volScalarField Wmix(
         //IOobject::AUTO_WRITE
         IOobject::NO_WRITE),
     thermo.W());
+dimensionedScalar unitW("unit1", dimMass / dimMoles, 1);
+PtrList<volScalarField> X(Y.size());
+forAll(Y, i)
+{
+    X.set(
+        i,
+        new volScalarField(
+            IOobject(
+                "X." + species[i],
+                runTime.timeName(),
+                mesh,
+                IOobject::NO_READ,
+                IOobject::NO_WRITE),
+            Wmix * Y[i] * 1e3 / unitW / composition.W(i)));
+}
+
 // - for Energy Equation
 volScalarField sumHeatDiffusion(
     IOobject(
@@ -291,5 +308,69 @@ volScalarField eStar(
         IOobject::NO_READ,
         IOobject::NO_WRITE),
     e - p / (rho * (gammaStar - 1)));
+
+volScalarField rRhoStar(
+    IOobject(
+        "rStar",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::NO_WRITE),
+    p / T);
+
+volScalarField S(
+    IOobject(
+        "S",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::NO_WRITE),
+    mesh, dimensionedScalar("zero", dimless, 0));
+volScalarField Smin(
+    IOobject(
+        "Smin",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::NO_WRITE),
+    mesh, dimensionedScalar("zero", dimless, 0));
+
+surfaceScalarField troubled(
+    IOobject(
+        "troubled",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::NO_WRITE),
+    mesh, dimensionedScalar("zero", dimless, 0));
+
+volScalarField troubledVol(
+    IOobject(
+        "troubledVol",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::AUTO_WRITE),
+    mesh, dimensionedScalar("zero", dimless, 0));
+dimensionedScalar unit1("unit1", dimPressure, 1);
+dimensionedScalar unit2("unit2", dimensionSet(0, -3, 0, 0, 1, 0, 0), 1);
+S = log(p / unit1) - gammaStar * log(constant::thermodynamic::RR * 1e3 / Wmix * rho / unit2);
+forAll(Y, i)
+{
+    S += (gammaStar - 1) * X[i] * log(X[i]);
+}
+
+const labelUList &owner = mesh.owner();
+const labelUList &neighbour = mesh.neighbour();
+Smin = 1e50;
+
+forAll(owner, facei)
+{
+    if (Smin[owner[facei]] > S[neighbour[facei]])
+        Smin[owner[facei]] = S[neighbour[facei]];
+    if (Smin[neighbour[facei]] > S[owner[facei]])
+        Smin[neighbour[facei]] = S[owner[facei]];
+}
+
 
 //#include "createFvOptions.H"

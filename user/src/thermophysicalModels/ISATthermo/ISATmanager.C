@@ -39,6 +39,7 @@ Foam::ISATmanager<FuncType>::ISATmanager(label in_n, label out_n, FuncType &func
       toleranceOut_(out_n, out_n),
       initToleranceIn_(in_n, in_n),
       init_elp_(in_n, in_n),
+      modified_(false),
       timeSteps_(0),
       noISAT_(ISATDict_.lookupOrDefault<bool>("noISAT", false)),
       checkInterval_(readLabel(ISATDict_.lookup("checkInterval"))),
@@ -155,6 +156,7 @@ void Foam::ISATmanager<FuncType>::add(const scalarList &value, scalarList &out, 
 
     //pleaf->EOA() = ((pleaf->A()) * scaleFactor_ * scaleFactor_ * (pleaf->A().T()) + init_elp_ * init_elp_) / (epsilon_ * epsilon_);//+ init_elp_
     pleaf->EOA() = scaleIn_ * initToleranceIn_ * initToleranceIn_ * scaleIn_ + scaleIn_ * (pleaf->A()) * toleranceOut_ * toleranceOut_ * (pleaf->A().T()) * scaleIn_;
+    modified_ = true;
     /*
     if (Tname == treename_)
     {
@@ -370,7 +372,7 @@ template <class FuncType>
 bool Foam::ISATmanager<FuncType>::grow(
     ISATleaf *plf,
     const scalarList &dvalue,
-    const scalarList &data1,
+    scalarList &data1,
     const scalarList &data2)
 {
     // If the pointer to the chemPoint is nullptr, the function stops
@@ -414,9 +416,11 @@ bool Foam::ISATmanager<FuncType>::grow(
     //if (distance(ret1, data1) <= epsilon_ && distance(ret2, data2) <= epsilon_)
     if (normalized_distance(ret1, data1) <= 1.0 && normalized_distance(ret2, data2) <= 1.0)
     {
-        plf->grow(plf->value() + dvalue_m, scaleIn_);
+        data1 = ret1;
+        plf->grow(plf->value() + dvalue_m * (1 + 1e-3), scaleIn_);
         tableTree_.timeTagList().renew(plf->pTimeTagList());
         nGrowth_++;
+        modified_ = true;
         return true;
     }
     // The actual solution and the approximation given by ISAT are too different

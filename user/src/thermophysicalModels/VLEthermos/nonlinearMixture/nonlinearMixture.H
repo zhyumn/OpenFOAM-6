@@ -134,6 +134,8 @@ public:
         ) const;
 
         inline void newTimeStep();
+        
+        inline bool newLoop();
 
         inline void mute_show();
 

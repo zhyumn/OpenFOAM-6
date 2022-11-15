@@ -110,8 +110,8 @@ namespace Foam
         //- Acentric factor [-]
         scalar omega_;
 
-        scalarList Hig_phase_;
-        scalarList Hig2_phase_;
+        //scalarList Hig_phase_;
+        //scalarList Hig2_phase_;
 
     public:
         label phaseFlag; //gas 1,liq 0
@@ -201,8 +201,8 @@ namespace Foam
         inline scalar EOSalpha(scalar P, scalar T) const;
 
         //Temp
-        inline scalar Hig_phase(scalar T) const;
-        inline scalar Hig2_phase(scalar T) const;
+        //inline scalar Hig_phase(scalar T) const;
+        //inline scalar Hig2_phase(scalar T) const;
         //solve cubic equatoin
         static inline scalar cubicSolve(scalar a0, scalar a1, scalar a2, label flag); //flag 0 smallest>0 ,flag 1 largest
         // IO

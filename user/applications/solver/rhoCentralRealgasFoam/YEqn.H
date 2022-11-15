@@ -11,94 +11,6 @@ tmp<fv::convectionScheme<scalar>> mvConvection
 );
 */
 
-/*
-PtrList<volVectorField> Dm =
-dynamic_cast<const reactingMixture<gasHThermoPhysics>&>
-(composition).Dm(p, T, Y, rho);
-
-PtrList<volScalarField> hsi(Y.size());
-PtrList<surfaceScalarField> J(Y.size());
-PtrList<volScalarField> D(Y.size());
-PtrList<volScalarField> tempY(Y.size());
-
-forAll(Y, i)
-{
-    hsi.set
-    (
-        i,
-        new volScalarField
-        (
-            IOobject
-            (
-                "hsi",
-                mesh.time().timeName(),
-                mesh
-            ),
-            mesh,
-            dimensionedScalar
-            (
-                "hsi",
-                dimEnergy / dimMass,
-                Zero
-            )
-        )
-    );
-
-    tempY.set
-    (
-        i,
-        new volScalarField
-        (
-            IOobject
-            (
-                "tempY",
-                mesh.time().timeName(),
-                mesh
-            ),
-            mesh,
-            scalar(0.0)
-        )
-    );
-
-    D.set
-    (
-        i,
-        mag(Dm[i]) / (dimensionedScalar("SMALL", dimensionSet(0, -1, 0, 0, 0), Foam::SMALL)
-            + mag(fvc::grad(Y[i]).ref()))
-    );
-
-    J.set
-    (
-        i,
-        fvc::interpolate(Dm[i] * rho) & mesh.Sf()
-    );
-
-}
-
-forAll(Y, i)
-{
-    volScalarField& tHsi = hsi[i];
-    forAll(tHsi, celli)
-    {
-        tHsi[celli] = composition.Hs(i, p[celli], T[celli]);
-    }
-    volScalarField::Boundary& Bf = tHsi.boundaryFieldRef();
-    forAll(Bf, patchi)
-    {
-        forAll(Bf[patchi], facei)
-        {
-            Bf[patchi][facei] =
-                composition.Hs
-                (
-                    i,
-                    p.boundaryField()[patchi][facei],
-                    T.boundaryField()[patchi][facei]
-                );
-        }
-    }
-}
-*/
-
 PtrList<volScalarField> tempY(Y.size());
 
 {
@@ -142,11 +54,7 @@ PtrList<volScalarField> tempY(Y.size());
             YVt += YVi[i];
         }
     }
-    /*Info << "\n93:" << YVi[0][93]
-        << "\n94:" << YVi[0][94]
-        << "\n95:" << YVi[0][95]
-        << "\n96:" << YVi[0][96]
-        << "\n97:" << YVi[0][97] << endl;*/
+
     YVi[inertIndex] = -YVt;
 
     //reaction->correct();
@@ -171,29 +79,18 @@ PtrList<volScalarField> tempY(Y.size());
             volScalarField &rhoYi = rhoY[i];
             // Central upwind scheme
             // interpolation of Yi to cell faces
-            surfaceScalarField Yi_pos(interpolate(Yi, pos, Yi_name));
-            surfaceScalarField Yi_neg(interpolate(Yi, neg, Yi_name));
-            surfaceScalarField phiYi(
-                "phiYi",
-                aphiv_pos * rho_pos * Yi_pos + aphiv_neg * rho_neg * Yi_neg);
+            surfaceScalarField rhoYi_pos(interpolate(rhoYi, pos, rhoYi_name));
+            surfaceScalarField rhoYi_neg(interpolate(rhoYi, neg, rhoYi_name));
 
-            surfaceScalarField phiYi_pos(
-                "phiYi_pos",
-                aphiv_pos_pos * rho_pos * Yi_pos + aphiv_pos_neg * rho_neg * Yi_neg);
+            surfaceScalarField rhoYstar((ap * rhoYi_neg - am * rhoYi_pos - ((U_neg * rhoYi_neg & mesh.Sf()) - (U_pos * rhoYi_pos & mesh.Sf()))) / (ap - am));
+            surfaceScalarField rhoYQ = minMod(rhoYi_neg - rhoYstar, rhoYstar - rhoYi_pos) * ap * am / (ap - am);
 
-            surfaceScalarField phiYi_neg(
-                "phiYi_neg",
-                aphiv_neg_pos * rho_pos * Yi_pos + aphiv_neg_neg * rho_neg * Yi_neg);
+            //phiY.set(i, aphiv_pos * rhoYi_pos + aphiv_neg * rhoYi_neg - rhoYQ);
 
-            if (divScheme == "Doubleflux")
-            {
-                solve(fvm::ddt(rhoYi) + fvc::div_doubleflux(phiYi_pos, phiYi_neg));
-            }
-            else if (divScheme == "Conservativeflux")
-            {
+            surfaceScalarField phiYi("phiYi", aphiv_pos * rhoYi_pos + aphiv_neg * rhoYi_neg - 0*rhoYQ);
 
-                solve(fvm::ddt(rhoYi) + fvc::div(phiYi));
-            }
+            solve(fvm::ddt(rhoYi) + fvc::div(phiYi));
+            
 
             Yi = rhoYi / rho;
             Yi.correctBoundaryConditions();
