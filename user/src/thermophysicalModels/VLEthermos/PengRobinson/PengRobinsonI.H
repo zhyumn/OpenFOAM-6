@@ -657,6 +657,7 @@ Foam::PengRobinson<Specie> Foam::operator==(
 }
 
 //temp E
+/*
 template <class Specie>
 inline Foam::scalar Foam::PengRobinson<Specie>::Hig_phase(
     scalar T) const
@@ -671,5 +672,5 @@ inline Foam::scalar Foam::PengRobinson<Specie>::Hig2_phase(
     //return   Hig2_phase_[0]*T +Hig2_phase_[1]*Hig2_phase_[2]*(2.0/(exp(2.0*Hig2_phase_[2]/T)-1.0))+ 2.0*Hig2_phase_[3]*Hig2_phase_[4]*(1.0/(exp(2.0*Hig2_phase_[4]/T)+1.0));
     return Hig2_phase_[0] + Hig2_phase_[1] * T + Hig2_phase_[2] * Hig2_phase_[3] * ((exp(2.0 * Hig2_phase_[3] / T) + 1) / (exp(2.0 * Hig2_phase_[3] / T) - 1.0)) + Hig2_phase_[4] * Hig2_phase_[5] * ((exp(2.0 * Hig2_phase_[5] / T) - 1.0) / (exp(2.0 * Hig2_phase_[5] / T) + 1.0));
 }
-
+*/
 // ************************************************************************* //

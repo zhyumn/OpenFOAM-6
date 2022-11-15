@@ -131,11 +131,13 @@ namespace Foam
             dictionary ISATDict_;
 
             ISATRhoMultithermo<ThermoMixture, Type> *temp_p;
-            thermofunction_TPX_to_Erhovfc_G_rhoY<ISATRhoMultithermo<ThermoMixture, Type>> Erhovfcfun_XTP;
-            thermofunction_TrhoP_to_THvfc_G_rhoY<ISATRhoMultithermo<ThermoMixture, Type>> THvfcfun_XrhoP;
+            thermofunction_TPX_to_Erhovfc_G_rhoY<ISATRhoMultithermo<ThermoMixture, Type>> Erhovffun_XTP;
+            thermofunction_TrhoP_to_THvf_G_rhoY<ISATRhoMultithermo<ThermoMixture, Type>> THvffun_XrhoP;
+            thermofunction_XHsP_to_Trhovfc_G_rhoY<ISATRhoMultithermo<ThermoMixture, Type>> Trhovffun_XHsP;
 
-            mutable ISATmanager<thermofunction_TPX_to_Erhovfc_G_rhoY<ISATRhoMultithermo<ThermoMixture, Type>>> Erhovfctree_XTP;
-            mutable ISATmanager<thermofunction_TrhoP_to_THvfc_G_rhoY<ISATRhoMultithermo<ThermoMixture, Type>>> THvfctree_XrhoP;
+            mutable ISATmanager<thermofunction_TPX_to_Erhovfc_G_rhoY<ISATRhoMultithermo<ThermoMixture, Type>>> Erhovftree_XTP;
+            mutable ISATmanager<thermofunction_TrhoP_to_THvf_G_rhoY<ISATRhoMultithermo<ThermoMixture, Type>>> THvftree_XrhoP;
+            mutable ISATmanager<thermofunction_XHsP_to_Trhovfc_G_rhoY<ISATRhoMultithermo<ThermoMixture, Type>>> Trhovftree_XHsP;
 
             // Private Member Functions
 
@@ -209,6 +211,8 @@ namespace Foam
             static inline word heName();
 
             inline void newTimeStep();
+
+            inline bool newLoop();
             // Fundamental properties
             // (These functions must be provided in derived types)
 
@@ -231,12 +235,12 @@ namespace Foam
             inline scalar psi_HP(const scalar p, const scalar T, const scalar T0) const;
             inline std::tuple<scalar, scalar> Tpsi_HP(const scalar p, const scalar T, const scalar T0) const;
             //inline std::tuple<scalar, scalar, scalar, scalar > Tpsivfc_XHP(const scalar p, const scalar T, const scalar T0) const;
-            inline std::tuple<scalar, scalar, scalar, scalar> THvfc_XrhoP(const scalar p, const scalar T, const scalar T0) const;
-            inline std::tuple<scalar, scalar, scalar, scalar, scalar> THvfc_G_rhoY_XrhoP(const scalar p, const scalar T, const scalar T0,scalarList& Y) const;
-            inline std::tuple<scalar, scalar, scalar, scalar> TPvfc_Erho(const scalar E, const scalar rho, const scalar T0, const scalar P0) const;
+            inline std::tuple<scalar, scalar, scalar> THvf_XrhoP(const scalar p, const scalar T, const scalar T0) const;
+            inline std::tuple<scalar, scalar, scalar, scalar> THvf_G_rhoY_XrhoP(const scalar p, const scalar T, const scalar T0, scalarList &Y) const;
+            inline std::tuple<scalar, scalar, scalar> TPvf_Erho(const scalar E, const scalar rho, const scalar T0, const scalar P0) const;
             //inline std::tuple<scalar, scalar, scalar, scalar, autoPtr<typename ThermoMixture::solution>> TPvfcsol_Erho(const scalar E, const scalar rho, const scalar T0, const scalar P0) const;
-            inline std::tuple<scalar, scalar, scalar, scalar, autoPtr<typename ThermoMixture::solution>> Tpsivfcsol_XHP(const scalar H, const scalar P, const scalar T0) const;
-
+            inline std::tuple<scalar, scalar, scalar, scalar, autoPtr<typename ThermoMixture::solution>> Tpsivfsol_XHP(const scalar H, const scalar P, const scalar T0) const;
+            inline std::tuple<scalar, scalar, scalar, scalar, scalar> Trhovfc_G_rhoY_XHsP(const scalar H, const scalar P, const scalar T0, scalarList &Y) const;
             inline scalar mu(const scalar p, const scalar T) const;
             inline scalar alphah(const scalar p, const scalar T) const;
             inline scalar kappa(const scalar p, const scalar T) const;
@@ -269,8 +273,8 @@ namespace Foam
             inline scalar Es_ac(const scalar p, const scalar T) const;
             inline scalar THP(const scalar H, const scalar P, const scalar T0) const;
 
-            inline std::tuple<scalar, scalar, scalar> rhovfc_ISAT(const scalar p, const scalar T) const;
-            inline std::tuple<scalar, scalar, scalar, scalar> Erhovfc_ISAT(const scalar p, const scalar T) const;
+            inline std::tuple<scalar, scalar> rhovf_ISAT(const scalar p, const scalar T) const;
+            inline std::tuple<scalar, scalar, scalar> Erhovf_ISAT(const scalar p, const scalar T) const;
             inline std::tuple<scalar, scalar, scalar, scalar, scalar> Erhovfc_G_rhoY_ISAT(const scalar p, const scalar T, scalarList &Y) const;
 
             //- Absolute internal energy [J/kg]
@@ -442,6 +446,10 @@ namespace Foam
             friend struct thermofunction_Tpsivfsol;
             template <class TypeName>
             friend struct thermofunction_TrhoP_to_THvfc_G_rhoY;
+            template <class TypeName>
+            friend struct thermofunction_TrhoP_to_THvf_G_rhoY;
+            template <class TypeName>
+            friend struct thermofunction_XHsP_to_Trhovfc_G_rhoY;
         };
 
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

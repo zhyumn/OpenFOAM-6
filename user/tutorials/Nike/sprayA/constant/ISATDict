@@ -35,7 +35,7 @@ THvfctree_XrhoP
     }
     NtimeTag 10;
     maxLeafsize (0.3 2 1e5);
-    toleranceOut (1e-2 10 1e-2 5);//(1e-0 1e-1 1e-3 1e-1);//BUG input!!(1e-10 1e-10 1e-10);//(1e-0 1e-0 1e-3);//(1e-1 1e-8 1e-3);
+    toleranceOut (1e-2 10 1e-2 5 1e-1 1e-3);//(1e-0 1e-1 1e-3 1e-1);//BUG input!!(1e-10 1e-10 1e-10);//(1e-0 1e-0 1e-3);//(1e-1 1e-8 1e-3);
     initToleranceIn (1e-5 1e-2 10);
     scaleIn (1  10 1e7);//(1 1 1 1);//(1 1 2.3e+07 500);
 }
@@ -54,7 +54,7 @@ Erhovfctree_XTP
     }
     NtimeTag 5;
     maxLeafsize (0.3 50 1e6);
-    toleranceOut (1e2 1e-1 1e-2 5);//BUG input!!(1e-10 1e-10 1e-10);//(1e-0 1e-0 1e-3);//(1e-1 1e-8 1e-3);
+    toleranceOut (1e2 1e-1 1e-2 5 1e-1 1e-3);//BUG input!!(1e-10 1e-10 1e-10);//(1e-0 1e-0 1e-3);//(1e-1 1e-8 1e-3);
     initToleranceIn (1e-4 1e-3 10);
     scaleIn (1 100 1e7);//(1 1 1 1);//(1 1 2.3e+07 500);
 }

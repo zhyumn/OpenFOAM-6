@@ -73,6 +73,9 @@ namespace Foam
 
         scalarRectangularMatrix init_elp_;
 
+        bool modified_;
+        label nloop_;
+
         label timeSteps_;
         bool noISAT_;
         label checkInterval_;
@@ -276,15 +279,27 @@ namespace Foam
 
         bool retrieve(const Foam::scalarList &value, scalarList &out);
 
-        bool grow(ISATleaf *plf, const scalarList &dvalue, const scalarList &data1, const scalarList &data2);
+        bool grow(ISATleaf *plf, const scalarList &dvalue, scalarList &data1, const scalarList &data2);
 
         double distance(const scalarList &l, const scalarList &r);
         double normalized_distance(const scalarList &l, const scalarList &r);
 
         double norm(const scalarList &l);
 
+        bool newLoop()
+        {
+            nloop_++;
+            if (nloop_ == 3)
+                return false;
+            bool ret = modified_;
+            modified_ = false;
+            return ret;
+        }
+
         void newTimeStep()
         {
+            nloop_ = 0;
+            modified_ = false;
             timeSteps_++;
             if (timeSteps_ % checkInterval_ == 0)
             {

@@ -2,6 +2,7 @@
 
 const word DF_name("DF");
 const word Yi_name("Yi");
+const word rhoYi_name("rhoYi");
 Info << "Reading thermophysical properties\n"
      << endl;
 
@@ -13,6 +14,7 @@ volScalarField &c = mesh.objectRegistry::lookupObjectRef<volScalarField>("sounds
 volScalarField &p = thermo.p();
 basicSpecieMixture &composition = thermo.composition();
 PtrList<volScalarField> &Y = composition.Y();
+volScalarField &T = thermo.T();
 
 // initialize oldY for CoDAC
 ///PtrList<volScalarField>& oldY = composition.oldY();
@@ -190,7 +192,7 @@ forAll(Y, i)
         i,
         new volScalarField(
             IOobject(
-                "rhoY."+ species[i],
+                "rhoY." + species[i],
                 runTime.timeName(),
                 mesh,
                 IOobject::NO_READ,
@@ -294,10 +296,35 @@ volScalarField eStar(
 
 multivariateSurfaceInterpolationScheme<scalar>::fieldTable fields;
 
-forAll (Y, i)
+forAll(Y, i)
 {
     fields.add(Y[i]);
     //fields.add(rhoY[i]);
 }
+/*
+surfaceScalarField rho_pos_0(interpolate(rho, pos));
+surfaceScalarField rho_neg_0(interpolate(rho, neg));
 
+surfaceVectorField rhoU_pos_0(interpolate(rhoU, pos, U.name()));
+surfaceVectorField rhoU_neg_0(interpolate(rhoU, neg, U.name()));
+
+surfaceScalarField phiv_pos_0("phiv_pos_0", rhoU_pos_0/rho_pos_0 & mesh.Sf());
+surfaceScalarField phiv_neg_0("phiv_neg_0", rhoU_neg_0/rho_neg_0 & mesh.Sf());
+dimensionedScalar v_zero_0("v_zero", dimVolume / dimTime, 0.0);
+surfaceScalarField cSf_pos_0(
+    "cSf_pos",
+    interpolate(c, pos) * mesh.magSf());
+surfaceScalarField cSf_neg_0(
+    "cSf_neg",
+    interpolate(c, neg) * mesh.magSf());
+
+surfaceScalarField ap_0(
+    "ap",
+    max(max(phiv_pos_0 + cSf_pos_0, phiv_neg_0 + cSf_neg_0), v_zero_0));
+surfaceScalarField am_0(
+    "am",
+    min(min(phiv_pos_0 - cSf_pos_0, phiv_neg_0 - cSf_neg_0), v_zero_0));
+
+surfaceScalarField amaxSf("amaxSf", max(mag(am_0), mag(ap_0)));
+*/
 //#include "createFvOptions.H"

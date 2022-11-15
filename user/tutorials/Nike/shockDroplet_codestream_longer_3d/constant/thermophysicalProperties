@@ -31,8 +31,9 @@ chemistryReader foamChemistryReader;
 
 foamChemistryFile "$FOAM_CASE/constant/chem";
 
-foamChemistryThermoFile "$FOAM_CASE/constant/thermo";
-
+//foamChemistryThermoFile "$FOAM_CASE/constant/thermo";
+foamChemistryThermoFile "$FOAM_USER_DIR/etc/caseDicts/VLEcase/system/thermo";
+#include"$FOAM_USER_DIR/etc/caseDicts/VLEcase/system/thermoMixture"
 CHEMKINFile     "$FOAM_CASE/chemkin/chem.inp";
 CHEMKINThermoFile "$FOAM_CASE/chemkin/therm.dat";
 CHEMKINTransportFile "$FOAM_CASE/chemkin/transportProperties";
@@ -54,7 +55,7 @@ Kinit (898871489.0830865 28337.84530200413 0.0014273249038749681);
 solids
 {}
 
-BinaryInteractionParameter
+/* BinaryInteractionParameter
 {
     specielist (N2       C12H26  CO2     CH4     H2O     O2      C7H16   H2      H2S      C6H14);
     
@@ -68,7 +69,7 @@ BinaryInteractionParameter
                 0.103    0.000   0.000   0.000   0.000   0.000   0.000   0.000   0.000   0.000    //H2
                 0.000    0.000   0.000   0.08    0.000   0.000   0.000   0.000   0.000   0.000    //H2S
                 0.02     0.000   0.000   0.000   0.000   0.000   0.000   0.000   0.000   0.000);  //C6H14 
-} 
+}  */
 
 
 

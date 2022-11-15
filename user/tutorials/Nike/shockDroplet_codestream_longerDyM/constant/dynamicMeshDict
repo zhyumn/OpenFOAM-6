@@ -44,7 +44,6 @@ maxCells        200000;
 // on surfaceScalarFields that do not need to be reinterpolated.
 correctFluxes
 (
-    (phi none)
     (neg none)
     (pos none)
 

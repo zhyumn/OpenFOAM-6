@@ -2,32 +2,36 @@ N2
 {
     specie
     {
-        molWeight       28.0134;
+        molWeight       28.0134; // g/mol   //NIST
     }
     equationOfState
     {
-        Tc       	    126.1;
-        Vc              0.0901;//m3/kmol
-        Pc              3.39e+06;
+        Tc       	    126.1; //K          //NIST
+        rhoc            11.18;//mol/l       //NIST
+        Pc              33.978e+5;//Pa      //NIST
         omega           0.039; //0.0377; //0.039; 
-        Hig_phase       (3.53100528e+00 -1.23660988e-04 -5.02999433e-07 2.43530612e-09 -1.40881235e-12);
-        Hig2_phase      (6.95808 2.03952 1681.60 0.506863 6535.68);
-        mu              0.0;
-        kappa           0.0;
-        sigmvi          17.9;
     }
     thermodynamics
     {
+        Cp 1005;
+        Hf 0;
+        //GRI30
         Tlow            100;
-        Thigh           5000;
         Tcommon         1000;
-        highCpCoeffs    ( 2.92664 0.00148798 -5.68476e-07 1.0097e-10 -6.75335e-15 -922.798 5.98053 ); //GRI30
-        lowCpCoeffs     ( 3.29868 0.00140824 -3.96322e-06 5.64152e-09 -2.44485e-12 -1020.9 3.95037 ); //GRI30
+        Thigh           5000;
+        lowCpCoeffs     ( 3.298677000E+00   1.408240400E-03   -3.963222000E-06   5.641515000E-09   -2.444854000E-12   -1.020899900E+03   3.950372000E+00 ); 
+        highCpCoeffs    ( 2.926640000E+00   1.487976800E-03   -5.684760000E-07   1.009703800E-10   -6.753351000E-15   -9.227977000E+02   5.980528000E+00 ); 
     }
     transport
     {
+        Pr 0.7;
+
+
         As              1.67212e-06;
         Ts              170.672;
+        mu              0.0;
+        kappa           0.0;
+        sigmvi          17.9;
     }
     elements
     {
@@ -39,32 +43,35 @@ C6H14
 {
     specie
     {
-        molWeight       86.1754;
+        molWeight       86.1754;  //NIST
     }
     equationOfState
     {
-        Tc       	    507.6;
-        Vc              0.368;//m3/kmol
-        Pc              3.02e+06;
+        Tc       	    507.6;//NIST
+        rhoc            2.71;//NIST
+        Pc              30.2e+5;//NIST
         omega           0.3003; //0.0377; //0.039; 
-        Hig_phase       (3.53100528e+00 -1.23660988e-04 -5.02999433e-07 2.43530612e-09 -1.40881235e-12);
-        Hig2_phase      (6.95808 2.03952 1681.60 0.506863 6535.68);
+    }
+    thermodynamics
+    {    
+                Cp 1005;
+        Hf 0;
+        //Mevel, R. and Chatelain, K. and Boettcher, P. A. and Shepherd, J. E.,
+        //Low temperature oxidation of n-hexane in a flow reactor. Fuel, 125, 282-293, 2014.
+        //https://shepherd.caltech.edu/EDL/PublicResources/sdt/cti_mech.html
+        Tlow            100;//300;
+        Tcommon         1200;
+        Thigh           5000;
+        lowCpCoeffs     (1.90038413E+00  5.14640294E-02  7.91906421E-06  -3.47484905E-08  1.31381393E-11 -2.29428369E+04 2.05073363E+01); 
+        highCpCoeffs    (2.28046470E+01  2.09800119E-02 -3.53074129E-06  -5.46609072E-10  1.47893745E-13 -3.07498496E+04 -9.58469533E+01);
+    }
+    transport
+    {Pr 0.7;
+                As              1.67212e-06;
+        Ts              170.672;
         mu              0.0;
         kappa           0.0;
         sigmvi          126.72;
-    }
-    thermodynamics
-    {
-        Tlow            100;
-        Thigh           5000;
-        Tcommon         1200;
-        highCpCoeffs    (22.804647 2.09800119e-2 -3.53074129e-6 -5.46609072e-10  1.47893745e-13 -3.07498496e4 -95.8469533);
-        lowCpCoeffs     (1.90038413 5.14640294e-2 7.91906421e-6 -3.47484905e-8 1.31381393e-11 -2.29428369e4 20.5073363); 
-    }
-    transport
-    {
-        As              1.67212e-06;
-        Ts              170.672;
     }
     elements
     {
@@ -77,32 +84,33 @@ O2
 {
     specie
     {
-        molWeight       32.0;
+        molWeight       31.9988;//NIST
     }
     equationOfState
     {
-        Tc       	    155.0;
-        Vc              0.080;//m3/kmol
-        Pc              5.08e+06;
+        Tc       	    154.58;//NIST
+        rhoc            13.60;//NIST
+        Pc              50.43e+5;//NIST
         omega           0.021; //0.039; 
-        Hig_phase       (3.78246636e+00 -2.99673416e-03 9.84730200e-06 -9.68129608e-09 3.24372836e-12);
-        Hig2_phase      (6.96302 2.40013 2522.05 2.21752 1154.15);
-        mu              0.0;
-        kappa           0.0;
-        sigmvi          1.0;
     }
     thermodynamics
     {
+                Cp 1005;
+        Hf 0;
+        //GRI30
         Tlow            200;
-        Thigh           6000;
         Tcommon         1000;
-        highCpCoeffs    ( 3.45852381 0.00104045351 -2.79664041e-07 3.11439672e-11 -8.55656058e-16 10222.9063 4.15264119 );
-        lowCpCoeffs     ( 3.78535371 -0.0032192854 1.12323443e-05 -1.17254068e-08 4.17659585e-12 10292.2572 3.27320239 );
+        Thigh           3500;
+        lowCpCoeffs     ( 3.782456360E+00  -2.996734160E-03  9.847302010E-06  -9.681295090E-09   3.243728370E-12  -1.063943560E+03   3.657675730E+00 );
+        highCpCoeffs    ( 3.282537840E+00   1.483087540E-03 -7.579666690E-07  2.094705550E-10  -2.167177940E-14   -1.088457720E+03   5.453231290E+00 );
     }
     transport
-    {
-        As              1.67212e-06;
+    {Pr 0.7;
+                As              1.67212e-06;
         Ts              170.672;
+        mu              0.0;
+        kappa           0.0;
+        sigmvi          1.0;
     }
     elements
     {
@@ -114,32 +122,34 @@ C12H26
 {
     specie
     {
-        molWeight       170.338;
+        molWeight       170.3348;//NIST
     }
     equationOfState
     {
-        Tc       	    658.0;
-        Vc              0.754;//m3/kmol
-        Pc              1.82e+06;
+        Tc       	    658.2;//NIST
+        rhoc            1.3;//NIST
+        Pc              18e+05;//NIST
         omega           0.576385; //0.5742; 
-        Hig_phase       (2.13264480e+01 -3.86394002e-02 3.99476113e-04 -5.06681097e-07 2.00697878e-10);
-        Hig2_phase      (51.02700 143.8250 1664.760 109.4510 789.2970);
-        mu              0.0;
-        kappa           0.0;
-        sigmvi          1.0;
     }
     thermodynamics
     {
-        Tlow            200;
-        Thigh           6000;
-        Tcommon         1000;
-        highCpCoeffs    ( 20.4565203 0.0348575357 -1.09226846e-05 1.67201776e-09 -9.8102485e-14 -32555.6365 -80.4405017 );
-        lowCpCoeffs     ( 11.1532994 -0.00949419773 0.000195572075 -2.49753662e-07 9.84877715e-11 -26768.8904 -15.9096837 );
+                Cp 1005;
+        Hf 0;
+        //JetSurF2.0
+        //https://shepherd.caltech.edu/EDL/PublicResources/sdt/cti_mech.html
+        Tlow            100;//300;
+        Tcommon         1590;
+        Thigh           5000;
+        lowCpCoeffs     ( -2.38265893E+00  1.45739929E-01 -9.14517778E-05 2.85289455E-08 -3.49138416E-12 -4.00920589E+04  4.90709953E+01 );
+        highCpCoeffs    ( 3.85078111E+01  5.63574461E-02 -1.91505499E-05  2.96050890E-09 -1.71263883E-13 -5.48939801E+04  -1.72672880E+02 );
     }
     transport
-    {
-        As              1.67212e-06;
+    {Pr 0.7;
+                As              1.67212e-06;
         Ts              170.672;
+        mu              0.0;
+        kappa           0.0;
+        sigmvi          1.0;
     }
     elements
     {
@@ -172,34 +182,33 @@ CO2
 {
     specie
     {
-        molWeight       44.01;
+        molWeight       44.0095; //NIST
     }
-
-    thermodynamics
-    {
-        Tlow            200;
-        Thigh           3500;
-        Tcommon         1000;
-        highCpCoeffs    ( 3.85746 0.00441437 -2.21481e-06 5.2349e-10 -4.72084e-14 -48759.2 2.27164 );
-        lowCpCoeffs     ( 2.35677 0.0089846 -7.12356e-06 2.45919e-09 -1.437e-13 -48372 9.90105 );
-    }
-
     equationOfState
     {
-        Tc       	    304.1;
-        Vc              0.0919;//m3/kmol
-        Pc              7.38e+06;
+        Tc       	    304.18;//NIST
+        rhoc            10.6;//NIST
+        Pc              73.80e+05;//NIST
         omega           0.225; //0.039; 
-        Hig_phase       (2.35677352e+00 8.98459677e-03 -7.12356269e-06 2.45919022e-09 -1.43699548e-13);
-        Hig2_phase      (-7460.81 7.54056 7.51625 1442.70 5.38023 647.502);
+    }
+    thermodynamics
+    {
+                Cp 1005;
+        Hf 0;
+        //GRI30
+        Tlow            200;
+        Tcommon         1000;
+        Thigh           3500;
+        lowCpCoeffs     ( 2.356773520E+00   8.984596770E-03  -7.123562690E-06   2.459190220E-09  -1.436995480E-13  -4.837196970E+04   9.901052220E+00 );
+        highCpCoeffs    ( 3.857460290E+00   4.414370260E-03  -2.214814040E-06   5.234901880E-10  -4.720841640E-14  -4.875916600E+04   2.271638060E+00 );
+    }
+    transport
+    {Pr 0.7;
+                As              1.67212e-06;
+        Ts              170.672;
         mu              0.0;
         kappa           0;
         sigmvi          1.0;
-    }
-    transport
-    {
-        As              1.67212e-06;
-        Ts              170.672;
     }
     elements
     {
@@ -234,32 +243,35 @@ H2O
 {
     specie
     {
-        molWeight       18.0;
-    }
-    thermodynamics
-    {
-        Tlow            200;
-        Thigh           3500;
-        Tcommon         1000;
-        highCpCoeffs    ( 3.03399 0.00217692 -1.64073e-07 -9.7042e-11 1.68201e-14 -30004.3 4.96677 );
-        lowCpCoeffs     ( 4.19864 -0.00203643 6.5204e-06 -5.48797e-09 1.77198e-12 -30293.7 -0.849032 );
+        molWeight       18.0153;//NIST
     }
     equationOfState
     {
-        Tc       	    647.096;
-        Vc              0.0559;//0.003155;//m3/kmol
-        Pc              22.06e+06;
+        Tc       	    647;//NIST
+        rhoc            17.9;//NIST
+        Pc              220.64e+05;//NIST
         omega           0.344; //0.039; 
-        Hig_phase       (7.25575005e+01 -6.62445402e-01 2.56198746e-03 -4.36591923e-06 2.78178981e-09);
-        Hig2_phase      (-13773.1 7.97183 6.27078 2572.63 2.0501 1156.72);
+    }
+    thermodynamics
+    {
+                Cp 1005;
+        Hf 0;
+        //GRI30
+        Tlow            200;
+        Tcommon         1000;
+        Thigh           3500;
+        lowCpCoeffs     ( 4.198640560E+00  -2.036434100E-03 6.520402110E-06  -5.487970620E-09   1.771978170E-12   -3.029372670E+04  -8.490322080E-01 );
+        highCpCoeffs    ( 3.033992490E+00  2.176918040E-03  -1.640725180E-07  -9.704198700E-11   1.682009920E-14 -3.000429710E+04   4.966770100E+00);
+
+    }
+    transport
+    {        
+        Pr 0.7;
+        As              1.67212e-06;
+        Ts              170.672;
         mu              1.8;
         kappa           0.075908;
         sigmvi          1.0;
-    }
-    transport
-    {
-        As              1.67212e-06;
-        Ts              170.672;
     }
     elements
     {

@@ -130,6 +130,24 @@ namespace Foam
                         )
                     );
         }
+
+        template<class Type>
+        tmp<GeometricField<Type, fvPatchField, volMesh>>
+            div_doubleflux
+            (
+                const tmp<GeometricField<Type, fvsPatchField, surfaceMesh>>& ssf_pos,
+                const tmp<GeometricField<Type, fvsPatchField, surfaceMesh>>& ssf_neg
+            )
+        {
+            return tmp<GeometricField<Type, fvPatchField, volMesh>>
+                (
+                    new GeometricField<Type, fvPatchField, volMesh>
+                    (
+                        "div_doubleflux(" + ssf_pos().name() + ',' + ssf_neg().name() + ')',
+                        surfaceIntegrate_doubleflux(ssf_pos(), ssf_neg())
+                        )
+                    );
+        }
     }
 
 }

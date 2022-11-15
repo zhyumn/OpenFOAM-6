@@ -180,6 +180,12 @@ inline void Foam::nonlinearMixture<ThermoType, ThermoMixtureType>::newTimeStep()
 }
 
 template<class ThermoType, template<class> class ThermoMixtureType>
+inline bool Foam::nonlinearMixture<ThermoType, ThermoMixtureType>::newLoop()
+{
+    return mixture_.newLoop();
+}
+
+template<class ThermoType, template<class> class ThermoMixtureType>
 inline void Foam::nonlinearMixture<ThermoType, ThermoMixtureType>::mute_show()
 {
     mixture_.mute_show();

@@ -72,7 +72,7 @@ bool Foam::ISATleaf::inEOA(const scalarList& point, const scalarRectangularMatri
     {
         dx[i][0] = (point[i] - value_[i]) / scaleIn[i][i];
     }
-
+    
     return ((dx.T()) * EOA_ * dx)[0][0] <= 1.0;
 
 }

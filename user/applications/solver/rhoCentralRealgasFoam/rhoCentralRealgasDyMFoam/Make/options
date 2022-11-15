@@ -1,4 +1,5 @@
 EXE_INC = \
+    -I. \
     -I.. \
     -I../BCs/lnInclude \
     -I$(LIB_SRC)/finiteVolume/lnInclude \
