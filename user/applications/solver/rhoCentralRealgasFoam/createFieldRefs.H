@@ -10,7 +10,7 @@ if (max(mu.primitiveField()) > 0.0)
 {
     inviscid = false;
 }
-inviscid = true;
+//inviscid = true;
 
 //volScalarField& frac = mesh.objectRegistry::lookupObjectRef<volScalarField>("vaporfrac");
 

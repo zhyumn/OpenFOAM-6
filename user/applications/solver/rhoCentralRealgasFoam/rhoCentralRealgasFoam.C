@@ -175,7 +175,7 @@ int main(int argc, char *argv[])
         surfaceVectorField rhoUstar((ap * rhoU_neg - am * rhoU_pos - (rhoU_neg * (U_neg & mesh.Sf()) + p_neg * mesh.Sf() - rhoU_pos * (U_pos & mesh.Sf()) - p_pos * mesh.Sf())) / (ap - am));
         surfaceVectorField rhoUQ = minMod(rhoU_neg - rhoUstar, rhoUstar - rhoU_pos) * ap * am / (ap - am);
 
-        phi = aphiv_pos * rho_pos + aphiv_neg * rho_neg - rhoQ;
+        phi = aphiv_pos * rho_pos + aphiv_neg * rho_neg - 0*rhoQ;
 
         surfaceVectorField phiUp((aphiv_pos * rhoU_pos + aphiv_neg * rhoU_neg) + (a_pos * p_pos + a_neg * p_neg) * mesh.Sf() - 0*rhoUQ);
 
