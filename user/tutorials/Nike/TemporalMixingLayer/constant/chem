@@ -1,0 +1,20 @@
+elements        
+3
+(
+H
+O
+C
+)
+;
+
+
+species        2(C6H14 N2);
+
+
+reactions
+{
+}
+
+Tlow            200;
+Thigh           6000;
+
