@@ -10,14 +10,15 @@ if (max(mu.primitiveField()) > 0.0)
 {
     inviscid = false;
 }
-inviscid = true;
+//inviscid = true;
 
 //volScalarField& frac = mesh.objectRegistry::lookupObjectRef<volScalarField>("vaporfrac");
 
 volScalarField &alpha = mesh.objectRegistry::lookupObjectRef<volScalarField>("thermo:alpha");
 volScalarField &rho_G = mesh.objectRegistry::lookupObjectRef<volScalarField>("thermo:rho_G");
+//volScalarField &Z = mesh.objectRegistry::lookupObjectRef<volScalarField>("thermo:Z");
 
-PtrList<volScalarField> Y_G(Y.size());
+UPtrList<volScalarField> Y_G(Y.size());
 forAll(Y_G, i)
 {
     Y_G.set(i, &mesh.objectRegistry::lookupObjectRef<volScalarField>("Y_G:" + species[i]));

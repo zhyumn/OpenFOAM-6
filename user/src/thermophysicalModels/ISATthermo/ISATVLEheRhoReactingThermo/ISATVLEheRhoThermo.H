@@ -57,6 +57,7 @@ namespace Foam
         volScalarField soundspeed_;
         volScalarField kappa_;
         volScalarField rho_G_;
+        //volScalarField Z_;
 
         //- Store list of mass diffusion coefficients
         PtrList<volScalarField> Dimix_; //
@@ -66,9 +67,22 @@ namespace Foam
         PtrList<volScalarField> Y_G_List_;
 
         bool inviscid_;
-        bool noVLE_;
+       // bool noVLE_;
 
-        
+       const double R_r = 1.9872; //cal/K-mol
+        double T_r, P_r, rho_r;
+        double c_r[6],Ygas_r[6];
+        double reactRate_r[6];
+        double W_r[6];
+        double Hc[6];
+
+        // volScalarField Temperature;
+        // volScalarField Pressure;
+        // volScalarField rho;
+        // PtrList<volScalarField> Yrxn;
+        // PtrList<volScalarField> conc;
+        // PtrList<volScalarField> rate;
+        // volScalarField qdot;
 
         // Private Member Functions
 
@@ -79,12 +93,6 @@ namespace Foam
 
         //- Construct as copy (not implemented)
         ISATVLEheRhoThermo(const ISATVLEheRhoThermo<BasicPsiThermo, MixtureType> &);
-
-        const double R_r = 8.314 * 1E7; //CGS
-        double T_r, P_r, rho_r;
-        double c_r[6],Ygas_r[6];
-        double reactRate_r[6];
-        double W_r[6];
 
     public:
         //- Runtime type information
@@ -114,6 +122,11 @@ namespace Foam
         scalar Qdot();
         scalar gasPhaseRho(scalar pressure, scalar temperature);
         scalar gasPhaseY(label celli, label speciesLabel);
+
+        // void customCHemistry(volScalarField temperature, volScalarField pressure, volScalarField density, PtrList<volScalarField> Y);
+        // void calculateReactions();
+        // volScalarField RR(label i);
+        // volScalarField Qdot();
     };
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
