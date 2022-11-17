@@ -163,12 +163,12 @@ PtrList<volScalarField> tempY(Y.size());
     forAll(T,celli){
         double T_i = T[celli];
         double P_i = p[celli];
-        double rho_i = rho[celli]; //thermo.gasPhaseRho(T_i, P_i);
+        double rho_i = rho_G[celli]; //thermo.gasPhaseRho(T_i, P_i);
         
         thermo.customChemistry(T_i,P_i,rho_i);
 
         forAll(Y,i){ //(int i=0;i<5;i++){
-            double Ygas_i = Y[i][celli]; //thermo.gasPhaseY(i,celli);
+            double Ygas_i = Y_G[i][celli]; //thermo.gasPhaseY(i,celli);
             thermo.setY(Ygas_i,i);
         }
 
