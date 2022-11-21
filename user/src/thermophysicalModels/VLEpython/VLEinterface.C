@@ -407,15 +407,7 @@ double solver_new::dBdT()
 
     return ((PengRobinsonMixture<multispecie<Stype>> *)thermo)->dBdT(P_, T_, comp_of);
 }
-double solver_new::W()
-{
-    Foam::scalarList comp_of(comp.size(), Foam::Zero);
-    for (unsigned int i = 0; i < comp.size(); i++)
-    {
-        comp_of[i] = comp[i];
-    }
-    return thermo->W(comp_of);
-}
+
 double solver_new::W(std::vector<double> &in)
 {
     Foam::scalarList comp_of(comp.size(), Foam::Zero);
@@ -1140,6 +1132,18 @@ double solver_new::rho()
     Mtype::solution so(thermo->Mtype::TPn_flash(P_, T_)());
     return thermo->rho(P_, T_);
     */
+}
+
+double solver_new::W()
+{
+
+    return thermo->W(thermo->X_);
+}
+
+double solver_new::mu()
+{
+    TPn_flash_update();
+    return thermo->mu_rho(P_, T_, thermo->rho(P_, T_, sol));
 }
 
 std::vector<double> solver_new::Ln_fugacityCoefficient(std::vector<double> Xout, int flag)

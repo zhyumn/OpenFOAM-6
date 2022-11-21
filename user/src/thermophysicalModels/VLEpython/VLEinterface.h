@@ -109,6 +109,7 @@ public:
     double T();
     double vaporfra();
     double rho();
+    double mu();
     double Cp();
     double c();
     double kappaS();
@@ -118,6 +119,7 @@ public:
     double rho_G();
     double W_G();
     double Es();
+    double W();
     std::vector<double> Y_G();
 
     std::vector<double> eps(std::vector<double>);
@@ -193,6 +195,7 @@ private:
     double B();
     double dBdT();
     double Ha();
+    
 
     double Ha_singlePhase(int, std::vector<double> &);
     double dHadT_singlePhase(int, std::vector<double> &);
@@ -202,7 +205,7 @@ private:
     double dHadP();
     double dHadXi(int);
     double dHsdXi(int);
-    double W();
+    //double W();
     double alphah_dev();
     double mu_dev();
     double Dimix(int);
