@@ -1763,6 +1763,19 @@ inline Foam::autoPtr<typename Foam::VLE<ThermoMixture>::solution> Foam::VLE<Ther
         //Info << "G=" << g1 << endl;
         //if (sol().vaporfra < 0.000001 || sol().vaporfra > 0.99999)
         //    g1 -= 0.1;
+
+        if (Zliq1 > Zgas1)
+            {
+                scalarList Xliq_temp = sol().X_liq;
+                scalarList Xgas_temp = sol().X_gas;
+                scalar alpha = 1.0 - sol().vaporfra;
+                forAll(Xinp,i)
+                {
+                    sol().X_liq()[i] = Xgas_temp[i];
+                    sol().X_gas()[i] = Xliq_temp[i];
+                }
+                sol().vaporfra = alpha;
+            }
     }
 
     if (Xinp.size() > 2)
@@ -1802,6 +1815,19 @@ inline Foam::autoPtr<typename Foam::VLE<ThermoMixture>::solution> Foam::VLE<Ther
             //if (sol2().vaporfra < 0.000001 || sol2().vaporfra > 0.99999)
             //    g2 -= 0.1;
             //Info << "G=" << g2 << endl;
+
+            if (Zliq2 > Zgas2 && sol2().X_liq()[0] < 0.2)
+            {
+                scalarList Xliq_temp2 = sol2().X_liq;
+                scalarList Xgas_temp2 = sol2().X_gas;
+                scalar alpha2 = 1.0 - sol2().vaporfra;
+                forAll(Xinp,i)
+                {
+                    sol2().X_liq()[i] = Xgas_temp2[i];
+                    sol2().X_gas()[i] = Xliq_temp2[i];
+                }
+                sol2().vaporfra = alpha2;
+            } 
         }
         if (success2 && success)
         {

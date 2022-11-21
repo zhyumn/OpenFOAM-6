@@ -63,10 +63,10 @@ int main(int argc, char *argv[])
 
     // Courant numbers used to adjust the time-step
     scalar CoNum = 0.0;
-    
+
     Info << "\nStarting time loop\n"
          << endl;
-
+    //Z.write();
 
     while (runTime.run())
     {
@@ -97,8 +97,10 @@ int main(int argc, char *argv[])
         //surfaceScalarField p_pos("p_pos", rho_pos * rPsi_pos); //??
         //surfaceScalarField p_neg("p_neg", rho_neg * rPsi_neg);
 
-        surfaceScalarField p_pos("p_pos", rho_pos * rPsi_pos);
-        surfaceScalarField p_neg("p_neg", rho_neg * rPsi_neg);
+        //surfaceScalarField p_pos("p_pos", rho_pos * rPsi_pos);
+        //surfaceScalarField p_neg("p_neg", rho_neg * rPsi_neg);
+        surfaceScalarField p_pos(interpolate(p, pos));
+        surfaceScalarField p_neg(interpolate(p, neg));
 
         surfaceScalarField e_pos_pos("e_pos_pos", p_pos / (rho_pos * (gammaStar_pos - 1)) + eStar_pos); // = e_pos
         surfaceScalarField e_pos_neg("e_pos_neg", p_neg / (rho_neg * (gammaStar_pos - 1)) + eStar_pos);
@@ -364,7 +366,9 @@ int main(int argc, char *argv[])
                 rhoEEqn -= fvc::div(sigmaDotU);
             }
         }
-        solve(rhoEEqn);
+        solve(rhoEEqn == Qdot);
+
+        
 
         e = rhoE / rho - 0.5 * magSqr(U);
         e.correctBoundaryConditions();
@@ -379,7 +383,8 @@ int main(int argc, char *argv[])
                     //- fvm::laplacian(turbulence->alphaEff(), e)
                     //- fvm::laplacian(kappa / Cp, he) //Todo kappa Cp
                     - fvm::laplacian(alpha, he) ==
-                    Qdot-sumHeatDiffusion - sumHeatDiffusion2
+                    //Qdot 
+                    - sumHeatDiffusion - sumHeatDiffusion2
                 //== fvOptions(rho, e)
             );
             /*forAll(Y, k)
@@ -397,12 +402,12 @@ int main(int argc, char *argv[])
 
         if (divScheme == "Doubleflux")
         {
+            //p.ref() = (e() - eStar()) * rho() * (gammaStar() - 1);
             p.ref() = (e() - eStar()) * rho() * (gammaStar() - 1);
         }
         else if (divScheme == "Conservativeflux")
         {
-            p.ref() =
-                rho() / psi();
+            //p.ref() = rho() / psi();
         }
         else
         {
@@ -412,6 +417,7 @@ int main(int argc, char *argv[])
         thermo.correct();
         p.correctBoundaryConditions();
         T.correctBoundaryConditions();
+        //#include "YEqn.H"
         thermo.correct();
         rho.boundaryFieldRef() == psi.boundaryField() * p.boundaryField();
         rhoU.boundaryFieldRef() == rho.boundaryField() * U.boundaryField();
@@ -426,7 +432,7 @@ int main(int argc, char *argv[])
 
                 rhoYi.boundaryFieldRef() = rho.boundaryField() * Yi.boundaryField();
 
-                Yi.max(0.0);
+                Yi.max(0.000001);
                 Yi.min(1.0);
 
                 Yt += Yi;
@@ -455,6 +461,7 @@ int main(int argc, char *argv[])
         // U*=0.1;
         //rho_write = rho;
         runTime.write();
+        //Z.write();
 
         Info << "ExecutionTime = " << runTime.elapsedCpuTime() << " s"
              << "  ClockTime = " << runTime.elapsedClockTime() << " s"

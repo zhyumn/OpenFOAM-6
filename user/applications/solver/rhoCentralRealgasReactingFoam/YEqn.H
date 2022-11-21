@@ -151,8 +151,16 @@ PtrList<volScalarField> tempY(Y.size());
 
     //reaction->correct();
     //Qdot = reaction->Qdot();
-    //volScalarField Yt(0.0 * Y[0]);
-    forAll(U,celli){
+
+    // thermo.customChemistry(T,p,rho);
+    // thermo.setY(Y);
+    // forAll(Y,i)
+    // {
+    //     reactRate[i] = thermo.RR(i);
+    // }
+    // Qdot = thermo.Qdot();
+
+    forAll(T,celli){
         double T_i = T[celli];
         double P_i = p[celli];
         double rho_i = rho_G[celli]; //thermo.gasPhaseRho(T_i, P_i);
@@ -173,6 +181,30 @@ PtrList<volScalarField> tempY(Y.size());
         Qdot[celli] = thermo.Qdot();
     }
 
+    forAll(Qdot_boundary,patchi){
+        forAll(Qdot_boundary[patchi],facei){
+
+            double T_i = T.boundaryField()[patchi][facei];
+            double P_i = p.boundaryField()[patchi][facei];
+            double rho_i = rho.boundaryField()[patchi][facei]; //thermo.gasPhaseRho(T_i, P_i);
+            
+            thermo.customChemistry(T_i,P_i,rho_i);
+
+            for(int i=0;i<6;i++){
+                double Ygas_i = Y[i].boundaryField()[patchi][facei]; //thermo.gasPhaseY(i,celli);
+                thermo.setY(Ygas_i,i);
+            }
+
+            thermo.setRate();
+            
+            for(int i=0;i<6;i++){
+                reactRate[i].boundaryFieldRef()[patchi][facei] = thermo.RR(i);
+            }
+
+            Qdot.boundaryFieldRef()[patchi][facei] = thermo.Qdot();
+        }
+    }
+    //volScalarField Yt(0.0 * Y[0]);
     tempY = Y;
     forAll(Y, i)
     {
@@ -192,8 +224,8 @@ PtrList<volScalarField> tempY(Y.size());
             volScalarField &rhoYi = rhoY[i];
             // Central upwind scheme
             // interpolation of Yi to cell faces
-            surfaceScalarField Yi_pos = interpolate(Yi, pos, Yi_name);
-            surfaceScalarField Yi_neg = interpolate(Yi, neg, Yi_name);
+            surfaceScalarField Yi_pos(interpolate(Yi, pos, Yi_name));
+            surfaceScalarField Yi_neg(interpolate(Yi, neg, Yi_name));
             surfaceScalarField phiYi(
                 "phiYi",
                 aphiv_pos * rho_pos * Yi_pos + aphiv_neg * rho_neg * Yi_neg);
@@ -208,17 +240,17 @@ PtrList<volScalarField> tempY(Y.size());
 
             if (divScheme == "Doubleflux")
             {
-                solve(fvm::ddt(rhoYi) + fvc::div_doubleflux(phiYi_pos, phiYi_neg));
+                solve(fvm::ddt(rhoYi) + fvc::div_doubleflux(phiYi_pos, phiYi_neg) == reactRate[i]);
             }
             else if (divScheme == "Conservativeflux")
             {
 
-                solve(fvm::ddt(rhoYi) + fvc::div(phiYi));
+                solve(fvm::ddt(rhoYi) + fvc::div(phiYi) == reactRate[i]);
             }
 
             Yi = rhoYi / rho;
             Yi.correctBoundaryConditions();
-            Yi.max(0.0);
+            Yi.max(0.000001);
 
             rhoYi.boundaryFieldRef() = rho.boundaryField() * Yi.boundaryField();
             if (!inviscid)
@@ -245,7 +277,7 @@ PtrList<volScalarField> tempY(Y.size());
 
                 Yi.correctBoundaryConditions();
             }
-            Yi.max(0.0);
+            Yi.max(0.000001);
             Yi.min(1.0);
 
             rhoYi = rho * Yi;
@@ -253,7 +285,7 @@ PtrList<volScalarField> tempY(Y.size());
         }
     }
     Y[inertIndex] = scalar(1) - Yt;
-    Y[inertIndex].max(0.0);
+    Y[inertIndex].max(0.000001);
     // update oldY here for CoDAC
     //oldY = tempY;
 }

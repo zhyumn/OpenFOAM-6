@@ -16,7 +16,7 @@ FoamFile
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 //libs ("libChemistryReaders.so");
 libs            ("libISATVLERhoReactingThermo.so");
-application     reactingFoam;
+application     rhoCentralRealGasReactingFoam;
 
 startFrom       startTime;
 

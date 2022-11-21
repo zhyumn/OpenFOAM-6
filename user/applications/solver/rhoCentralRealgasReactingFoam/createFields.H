@@ -232,7 +232,6 @@ autoPtr<CombustionModel<rhoReactionThermo>> reaction
     CombustionModel<rhoReactionThermo>::New(thermo, turbulence())
 );
 */
-
 volScalarField Qdot
 (
     IOobject
@@ -241,12 +240,13 @@ volScalarField Qdot
         runTime.timeName(),
         mesh,
         IOobject::READ_IF_PRESENT,
-        IOobject::NO_WRITE
+        IOobject::AUTO_WRITE
     ),
     mesh,
     dimensionedScalar("Qdot", dimEnergy / dimVolume / dimTime, 0.0)
 );
 
+volScalarField::Boundary& Qdot_boundary = Qdot.boundaryFieldRef();
 //Nav added
 PtrList<volScalarField> reactRate(Y.size());
 forAll(Y, i)
@@ -262,7 +262,7 @@ forAll(Y, i)
                 runTime.timeName(),
                 mesh,
                 IOobject::NO_READ,
-                IOobject::NO_WRITE
+                IOobject::AUTO_WRITE
             ),
             mesh,
             dimensionedScalar("reactRate" + species[i], dimMass / dimVolume / dimTime , 0.0)
