@@ -163,7 +163,28 @@ PtrList<volScalarField> tempY(Y.size());
     forAll(T,celli){
         double T_i = T[celli];
         double P_i = p[celli];
-        double rho_i = rho_G[celli]; //thermo.gasPhaseRho(T_i, P_i);
+        scalar W_r[6];
+
+        W_r[0] = 0.170338;
+        W_r[1] = 0.032;
+        W_r[2] = 0.04401;
+        W_r[3] =  0.0280101;
+        W_r[4] = 0.018;
+        W_r[5] = 0.0280134;
+        scalar Mavg = 0.0;
+        scalar Mavg_G = 0.0;
+
+        forAll(Y,i){
+            Mavg += Y[i][celli]/W_r[i];
+            Mavg_G += Y_G[i][celli]/W_r[i];
+        }
+        Mavg = 1.0/Mavg;
+        Mavg_G = 1.0/Mavg_G;
+        double mass_frac = Mavg_G*frac[celli]/Mavg;
+        //Info<<Mavg<<"\t"<<Mavg_G<<"\t"<<mass_frac<<endl;
+        
+        double rho_i = mass_frac*rho[celli]; //thermo.gasPhaseRho(T_i, P_i);
+        rhoGas[celli] = rho_i;
         
         thermo.customChemistry(T_i,P_i,rho_i);
 
@@ -186,7 +207,30 @@ PtrList<volScalarField> tempY(Y.size());
 
             double T_i = T.boundaryField()[patchi][facei];
             double P_i = p.boundaryField()[patchi][facei];
-            double rho_i = rho.boundaryField()[patchi][facei]; //thermo.gasPhaseRho(T_i, P_i);
+
+            scalar W_r[6];
+
+            W_r[0] = 0.170338;
+            W_r[1] = 0.032;
+            W_r[2] = 0.04401;
+            W_r[3] =  0.0280101;
+            W_r[4] = 0.018;
+            W_r[5] = 0.0280134;
+            scalar Mavg = 0.0;
+            scalar Mavg_G = 0.0;
+
+            forAll(Y,i){
+                Mavg += Y[i].boundaryField()[patchi][facei]/W_r[i];
+                Mavg_G += Y_G[i].boundaryField()[patchi][facei]/W_r[i];
+            }
+            Mavg = 1.0/Mavg;
+            Mavg_G = 1.0/Mavg_G;
+            double mass_frac = Mavg_G*frac.boundaryField()[patchi][facei]/Mavg;
+            double rho_i = mass_frac*rho.boundaryField()[patchi][facei]; //thermo.gasPhaseRho(T_i, P_i);
+            
+            thermo.customChemistry(T_i,P_i,rho_i);
+
+            
             
             thermo.customChemistry(T_i,P_i,rho_i);
 

@@ -15,7 +15,7 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-libs            ("libISATVLERhoThermo.so");
+libs            ("libISATVLERhoReactingThermo.so");
 
 application     rhoCentralRealgasFoam;
 

@@ -703,7 +703,8 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::setRate()
     double t0, t1, t2, t3, t4, t5, t6;
     double phi_st;
     double x_f, x_o, Mavg, Temp, err ;
-    double T_ini = 900.0;
+    double T_ini,Tf,To;
+    double Z,yf,yo,yff,yoo,s,S;
 
     // reactions 2 step
     // c12h26 + 12.5O2 -> 12CO + 13H2O   R1 = A1 exp(-31944/(RT)) [c12h26]^0.25 [O2]^1.25
@@ -727,6 +728,19 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::setRate()
     }
 
     Mavg = 1.0/Mavg;
+    Tf = 363.0;
+    To = 900.0;
+
+    //mixture fraction estimation
+    s = 32.0*(12.0 + 26.0/4.0)/(12.0*12.0+26.0);
+    yff = 1.0;
+    yoo = 0.15;
+    yf = Ygas_r[0]/yff;
+    yo = Ygas_r[1]/yoo;
+    S = s*yff/(yoo+1E-30);
+    Z = (S*yf - yo + 1)/(S+1);
+
+    T_ini = Z*Tf + (1-Z)*To;
 
     //if (err>5) Info<<"Gas phase temperature "<<T_r<<"\t"<<Temp<<endl; 
 

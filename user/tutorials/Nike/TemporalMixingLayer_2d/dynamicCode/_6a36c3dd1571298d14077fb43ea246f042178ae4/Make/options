@@ -1,0 +1,11 @@
+/* dynamicCode:
+ * SHA1 = 6a36c3dd1571298d14077fb43ea246f042178ae4
+ */
+EXE_INC = -g \
+-I$(LIB_SRC)/finiteVolume/lnInclude \
+            -I$(LIB_SRC)/meshTools/lnInclude
+
+LIB_LIBS = \
+    -lOpenFOAM \
+-lmeshTools \
+            -lfiniteVolume

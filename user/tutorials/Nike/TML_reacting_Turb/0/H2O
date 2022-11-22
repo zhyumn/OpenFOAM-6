@@ -1,0 +1,88 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  6
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volScalarField;
+    location    "0.00011";
+    object      H2O;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+dimensions      [0 0 0 0 0 0 0];
+
+internalField   #codeStream
+{
+    
+        codeInclude
+        #{
+            #include "fvCFD.H"
+        #};
+        codeOptions
+        #{
+            -I$(LIB_SRC)/finiteVolume/lnInclude \
+            -I$(LIB_SRC)/meshTools/lnInclude
+        #};  
+        codeLibs
+        #{
+            -lmeshTools \
+            -lfiniteVolume
+        #};
+        code
+        #{
+            const IOdictionary & d = static_cast<const IOdictionary&>(dict);
+            const fvMesh& mesh = refCast<const fvMesh>(d.db());
+            const scalar PI = 3.1415926535897932384626;
+
+            double thickness = 5.95e-7;
+            double Htop=0.0362;//0.05;
+            double Hbottom=0.0001;//0.0001;
+
+            scalarField H2O(mesh.nCells());
+            forAll(H2O, i)
+            {
+                const scalar z = mesh.C()[i][2];
+                
+                    H2O[i] =0.5*(Htop+Hbottom)+0.5*(Htop-Hbottom)*erf(sqrt(PI)*z/thickness);
+                
+            }
+            H2O.writeEntry( "", os);
+        #};
+};
+
+boundaryField
+{
+    top
+    {
+        type            zeroGradient;
+    }
+    bottom
+    {
+        type            zeroGradient;
+    }
+    front
+    {
+        type            empty;
+    }
+    back
+    {
+        type            empty;
+    }
+    left
+    {
+        type            cyclic;
+    }
+    right
+    {
+        type            cyclic;
+    }
+}
+
+
+// ************************************************************************* //
