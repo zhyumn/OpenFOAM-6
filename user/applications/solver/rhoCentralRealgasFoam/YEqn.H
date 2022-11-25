@@ -97,7 +97,7 @@ PtrList<volScalarField> tempY(Y.size());
             Yi.max(0.0);
 
             rhoYi.boundaryFieldRef() = rho.boundaryField() * Yi.boundaryField();
-            if (!inviscid)
+            if (false&&!inviscid)
             {
                 fvScalarMatrix YiEqn(
                     fvm::ddt(rho, Yi) - fvc::ddt(rho, Yi) + fvm::div(phi, Yi) - fvc::div(phi, Yi)

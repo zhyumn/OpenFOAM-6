@@ -348,6 +348,7 @@ int main(int argc, char *argv[])
             hei[i] = hei_t[i];
             // hei[i] = thermo.hei(i);
         }
+        surfbeta = frac*(1-frac);
         runTime.write();
 
         Info << "ExecutionTime = " << runTime.elapsedCpuTime() << " s"

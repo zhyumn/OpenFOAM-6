@@ -380,5 +380,14 @@ forAll(owner, facei)
         Smin[neighbour[facei]] = S[owner[facei]];
 }
 
+surfaceScalarField surfbeta(
+    IOobject(
+        "surfbeta",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::AUTO_WRITE),
+    mesh, dimensionedScalar("zero", dimless, 0));
+
 
 //#include "createFvOptions.H"
