@@ -380,7 +380,7 @@ forAll(owner, facei)
         Smin[neighbour[facei]] = S[owner[facei]];
 }
 
-surfaceScalarField surfbeta(
+volScalarField surfbeta(
     IOobject(
         "surfbeta",
         runTime.timeName(),
