@@ -148,7 +148,6 @@ int main(int argc, char *argv[])
         // estimated by the central scheme
         amaxSf = max(mag(aphiv_pos), mag(aphiv_neg));
 
-
 #include "centralCourantNo.H"
 #include "readTimeControls.H"
 
@@ -175,9 +174,9 @@ int main(int argc, char *argv[])
         surfaceVectorField rhoUstar((ap * rhoU_neg - am * rhoU_pos - (rhoU_neg * (U_neg & mesh.Sf()) + p_neg * mesh.Sf() - rhoU_pos * (U_pos & mesh.Sf()) - p_pos * mesh.Sf())) / (ap - am));
         surfaceVectorField rhoUQ = minMod(rhoU_neg - rhoUstar, rhoUstar - rhoU_pos) * ap * am / (ap - am);
 
-        phi = aphiv_pos * rho_pos + aphiv_neg * rho_neg - 0*rhoQ;
+        phi = aphiv_pos * rho_pos + aphiv_neg * rho_neg - 0 * rhoQ;
 
-        surfaceVectorField phiUp((aphiv_pos * rhoU_pos + aphiv_neg * rhoU_neg) + (a_pos * p_pos + a_neg * p_neg) * mesh.Sf() - 0*rhoUQ);
+        surfaceVectorField phiUp((aphiv_pos * rhoU_pos + aphiv_neg * rhoU_neg) + (a_pos * p_pos + a_neg * p_neg) * mesh.Sf() - 0 * rhoUQ);
 
         // --- Solve density
         solve(fvm::ddt(rho) + fvc::div(phi));
@@ -210,8 +209,9 @@ int main(int argc, char *argv[])
 
         // --- Solve energy
 
-        fvScalarMatrix rhoEEqn(
-            fvm::ddt(rhoE));
+        fvScalarMatrix rhoEEqn(fvm::ddt(rhoE));
+        //fvScalarMatrix rhoeEqn(fvm::ddt(rhoe));
+
         surfaceScalarField rhoEstar_pos((ap * rho_neg * (e_pos_neg + 0.5 * magSqr(U_neg)) - am * rho_pos * (e_pos_pos + 0.5 * magSqr(U_pos)) - ((U_neg & mesh.Sf()) * (rho_neg * (e_pos_neg + 0.5 * magSqr(U_neg)) + p_neg) - (U_pos & mesh.Sf()) * (rho_pos * (e_pos_pos + 0.5 * magSqr(U_pos)) + p_pos))) / (ap - am));
         surfaceScalarField rhoEQ_pos = minMod(rho_neg * (e_pos_neg + 0.5 * magSqr(U_neg)) - rhoEstar_pos, rhoEstar_pos - rho_pos * (e_pos_pos + 0.5 * magSqr(U_pos))) * ap * am / (ap - am);
 
@@ -220,16 +220,21 @@ int main(int argc, char *argv[])
 
         surfaceScalarField phiEp_pos(
             "phiEp_pos",
-            aphiv_pos * (rho_pos * (e_pos_pos + 0.5 * magSqr(U_pos)) + p_pos) + aphiv_neg * (rho_neg * (e_pos_neg + 0.5 * magSqr(U_neg)) + p_neg) + aSf * p_pos - aSf * p_neg - 0*rhoEQ_pos);
+            aphiv_pos * (rho_pos * (e_pos_pos + 0.5 * magSqr(U_pos)) + p_pos) + aphiv_neg * (rho_neg * (e_pos_neg + 0.5 * magSqr(U_neg)) + p_neg) + aSf * p_pos - aSf * p_neg - 0 * rhoEQ_pos);
 
         surfaceScalarField phiEp_neg(
             "phiEp_pos",
-            aphiv_pos * (rho_pos * (e_neg_pos + 0.5 * magSqr(U_pos)) + p_pos) + aphiv_neg * (rho_neg * (e_neg_neg + 0.5 * magSqr(U_neg)) + p_neg) + aSf * p_pos - aSf * p_neg - 0*rhoEQ_neg);
+            aphiv_pos * (rho_pos * (e_neg_pos + 0.5 * magSqr(U_pos)) + p_pos) + aphiv_neg * (rho_neg * (e_neg_neg + 0.5 * magSqr(U_neg)) + p_neg) + aSf * p_pos - aSf * p_neg - 0 * rhoEQ_neg);
+
+        //surfaceScalarField phiep_pos("phiep_pos", aphiv_pos * (rho_pos * e_pos_pos) + aphiv_neg * (rho_neg * e_pos_neg));
+
+        //surfaceScalarField phiep_neg("phiep_pos", aphiv_pos * (rho_pos * e_neg_pos) + aphiv_neg * (rho_neg * e_neg_neg));
 
         if (divScheme == "Doubleflux")
         {
 
             rhoEEqn += fvc::div_doubleflux(phiEp_pos, phiEp_neg);
+            //rhoeEqn += fvc::div_doubleflux(phiep_pos, phiep_neg);
         }
         else if (divScheme == "Conservativeflux")
         {
@@ -252,11 +257,13 @@ int main(int argc, char *argv[])
         }
 
         solve(rhoEEqn);
+        //solve(rhoeEqn);
 
         e = rhoE / rho - 0.5 * magSqr(U);
+        //e = rhoe / rho;
         e.correctBoundaryConditions();
-
-        if (!inviscid)
+        
+        if (false&&!inviscid)
         {
             volScalarField &he = thermo.he();
             fvScalarMatrix EEqn(
@@ -314,20 +321,21 @@ int main(int argc, char *argv[])
 
                 rhoYi.boundaryFieldRef() = rho.boundaryField() * Yi.boundaryField();
 
-                Yi.max(0.0);
+                Yi.max(1e-5);
                 Yi.min(1.0);
 
                 Yt += Yi;
             }
         }
         Y[inertIndex] = scalar(1) - Yt;
-        Y[inertIndex].max(0.0);
+        Y[inertIndex].max(1e-5);
 
         //rhoE.boundaryFieldRef() ==
         //    rho.boundaryField() *
         //        (e.boundaryField() + 0.5 * magSqr(U.boundaryField()));
 
         rhoE = rho * (e + 0.5 * magSqr(U));
+        //rhoe = rho * e;
 
         turbulence->correct();
         gammaStar = rho * c * c / p;

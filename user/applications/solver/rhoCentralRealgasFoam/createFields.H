@@ -183,6 +183,14 @@ volScalarField rhoE(
         IOobject::NO_READ,
         IOobject::NO_WRITE),
     rho *(e + 0.5 * magSqr(U)));
+/* volScalarField rhoe(
+    IOobject(
+        "rhoe",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::NO_WRITE),
+    rho *e ); */
 
 PtrList<volScalarField> rhoY(Y.size());
 forAll(Y, i)
