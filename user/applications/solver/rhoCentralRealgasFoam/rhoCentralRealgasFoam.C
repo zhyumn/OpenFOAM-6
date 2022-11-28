@@ -271,7 +271,7 @@ int main(int argc, char *argv[])
                     //- fvm::laplacian(turbulence->alphaEff(), e)
                     //- fvm::laplacian(kappa / Cp, he) //Todo kappa Cp
                     //- fvm::laplacian(alpha, he) ==
-                   - fvc::laplacian(kappa, T) ==
+                   - fvc::laplacian(kappa, T) //==
                 //-sumHeatDiffusion - sumHeatDiffusion2
                 //== fvOptions(rho, e)
             );
