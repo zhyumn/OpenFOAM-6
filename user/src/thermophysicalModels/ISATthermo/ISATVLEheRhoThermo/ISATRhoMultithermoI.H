@@ -54,14 +54,15 @@ inline Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::ISATRhoMultitherm
 }
 
 template <class ThermoMixture, template <class> class Type>
-inline Foam::scalar Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::T(
+inline Foam::scalar Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::T
+(
     scalar f,
     scalar p,
     scalar T0,
     scalar (ISATRhoMultithermo<ThermoMixture, Type>::*F)(const scalar, const scalar) const,
-    scalar (ISATRhoMultithermo<ThermoMixture, Type>::*dFdT)(const scalar, const scalar)
-        const,
-    scalar (ISATRhoMultithermo<ThermoMixture, Type>::*limit)(const scalar) const) const
+    scalar (ISATRhoMultithermo<ThermoMixture, Type>::*dFdT)(const scalar, const scalar) const,
+    scalar (ISATRhoMultithermo<ThermoMixture, Type>::*limit)(const scalar) const
+) const
 {
 
     if (T0 < 0)

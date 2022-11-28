@@ -120,6 +120,9 @@ public:
     double W_G();
     double Es();
     double W();
+    double S();
+    
+    
     std::vector<double> Y_G();
 
     std::vector<double> eps(std::vector<double>);
@@ -174,7 +177,7 @@ private:
     double Gideal_Mole();
     double G_Mole();
     double G();
-    double S();
+    //double S();
     bool solveTPD_BFGS();
     double A_single();
     double z_single();

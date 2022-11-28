@@ -91,8 +91,9 @@ forAll(Dimix, i)
             Dimix_t[i]));
 }
 
-volScalarField &kappa_t = mesh.objectRegistry::lookupObjectRef<volScalarField>("thermo:kappa");
+volScalarField &kappa = mesh.objectRegistry::lookupObjectRef<volScalarField>("thermo:kappa");
 //- Create Thermal Conductivity field"kappa" [W/mK]
+/*
 Info << "\nCreating field thermal conductivity - kappa" << endl;
 volScalarField kappa(
     IOobject(
@@ -102,6 +103,7 @@ volScalarField kappa(
         IOobject::NO_READ, //IOobject::MUST_READ,
         IOobject::NO_WRITE),
     kappa_t);
+*/
 
 //- Creates Heat Capacity at constant pressure "Cp" [J/kgK]
 /*Info << "\nCreating field heat capacity Cp" << endl;

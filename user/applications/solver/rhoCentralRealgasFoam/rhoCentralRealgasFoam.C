@@ -263,15 +263,16 @@ int main(int argc, char *argv[])
         //e = rhoe / rho;
         e.correctBoundaryConditions();
         
-        if (false&&!inviscid)
+        if (!inviscid)
         {
             volScalarField &he = thermo.he();
             fvScalarMatrix EEqn(
                 fvm::ddt(rho, e) - fvc::ddt(rho, e)
                     //- fvm::laplacian(turbulence->alphaEff(), e)
                     //- fvm::laplacian(kappa / Cp, he) //Todo kappa Cp
-                    - fvm::laplacian(alpha, he) ==
-                -sumHeatDiffusion - sumHeatDiffusion2
+                    //- fvm::laplacian(alpha, he) ==
+                   - fvc::laplacian(kappa, T) ==
+                //-sumHeatDiffusion - sumHeatDiffusion2
                 //== fvOptions(rho, e)
             );
             /*forAll(Y, k)
