@@ -50,7 +50,7 @@ Foam::ISATmanager<FuncType>::ISATmanager(label in_n, label out_n, FuncType &func
       nAdd_(0),
       nCall_(0),
       treename_(name_in),
-      muted_(false)
+      muted_(ISATDict_.lookupOrDefault<bool>("muted", false))
 {
     for (int i = 0; i < out_n; i++)
         for (int j = 0; j < out_n; j++)
