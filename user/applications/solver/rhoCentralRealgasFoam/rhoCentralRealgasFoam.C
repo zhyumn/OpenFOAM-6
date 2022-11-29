@@ -47,6 +47,11 @@ Description
 int main(int argc, char *argv[])
 {
 #define NO_CONTROL
+Foam::argList::addBoolOption
+(
+    "init",
+    "initailize"
+);
 #include "postProcess.H"
 
 #include "setRootCaseLists.H"
@@ -71,6 +76,26 @@ int main(int argc, char *argv[])
     Info << "\nStarting time loop\n"
          << endl;
     //Z.write();
+
+    if (args.optionFound("init"))
+    {
+        double rho_bottom = rho[0];
+        double rho_top = rho[rho.size()-1];
+        forAll (rho,i)
+        {
+            rho[i] = (Y[0][i]+Y[1][i])/(Y[0][i]/rho_top+Y[1][i]/rho_bottom);
+            //rho[i] = Y[0][i]*rho_top+Y[1][i]*rho_bottom;
+        }
+        thermo.correct();
+        /*forAll (rho,i)
+        {
+            T[i]= p[i]*Wmix[i]/rho[i]/8.314;
+        }*/
+        T.write();
+        rho.write();
+        frac.write();
+        return 0;
+    }
 
     while (runTime.run())
     {
