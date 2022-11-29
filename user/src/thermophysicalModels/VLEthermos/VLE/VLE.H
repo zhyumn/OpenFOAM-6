@@ -344,6 +344,7 @@ namespace Foam
         inline autoPtr<scalarRectangularMatrix> dTPvfdXErho_constC(scalar p, scalar T, solution &sol) const;
         //inline autoPtr<scalarRectangularMatrix> dTPvfsoldXErho_constC(scalar p, scalar T, solution& sol) const;
         inline autoPtr<scalarRectangularMatrix> dTPvfdXErho_simp(scalar p, scalar T, solution &sol) const;
+        inline autoPtr<scalarRectangularMatrix> dTPvfc_G_rhoY_dXErho(scalar p, scalar T, solution &sol) const;
         inline autoPtr<scalarRectangularMatrix> dTHvfcdXrhoP(scalar p, scalar T, solution &sol) const;
         inline autoPtr<scalarRectangularMatrix> dTHvfc_G_rhoY_dXrhoP(scalar p, scalar T, solution &sol) const;
         inline autoPtr<scalarRectangularMatrix> dTHvf_G_rhoY_dXrhoP(scalar p, scalar T, solution &sol) const;
@@ -352,6 +353,7 @@ namespace Foam
         inline autoPtr<scalarRectangularMatrix> dErhovfcdXTP(scalar p, scalar T, solution &sol) const;
         inline autoPtr<scalarRectangularMatrix> dErhovfc_G_rhoY_dXTP(scalar p, scalar T, solution &sol) const;
         inline autoPtr<scalarRectangularMatrix> dErhovf_G_rhoY_dXTP(scalar p, scalar T, solution &sol) const;
+        
 
         inline tuple<scalar, scalar, scalar, scalar> dTPdErho(scalar p, scalar T, solution &sol) const;
 

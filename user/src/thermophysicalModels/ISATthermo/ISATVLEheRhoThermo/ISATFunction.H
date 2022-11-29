@@ -89,7 +89,6 @@ namespace Foam
                 out[3] = p->c_ideal(P, T);
                 */
 
-                
                 out[0] = T;
                 out[1] = p->Hs(P, T, sol());
                 out[2] = sol().vaporfra;
@@ -102,8 +101,6 @@ namespace Foam
                 {
                     out[i + 5] = sol().X_gas()[i] * (*p)[i].W() * 1e-3 / W_G_;
                 }
-                
-
 
                 /*
                 scalar xx = p->c_opt(P, T, rho, sol());
@@ -292,22 +289,19 @@ namespace Foam
 
                 p->setX(in);
 
-/*
+                /*
                 out[0] = p->Hs_ideal(P, T) - P / p->rho_ideal(P, T);
                 out[1] = p->rho_ideal(P, T);
                 out[2] = 1;
                 out[3] = p->c_ideal(P, T);
                 */
 
-                
                 sol.reset(p->TPN(P, T).ptr());
                 //autoPtr<typename Type::solution> sol(p->TPN(P, T));
                 out[0] = p->Hs(P, T, sol()) - P / p->rho(P, T, sol());
                 out[1] = p->rho(P, T, sol());
                 out[2] = sol().vaporfra;
                 out[3] = p->c(P, T, sol());
-                
-
 
                 scalar W_G_ = p->W(sol().X_gas());
                 out[4] = P * W_G_ / (p->Type::singlePhaseMixtureThermoType::Z(P, T, sol().X_gas(), 1) * RR * 1.0e-03 * T);
@@ -315,7 +309,6 @@ namespace Foam
                 {
                     out[i + 5] = sol().X_gas()[i] * (*p)[i].W() * 1e-3 / W_G_;
                 }
-                
 
                 /*
                 FatalErrorInFunction
@@ -349,6 +342,176 @@ namespace Foam
                 }
                 return flag;
             }
+            static void read(const dictionary &ISATDict_, scalarList &maxLeafsize_in, scalarList &toleranceOut_in, scalarList &initToleranceIn_in, scalarList &scaleIn_in)
+            {
+                scalarList maxLeafsize_temp(ISATDict_.lookup("maxLeafsize"));
+                if (maxLeafsize_temp.size() != 3 && maxLeafsize_temp.size() != maxLeafsize_in.size())
+                {
+                    FatalErrorInFunction
+                        << "maxLeafsize error"
+                        << abort(FatalError);
+                }
+                if (maxLeafsize_temp.size() == 3)
+                {
+
+                    maxLeafsize_in[maxLeafsize_in.size() - 1] = maxLeafsize_temp[maxLeafsize_temp.size() - 1];
+                    maxLeafsize_in[maxLeafsize_in.size() - 2] = maxLeafsize_temp[maxLeafsize_temp.size() - 2];
+                    for (int i = 0; i < maxLeafsize_in.size() - 2; i++)
+                    {
+                        maxLeafsize_in[i] = maxLeafsize_temp[0];
+                    }
+                }
+                else
+                {
+                    for (int i = 0; i < maxLeafsize_in.size(); i++)
+                    {
+                        maxLeafsize_in[i] = maxLeafsize_temp[i];
+                    }
+                }
+
+                //toleranceOut_in = scalarList(ISATDict_.lookup("toleranceOut"));
+                scalarList toleranceOut_temp(ISATDict_.lookup("toleranceOut"));
+                if (toleranceOut_temp.size() != 6 && toleranceOut_temp.size() != toleranceOut_in.size())
+                {
+                    FatalErrorInFunction
+                        << "toleranceOut error"
+                        << abort(FatalError);
+                }
+                if (toleranceOut_temp.size() == 6)
+                {
+                    for (int i = 0; i < 5; i++)
+                    {
+                        toleranceOut_in[i] = toleranceOut_temp[i];
+                    }
+                    for (int i = 5; i < toleranceOut_in.size(); i++)
+                    {
+                        toleranceOut_in[i] = toleranceOut_temp[5];
+                    }
+                }
+                else
+                {
+                    for (int i = 0; i < toleranceOut_in.size(); i++)
+                    {
+                        toleranceOut_in[i] = toleranceOut_temp[i];
+                    }
+                }
+
+                scalarList initToleranceIn_temp(ISATDict_.lookup("initToleranceIn"));
+                if (initToleranceIn_temp.size() != 3 && initToleranceIn_temp.size() != initToleranceIn_in.size())
+                {
+                    FatalErrorInFunction
+                        << "initToleranceIn error"
+                        << abort(FatalError);
+                }
+                if (initToleranceIn_temp.size() == 3)
+                {
+
+                    initToleranceIn_in[initToleranceIn_in.size() - 1] = initToleranceIn_temp[initToleranceIn_temp.size() - 1];
+                    initToleranceIn_in[initToleranceIn_in.size() - 2] = initToleranceIn_temp[initToleranceIn_temp.size() - 2];
+                    for (int i = 0; i < initToleranceIn_in.size() - 2; i++)
+                    {
+                        initToleranceIn_in[i] = initToleranceIn_temp[0];
+                    }
+                }
+                else
+                {
+                    for (int i = 0; i < initToleranceIn_in.size(); i++)
+                    {
+                        initToleranceIn_in[i] = initToleranceIn_temp[i];
+                    }
+                }
+
+                scalarList scaleIn_temp(ISATDict_.lookup("scaleIn"));
+                if (scaleIn_temp.size() != 3 && scaleIn_temp.size() != scaleIn_in.size())
+                {
+                    FatalErrorInFunction
+                        << "scaleIn error"
+                        << abort(FatalError);
+                }
+                if (scaleIn_temp.size() == 3)
+                {
+
+                    scaleIn_in[scaleIn_in.size() - 1] = scaleIn_temp[scaleIn_temp.size() - 1];
+                    scaleIn_in[scaleIn_in.size() - 2] = scaleIn_temp[scaleIn_temp.size() - 2];
+                    for (int i = 0; i < scaleIn_in.size() - 2; i++)
+                    {
+                        scaleIn_in[i] = scaleIn_temp[0];
+                    }
+                }
+                else
+                {
+                    for (int i = 0; i < scaleIn_in.size(); i++)
+                    {
+                        scaleIn_in[i] = scaleIn_temp[i];
+                    }
+                }
+            }
+        };
+
+        template <class Type>
+        struct thermofunction_ErhoX_to_TPvfc_G_rhoY : public basicFunction
+        {
+            Type *p;
+            thermofunction_ErhoX_to_TPvfc_G_rhoY(Type *pin) : p(pin) {}
+            void value(const scalarList &in, scalarList &out, scalar T0, scalar P0, autoPtr<typename Type::solution> &sol) const
+            {
+                scalar E = in[in.size() - 2];
+                scalar rho = in[in.size() - 1];
+                scalar T, P;
+                p->setX(in);
+                std::tie(P, T) = p->TrhoEs(E, rho, P0, T0, &Type::Es, &Type::rho);
+
+                sol.reset(p->TPN(P, T).ptr());
+                //autoPtr<typename Type::solution> sol(p->TPN(P, T));
+
+                out.resize(5 + p->X_.size());
+
+                out[0] = T;
+                out[1] = P;
+                out[2] = sol().vaporfra;
+                out[3] = p->c(P, T, sol());
+
+                scalar W_G_ = p->W(sol().X_gas());
+                out[4] = P * W_G_ / (p->Type::singlePhaseMixtureThermoType::Z(P, T, sol().X_gas(), 1) * RR * 1.0e-03 * T);
+                for (int i = 0; i < sol().X_gas().size(); i++)
+                {
+                    out[i + 5] = sol().X_gas()[i] * (*p)[i].W() * 1e-3 / W_G_;
+                }
+                /*
+                                FatalErrorInFunction
+                                    << "T1: " << P
+                                    << "\nT2: " << P1
+                                    << "\ndEsdx1: " << (P1-P) / dx
+                                    << "\ndEsdx1_ AA: " << grad()[1][1]
+                                    << exit(FatalError);
+                                    */
+            }
+
+            void derive(const scalarList &in, scalarList &in2, scalarRectangularMatrix &out, scalar T0, scalar P0, autoPtr<typename Type::solution> &sol)
+            {
+                scalar E = in[in.size() - 2];
+                scalar rho = in[in.size() - 1];
+                scalar T, P;
+                std::tie(P, T) = p->TrhoEs(E, rho, P0, T0, &Type::Es, &Type::rho);
+
+                p->setX(in);
+                //autoPtr<typename Type::solution> sol(p->TPN(P, T)); // sol(p->TPn_flash_New_TPD(P, T));//sol(p->TPn_flash(P, T));
+                sol.reset(p->TPN(P, T).ptr());
+                autoPtr<scalarRectangularMatrix> grad(p->dTPvfdXErho_constC(P, T, sol()));
+                // autoPtr<scalarRectangularMatrix> grad(p->dTPvfdXErho(P, T, sol()));
+                out = grad();
+            }
+            bool valid_in(const scalarList &in)
+            {
+                bool flag = true;
+                for (int i = 0; i < in.size() - 2; i++)
+                {
+                    flag = flag && (in[i] > 0);
+                }
+                flag = flag && (in[in.size() - 1] > 0);
+                return flag;
+            }
+
             static void read(const dictionary &ISATDict_, scalarList &maxLeafsize_in, scalarList &toleranceOut_in, scalarList &initToleranceIn_in, scalarList &scaleIn_in)
             {
                 scalarList maxLeafsize_temp(ISATDict_.lookup("maxLeafsize"));

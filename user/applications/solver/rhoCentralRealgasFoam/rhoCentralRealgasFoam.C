@@ -319,14 +319,7 @@ Foam::argList::addBoolOption
             p.max(1e3);
             p.min(1e7);
         }
-        else if (divScheme == "Conservativeflux")
-        {
-            p.ref() = rho() / psi();
-        }
-        else
-        {
-            FatalErrorInFunction << "divScheme must be Doubleflux or Conservativeflux." << exit(FatalError);
-        }
+
 
         thermo.correct();
         p.correctBoundaryConditions();

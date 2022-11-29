@@ -275,29 +275,49 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
     if (!boundary_flag)
     {
         this->newTimeStep();
-
-        do
+        if (DF_)
         {
-            forAll(TCells, celli)
+            do
             {
-                const typename MixtureType::thermoType &mixture_ = this->cellMixture(celli);
-
-                // std::tie(TCells[celli], psiCells[celli], vaporfracCells[celli], soundspeedCells[celli]) = mixture_.Tpsivfc_XHP(hCells[celli] + pCells[celli] / rhoCells[celli], pCells[celli], TCells[celli]);
-                std::tie(TCells[celli], hCells[celli], vaporfracCells[celli], soundspeedCells[celli], rho_G_[celli]) = mixture_.THvfc_G_rhoY_XrhoP(rhoCells[celli], pCells[celli], TCells[celli], Y_temp);
-                //std::tie(hCells[celli], rhoCells[celli], vaporfracCells[celli], soundspeedCells[celli], rho_G_Cells[celli]) = mixture_.Erhovfc_G_rhoY_ISAT(pCells[celli], TCells[celli], Y_temp);
-
-                hCells[celli] -= pCells[celli] / rhoCells[celli];
-
-                for (int i = 0; i < Y_temp.size(); i++)
+                forAll(TCells, celli)
                 {
-                    Y_G_List_[i][celli] = Y_temp[i];
+                    const typename MixtureType::thermoType &mixture_ = this->cellMixture(celli);
+
+                    // std::tie(TCells[celli], psiCells[celli], vaporfracCells[celli], soundspeedCells[celli]) = mixture_.Tpsivfc_XHP(hCells[celli] + pCells[celli] / rhoCells[celli], pCells[celli], TCells[celli]);
+                    std::tie(TCells[celli], hCells[celli], vaporfracCells[celli], soundspeedCells[celli], rho_G_[celli]) = mixture_.THvfc_G_rhoY_XrhoP(rhoCells[celli], pCells[celli], TCells[celli], Y_temp);
+                    //std::tie(hCells[celli], rhoCells[celli], vaporfracCells[celli], soundspeedCells[celli], rho_G_Cells[celli]) = mixture_.Erhovfc_G_rhoY_ISAT(pCells[celli], TCells[celli], Y_temp);
+
+                    hCells[celli] -= pCells[celli] / rhoCells[celli];
+
+                    for (int i = 0; i < Y_temp.size(); i++)
+                    {
+                        Y_G_List_[i][celli] = Y_temp[i];
+                    }
+                    // autoPtr<typename MixtureType::thermoType::solution> sol;
+                    // std::tie(TCells[celli], temppsi, vaporfracCells[celli], soundspeedCells[celli], sol) = mixture_.Tpsivfcsol_XHP(hCells[celli] + pCells[celli] / rhoCells[celli], pCells[celli], TCells[celli]);
+                    // rhoCells[celli] = psiCells[celli] * pCells[celli];
+                    psiCells[celli] = rhoCells[celli] / pCells[celli];
                 }
-                // autoPtr<typename MixtureType::thermoType::solution> sol;
-                // std::tie(TCells[celli], temppsi, vaporfracCells[celli], soundspeedCells[celli], sol) = mixture_.Tpsivfcsol_XHP(hCells[celli] + pCells[celli] / rhoCells[celli], pCells[celli], TCells[celli]);
-                // rhoCells[celli] = psiCells[celli] * pCells[celli];
-                psiCells[celli] = rhoCells[celli] / pCells[celli];
-            }
-        } while (this->newLoop());
+            } while (this->newLoop());
+        }
+        else
+        {
+            do
+            {
+                forAll(TCells, celli)
+                {
+                    const typename MixtureType::thermoType &mixture_ = this->cellMixture(celli);
+
+                    std::tie(TCells[celli], pCells[celli], vaporfracCells[celli], soundspeedCells[celli], rho_G_[celli]) = mixture_.TPvfc_G_rhoY_XErho(hCells[celli], rhoCells[celli], TCells[celli], pCells[celli], Y_temp);
+
+                    for (int i = 0; i < Y_temp.size(); i++)
+                    {
+                        Y_G_List_[i][celli] = Y_temp[i];
+                    }
+                    psiCells[celli] = rhoCells[celli] / pCells[celli];
+                }
+            } while (this->newLoop());
+        }
 
         if (!inviscid_)
         {
@@ -538,6 +558,7 @@ Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::ISATVLEheRhoThermo(
             false));
     inviscid_ = thermoDict.lookupOrDefault<bool>("inviscid", false);
     nloop = thermoDict.lookupOrDefault<label>("nloop", 1);
+    DF_ = thermoDict.lookupOrDefault<bool>("doubeFlux", true);
     //noVLE_ = thermoDict.lookupOrDefault<bool>("noVLE", false);
     //MixtureType::thermoType::noVLE = noVLE_;
     // FatalErrorInFunction
