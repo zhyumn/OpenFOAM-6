@@ -497,7 +497,7 @@ namespace Foam
                 p->setX(in);
                 //autoPtr<typename Type::solution> sol(p->TPN(P, T)); // sol(p->TPn_flash_New_TPD(P, T));//sol(p->TPn_flash(P, T));
                 sol.reset(p->TPN(P, T).ptr());
-                autoPtr<scalarRectangularMatrix> grad(p->dTPvfdXErho_constC(P, T, sol()));
+                autoPtr<scalarRectangularMatrix> grad(p->dTPvfc_G_rhoY_dXErho(P, T, sol()));
                 // autoPtr<scalarRectangularMatrix> grad(p->dTPvfdXErho(P, T, sol()));
                 out = grad();
             }

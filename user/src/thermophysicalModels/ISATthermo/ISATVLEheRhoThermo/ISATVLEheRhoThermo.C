@@ -558,7 +558,7 @@ Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::ISATVLEheRhoThermo(
             false));
     inviscid_ = thermoDict.lookupOrDefault<bool>("inviscid", false);
     nloop = thermoDict.lookupOrDefault<label>("nloop", 1);
-    DF_ = thermoDict.lookupOrDefault<bool>("doubeFlux", true);
+    DF_ = thermoDict.lookupOrDefault<bool>("doubleFlux", true);
     //noVLE_ = thermoDict.lookupOrDefault<bool>("noVLE", false);
     //MixtureType::thermoType::noVLE = noVLE_;
     // FatalErrorInFunction
