@@ -133,9 +133,11 @@ namespace Foam
             ISATRhoMultithermo<ThermoMixture, Type> *temp_p;
             thermofunction_TPX_to_Erhovfc_G_rhoY<ISATRhoMultithermo<ThermoMixture, Type>> Erhovfcfun_XTP;
             thermofunction_TrhoP_to_THvfc_G_rhoY<ISATRhoMultithermo<ThermoMixture, Type>> THvfcfun_XrhoP;
+            thermofunction_ErhoX_to_TPvfc_G_rhoY<ISATRhoMultithermo<ThermoMixture, Type>> TPvfcfun_XErho;
 
             mutable ISATmanager<thermofunction_TPX_to_Erhovfc_G_rhoY<ISATRhoMultithermo<ThermoMixture, Type>>> Erhovfctree_XTP;
             mutable ISATmanager<thermofunction_TrhoP_to_THvfc_G_rhoY<ISATRhoMultithermo<ThermoMixture, Type>>> THvfctree_XrhoP;
+            mutable ISATmanager<thermofunction_ErhoX_to_TPvfc_G_rhoY<ISATRhoMultithermo<ThermoMixture, Type>>> TPvfctree_XErho;
 
             // Private Member Functions
 
@@ -234,7 +236,8 @@ namespace Foam
             inline std::tuple<scalar, scalar> Tpsi_HP(const scalar p, const scalar T, const scalar T0) const;
             //inline std::tuple<scalar, scalar, scalar, scalar > Tpsivfc_XHP(const scalar p, const scalar T, const scalar T0) const;
             inline std::tuple<scalar, scalar, scalar, scalar> THvfc_XrhoP(const scalar p, const scalar T, const scalar T0) const;
-            inline std::tuple<scalar, scalar, scalar, scalar, scalar> THvfc_G_rhoY_XrhoP(const scalar p, const scalar T, const scalar T0,scalarList& Y) const;
+            inline std::tuple<scalar, scalar, scalar, scalar, scalar> THvfc_G_rhoY_XrhoP(const scalar p, const scalar T, const scalar T0, scalarList &Y) const;
+            inline std::tuple<scalar, scalar, scalar, scalar, scalar> TPvfc_G_rhoY_XErho(const scalar E, const scalar rho, const scalar T0, const scalar P0, scalarList &Y) const;
             inline std::tuple<scalar, scalar, scalar, scalar> TPvfc_Erho(const scalar E, const scalar rho, const scalar T0, const scalar P0) const;
             //inline std::tuple<scalar, scalar, scalar, scalar, autoPtr<typename ThermoMixture::solution>> TPvfcsol_Erho(const scalar E, const scalar rho, const scalar T0, const scalar P0) const;
             inline std::tuple<scalar, scalar, scalar, scalar, autoPtr<typename ThermoMixture::solution>> Tpsivfcsol_XHP(const scalar H, const scalar P, const scalar T0) const;
@@ -444,6 +447,8 @@ namespace Foam
             friend struct thermofunction_Tpsivfsol;
             template <class TypeName>
             friend struct thermofunction_TrhoP_to_THvfc_G_rhoY;
+            template <class TypeName>
+            friend struct thermofunction_ErhoX_to_TPvfc_G_rhoY;
         };
 
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

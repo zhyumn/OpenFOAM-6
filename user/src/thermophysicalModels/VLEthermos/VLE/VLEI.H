@@ -1765,7 +1765,13 @@ inline Foam::autoPtr<typename Foam::VLE<ThermoMixture>::solution> Foam::VLE<Ther
         //    g1 -= 0.1;
 
         if (Zliq1 > Zgas1)
+        {
+            scalarList Xliq_temp = sol().X_liq;
+            scalarList Xgas_temp = sol().X_gas;
+            scalar alpha = 1.0 - sol().vaporfra;
+            forAll(Xinp, i)
             {
+<<<<<<< HEAD
                 scalarList Xliq_temp = sol().X_liq;
                 scalarList Xgas_temp = sol().X_gas;
                 scalar alpha = 1.0 - sol().vaporfra;
@@ -1776,7 +1782,13 @@ inline Foam::autoPtr<typename Foam::VLE<ThermoMixture>::solution> Foam::VLE<Ther
                 }
                 sol().vaporfra = alpha;
                // Info<<"sol 1 flipped"<<endl;
+=======
+                sol().X_liq()[i] = Xgas_temp[i];
+                sol().X_gas()[i] = Xliq_temp[i];
+>>>>>>> ce4378209713aa6e6f6895cd523b03388c83d651
             }
+            sol().vaporfra = alpha;
+        }
     }
 
     if (Xinp.size() > 2)
@@ -1836,13 +1848,13 @@ inline Foam::autoPtr<typename Foam::VLE<ThermoMixture>::solution> Foam::VLE<Ther
                 scalarList Xliq_temp2 = sol2().X_liq;
                 scalarList Xgas_temp2 = sol2().X_gas;
                 scalar alpha2 = 1.0 - sol2().vaporfra;
-                forAll(Xinp,i)
+                forAll(Xinp, i)
                 {
                     sol2().X_liq()[i] = Xgas_temp2[i];
                     sol2().X_gas()[i] = Xliq_temp2[i];
                 }
                 sol2().vaporfra = alpha2;
-            } 
+            }
         }
         if (success2 && success)
         {
@@ -3741,6 +3753,8 @@ inline Foam::scalar Foam::VLE<ThermoMixture>::Hs(
 {
     return Ha(p, T, sol) - Hc();
 }
+
+
 
 // Cp=dHadT system (T,P,X)
 template <class ThermoMixture>

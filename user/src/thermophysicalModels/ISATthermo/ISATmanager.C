@@ -50,7 +50,7 @@ Foam::ISATmanager<FuncType>::ISATmanager(label in_n, label out_n, FuncType &func
       nAdd_(0),
       nCall_(0),
       treename_(name_in),
-      muted_(false)
+      muted_(ISATDict_.lookupOrDefault<bool>("muted", false))
 {
     for (int i = 0; i < out_n; i++)
         for (int j = 0; j < out_n; j++)
@@ -146,7 +146,7 @@ void Foam::ISATmanager<FuncType>::add(const scalarList &value, scalarList &out, 
     //pfunc->value(value, R, arg...);
     pleaf = T.insertNewLeaf(value, out);
     pfunc->derive(value, out, pleaf->A(), arg...);
-    scalarRectangularMatrix At(tableTree_.n_in_, tableTree_.n_in_);
+    //scalarRectangularMatrix At(tableTree_.n_in_, tableTree_.n_in_);
     /*for (int i = 0;i < tableTree_.n_in_;i++)
         for (int j = 0;j < tableTree_.n_in_;j++)
         {
@@ -155,6 +155,8 @@ void Foam::ISATmanager<FuncType>::add(const scalarList &value, scalarList &out, 
     //Info<<pleaf->A()<<endl;
 
     //pleaf->EOA() = ((pleaf->A()) * scaleFactor_ * scaleFactor_ * (pleaf->A().T()) + init_elp_ * init_elp_) / (epsilon_ * epsilon_);//+ init_elp_
+    //auto debu= scaleIn_ *(pleaf->A()) * toleranceOut_ ;
+    //Info<<treename_<<","<<T.n_in()<<","<<T.n_out()<<"  "<< (pleaf->A())<<endl;
     pleaf->EOA() = scaleIn_ * initToleranceIn_ * initToleranceIn_ * scaleIn_ + scaleIn_ * (pleaf->A()) * toleranceOut_ * toleranceOut_ * (pleaf->A().T()) * scaleIn_;
     modified_ = true;
     /*

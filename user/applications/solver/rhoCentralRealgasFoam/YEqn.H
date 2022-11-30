@@ -97,7 +97,7 @@ PtrList<volScalarField> tempY(Y.size());
             Yi.max(0.0);
 
             rhoYi.boundaryFieldRef() = rho.boundaryField() * Yi.boundaryField();
-            if (!inviscid)
+            if (false&&!inviscid)
             {
                 fvScalarMatrix YiEqn(
                     fvm::ddt(rho, Yi) - fvc::ddt(rho, Yi) + fvm::div(phi, Yi) - fvc::div(phi, Yi)
@@ -121,7 +121,7 @@ PtrList<volScalarField> tempY(Y.size());
 
                 Yi.correctBoundaryConditions();
             }
-            Yi.max(0.0);
+            Yi.max(1e-5);
             Yi.min(1.0);
 
             rhoYi = rho * Yi;
@@ -129,7 +129,7 @@ PtrList<volScalarField> tempY(Y.size());
         }
     }
     Y[inertIndex] = scalar(1) - Yt;
-    Y[inertIndex].max(0.00001);
+    Y[inertIndex].max(1e-5);
     // update oldY here for CoDAC
     //oldY = tempY;
 }

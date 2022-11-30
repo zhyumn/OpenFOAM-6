@@ -67,6 +67,7 @@ namespace Foam
         PtrList<volScalarField> Y_G_List_;
 
         bool inviscid_;
+        bool DF_;
         label nloop;
         // bool noVLE_;
 

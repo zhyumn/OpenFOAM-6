@@ -775,7 +775,7 @@ double solver_new::G()
     thermo->setX(comp_of);
     return thermo->G(P_, T_);
 }
-
+/*
 double solver_new::S()
 {
     Foam::scalarList comp_of(comp.size(), Foam::Zero);
@@ -786,7 +786,7 @@ double solver_new::S()
     thermo->setX(comp_of);
     return thermo->S(P_, T_);
 }
-
+*/
 double solver_new::G_departure_Mole()
 {
     Foam::scalarList comp_of(comp.size(), Foam::Zero);
@@ -1132,6 +1132,11 @@ double solver_new::rho()
     Mtype::solution so(thermo->Mtype::TPn_flash(P_, T_)());
     return thermo->rho(P_, T_);
     */
+}
+
+double solver_new::S()
+{
+    return thermo->S(P_, T_);
 }
 
 double solver_new::W()

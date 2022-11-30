@@ -47,6 +47,11 @@ Description
 int main(int argc, char *argv[])
 {
 #define NO_CONTROL
+Foam::argList::addBoolOption
+(
+    "init",
+    "initailize"
+);
 #include "postProcess.H"
 
 #include "setRootCaseLists.H"
@@ -71,6 +76,26 @@ int main(int argc, char *argv[])
     Info << "\nStarting time loop\n"
          << endl;
     //Z.write();
+
+    if (args.optionFound("init"))
+    {
+        double rho_bottom = rho[0];
+        double rho_top = rho[rho.size()-1];
+        forAll (rho,i)
+        {
+            rho[i] = (Y[0][i]+Y[1][i])/(Y[0][i]/rho_top+Y[1][i]/rho_bottom);
+            //rho[i] = Y[0][i]*rho_top+Y[1][i]*rho_bottom;
+        }
+        thermo.correct();
+        /*forAll (rho,i)
+        {
+            T[i]= p[i]*Wmix[i]/rho[i]/8.314;
+        }*/
+        T.write();
+        rho.write();
+        frac.write();
+        return 0;
+    }
 
     while (runTime.run())
     {
@@ -148,7 +173,6 @@ int main(int argc, char *argv[])
         // estimated by the central scheme
         amaxSf = max(mag(aphiv_pos), mag(aphiv_neg));
 
-
 #include "centralCourantNo.H"
 #include "readTimeControls.H"
 
@@ -175,9 +199,9 @@ int main(int argc, char *argv[])
         surfaceVectorField rhoUstar((ap * rhoU_neg - am * rhoU_pos - (rhoU_neg * (U_neg & mesh.Sf()) + p_neg * mesh.Sf() - rhoU_pos * (U_pos & mesh.Sf()) - p_pos * mesh.Sf())) / (ap - am));
         surfaceVectorField rhoUQ = minMod(rhoU_neg - rhoUstar, rhoUstar - rhoU_pos) * ap * am / (ap - am);
 
-        phi = aphiv_pos * rho_pos + aphiv_neg * rho_neg - 0*rhoQ;
+        phi = aphiv_pos * rho_pos + aphiv_neg * rho_neg - 0 * rhoQ;
 
-        surfaceVectorField phiUp((aphiv_pos * rhoU_pos + aphiv_neg * rhoU_neg) + (a_pos * p_pos + a_neg * p_neg) * mesh.Sf() - 0*rhoUQ);
+        surfaceVectorField phiUp((aphiv_pos * rhoU_pos + aphiv_neg * rhoU_neg) + (a_pos * p_pos + a_neg * p_neg) * mesh.Sf() - 0 * rhoUQ);
 
         // --- Solve density
         solve(fvm::ddt(rho) + fvc::div(phi));
@@ -210,8 +234,9 @@ int main(int argc, char *argv[])
 
         // --- Solve energy
 
-        fvScalarMatrix rhoEEqn(
-            fvm::ddt(rhoE));
+        fvScalarMatrix rhoEEqn(fvm::ddt(rhoE));
+        //fvScalarMatrix rhoeEqn(fvm::ddt(rhoe));
+
         surfaceScalarField rhoEstar_pos((ap * rho_neg * (e_pos_neg + 0.5 * magSqr(U_neg)) - am * rho_pos * (e_pos_pos + 0.5 * magSqr(U_pos)) - ((U_neg & mesh.Sf()) * (rho_neg * (e_pos_neg + 0.5 * magSqr(U_neg)) + p_neg) - (U_pos & mesh.Sf()) * (rho_pos * (e_pos_pos + 0.5 * magSqr(U_pos)) + p_pos))) / (ap - am));
         surfaceScalarField rhoEQ_pos = minMod(rho_neg * (e_pos_neg + 0.5 * magSqr(U_neg)) - rhoEstar_pos, rhoEstar_pos - rho_pos * (e_pos_pos + 0.5 * magSqr(U_pos))) * ap * am / (ap - am);
 
@@ -220,16 +245,21 @@ int main(int argc, char *argv[])
 
         surfaceScalarField phiEp_pos(
             "phiEp_pos",
-            aphiv_pos * (rho_pos * (e_pos_pos + 0.5 * magSqr(U_pos)) + p_pos) + aphiv_neg * (rho_neg * (e_pos_neg + 0.5 * magSqr(U_neg)) + p_neg) + aSf * p_pos - aSf * p_neg - 0*rhoEQ_pos);
+            aphiv_pos * (rho_pos * (e_pos_pos + 0.5 * magSqr(U_pos)) + p_pos) + aphiv_neg * (rho_neg * (e_pos_neg + 0.5 * magSqr(U_neg)) + p_neg) + aSf * p_pos - aSf * p_neg - 0 * rhoEQ_pos);
 
         surfaceScalarField phiEp_neg(
             "phiEp_pos",
-            aphiv_pos * (rho_pos * (e_neg_pos + 0.5 * magSqr(U_pos)) + p_pos) + aphiv_neg * (rho_neg * (e_neg_neg + 0.5 * magSqr(U_neg)) + p_neg) + aSf * p_pos - aSf * p_neg - 0*rhoEQ_neg);
+            aphiv_pos * (rho_pos * (e_neg_pos + 0.5 * magSqr(U_pos)) + p_pos) + aphiv_neg * (rho_neg * (e_neg_neg + 0.5 * magSqr(U_neg)) + p_neg) + aSf * p_pos - aSf * p_neg - 0 * rhoEQ_neg);
+
+        //surfaceScalarField phiep_pos("phiep_pos", aphiv_pos * (rho_pos * e_pos_pos) + aphiv_neg * (rho_neg * e_pos_neg));
+
+        //surfaceScalarField phiep_neg("phiep_pos", aphiv_pos * (rho_pos * e_neg_pos) + aphiv_neg * (rho_neg * e_neg_neg));
 
         if (divScheme == "Doubleflux")
         {
 
             rhoEEqn += fvc::div_doubleflux(phiEp_pos, phiEp_neg);
+            //rhoeEqn += fvc::div_doubleflux(phiep_pos, phiep_neg);
         }
         else if (divScheme == "Conservativeflux")
         {
@@ -252,10 +282,12 @@ int main(int argc, char *argv[])
         }
 
         solve(rhoEEqn);
+        //solve(rhoeEqn);
 
         e = rhoE / rho - 0.5 * magSqr(U);
+        //e = rhoe / rho;
         e.correctBoundaryConditions();
-
+        
         if (!inviscid)
         {
             volScalarField &he = thermo.he();
@@ -263,8 +295,9 @@ int main(int argc, char *argv[])
                 fvm::ddt(rho, e) - fvc::ddt(rho, e)
                     //- fvm::laplacian(turbulence->alphaEff(), e)
                     //- fvm::laplacian(kappa / Cp, he) //Todo kappa Cp
-                    - fvm::laplacian(alpha, he) ==
-                -sumHeatDiffusion - sumHeatDiffusion2
+                    //- fvm::laplacian(alpha, he) ==
+                   - fvc::laplacian(kappa, T) //==
+                //-sumHeatDiffusion - sumHeatDiffusion2
                 //== fvOptions(rho, e)
             );
             /*forAll(Y, k)
@@ -286,14 +319,7 @@ int main(int argc, char *argv[])
             p.max(1e3);
             p.min(1e7);
         }
-        else if (divScheme == "Conservativeflux")
-        {
-            p.ref() = rho() / psi();
-        }
-        else
-        {
-            FatalErrorInFunction << "divScheme must be Doubleflux or Conservativeflux." << exit(FatalError);
-        }
+
 
         thermo.correct();
         p.correctBoundaryConditions();
@@ -314,20 +340,21 @@ int main(int argc, char *argv[])
 
                 rhoYi.boundaryFieldRef() = rho.boundaryField() * Yi.boundaryField();
 
-                Yi.max(0.0);
+                Yi.max(1e-5);
                 Yi.min(1.0);
 
                 Yt += Yi;
             }
         }
         Y[inertIndex] = scalar(1) - Yt;
-        Y[inertIndex].max(0.0);
+        Y[inertIndex].max(1e-5);
 
         //rhoE.boundaryFieldRef() ==
         //    rho.boundaryField() *
         //        (e.boundaryField() + 0.5 * magSqr(U.boundaryField()));
 
         rhoE = rho * (e + 0.5 * magSqr(U));
+        //rhoe = rho * e;
 
         turbulence->correct();
         gammaStar = rho * c * c / p;
@@ -340,6 +367,7 @@ int main(int argc, char *argv[])
             hei[i] = hei_t[i];
             // hei[i] = thermo.hei(i);
         }
+        surfbeta = frac*(1-frac);
         runTime.write();
 
         Info << "ExecutionTime = " << runTime.elapsedCpuTime() << " s"

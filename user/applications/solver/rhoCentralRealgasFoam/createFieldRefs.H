@@ -12,7 +12,7 @@ if (max(mu.primitiveField()) > 0.0)
 }
 //inviscid = true;
 
-//volScalarField& frac = mesh.objectRegistry::lookupObjectRef<volScalarField>("vaporfrac");
+volScalarField& frac = mesh.objectRegistry::lookupObjectRef<volScalarField>("vaporfrac");
 
 volScalarField &alpha = mesh.objectRegistry::lookupObjectRef<volScalarField>("thermo:alpha");
 volScalarField &rho_G = mesh.objectRegistry::lookupObjectRef<volScalarField>("thermo:rho_G");

@@ -91,8 +91,9 @@ forAll(Dimix, i)
             Dimix_t[i]));
 }
 
-volScalarField &kappa_t = mesh.objectRegistry::lookupObjectRef<volScalarField>("thermo:kappa");
+volScalarField &kappa = mesh.objectRegistry::lookupObjectRef<volScalarField>("thermo:kappa");
 //- Create Thermal Conductivity field"kappa" [W/mK]
+/*
 Info << "\nCreating field thermal conductivity - kappa" << endl;
 volScalarField kappa(
     IOobject(
@@ -102,6 +103,7 @@ volScalarField kappa(
         IOobject::NO_READ, //IOobject::MUST_READ,
         IOobject::NO_WRITE),
     kappa_t);
+*/
 
 //- Creates Heat Capacity at constant pressure "Cp" [J/kgK]
 /*Info << "\nCreating field heat capacity Cp" << endl;
@@ -183,6 +185,14 @@ volScalarField rhoE(
         IOobject::NO_READ,
         IOobject::NO_WRITE),
     rho *(e + 0.5 * magSqr(U)));
+/* volScalarField rhoe(
+    IOobject(
+        "rhoe",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::NO_WRITE),
+    rho *e ); */
 
 PtrList<volScalarField> rhoY(Y.size());
 forAll(Y, i)
@@ -371,6 +381,15 @@ forAll(owner, facei)
     if (Smin[neighbour[facei]] > S[owner[facei]])
         Smin[neighbour[facei]] = S[owner[facei]];
 }
+
+volScalarField surfbeta(
+    IOobject(
+        "surfbeta",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::AUTO_WRITE),
+    mesh, dimensionedScalar("zero", dimless, 0));
 
 
 //#include "createFvOptions.H"
