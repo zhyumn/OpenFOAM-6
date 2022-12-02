@@ -1,0 +1,96 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  6
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volScalarField;
+    location    "0.00015";
+    object      H2O;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+dimensions [0 0 0 0 0 0 0];
+
+internalField   #codeStream
+{
+    
+        codeInclude
+        #{
+            #include "fvCFD.H"
+        #};
+        codeOptions
+        #{
+            -I$(LIB_SRC)/finiteVolume/lnInclude \
+            -I$(LIB_SRC)/meshTools/lnInclude
+        #};  
+        codeLibs
+        #{
+            -lmeshTools \
+            -lfiniteVolume
+        #};
+        code
+        #{
+            const IOdictionary & d = static_cast<const IOdictionary&>(dict);
+            const fvMesh& mesh = refCast<const fvMesh>(d.db());
+            const scalar PI = 3.1415926535897932384626;
+
+            double dx=0.0002;//2.159e-5;
+            double thickness =dx/7.29;//dx/29.16;//5.901;
+            double Ctop=0.0001;//0.0001;
+            double Cbottom=0.0223;//0.9998;
+
+            double WMC=86.1754;
+            double WMN=28.0134;
+
+            scalarField H2O(mesh.nCells());
+            forAll(H2O, i)
+            {
+                const scalar z = mesh.C()[i][2];
+                double a = 0.5*(1+erf(sqrt(PI)*z/thickness));
+                double X=(Ctop*a+Cbottom*(1-a));
+
+                //H2O[i] =WMC*X/(WMC*X+WMN*(1-X));//0.5*(Ctop+Cbottom)+0.5*(Ctop-Cbottom)*erf(sqrt(PI)*z/thickness)
+                H2O[i] = 0.5*(Ctop+Cbottom)+0.5*(Ctop-Cbottom)*erf(sqrt(PI)*z/thickness);//
+                
+            }
+            H2O.writeEntry( "", os);
+        #};
+    
+};
+
+boundaryField
+{
+    top
+    {
+        type            zeroGradient;
+    }
+    bottom
+    {
+        type            zeroGradient;
+    }
+    front
+    {
+        type            empty;
+    }
+    back
+    {
+        type            empty;
+    }
+    left
+    {
+        type            cyclic;
+    }
+    right
+    {
+        type            cyclic;
+    }
+}
+
+
+// ************************************************************************* //

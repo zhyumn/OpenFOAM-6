@@ -559,7 +559,7 @@ inline std::tuple<Foam::scalar, Foam::scalar> Foam::species::ISATRhoMultithermo<
         H1[1][0] = H2[1][0];
         H1[1][1] = H2[1][1];
         */
-        if (iter++ > 20 * maxIter_)
+        if (iter++ > 100 * maxIter_)
         {
             WarningInFunction << setprecision(50)
                               << "Maximum number of iterations exceeded: " << iter - 1

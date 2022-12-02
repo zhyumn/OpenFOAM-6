@@ -27,6 +27,7 @@ thermoType
 }
 
 dpdt yes;
+doubleFlux true;//false;
 chemistryReader foamChemistryReader;
 
 foamChemistryFile "$FOAM_CASE/constant/chem";

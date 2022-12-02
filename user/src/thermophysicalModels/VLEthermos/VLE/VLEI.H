@@ -1771,21 +1771,8 @@ inline Foam::autoPtr<typename Foam::VLE<ThermoMixture>::solution> Foam::VLE<Ther
             scalar alpha = 1.0 - sol().vaporfra;
             forAll(Xinp, i)
             {
-<<<<<<< HEAD
-                scalarList Xliq_temp = sol().X_liq;
-                scalarList Xgas_temp = sol().X_gas;
-                scalar alpha = 1.0 - sol().vaporfra;
-                forAll(Xinp,i)
-                {
-                    sol().X_liq()[i] = Xgas_temp[i];
-                    sol().X_gas()[i] = Xliq_temp[i];
-                }
-                sol().vaporfra = alpha;
-               // Info<<"sol 1 flipped"<<endl;
-=======
                 sol().X_liq()[i] = Xgas_temp[i];
                 sol().X_gas()[i] = Xliq_temp[i];
->>>>>>> ce4378209713aa6e6f6895cd523b03388c83d651
             }
             sol().vaporfra = alpha;
         }

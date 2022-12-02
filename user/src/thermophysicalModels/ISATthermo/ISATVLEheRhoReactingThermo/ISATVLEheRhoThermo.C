@@ -77,7 +77,7 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate_init()
             {
                 const typename MixtureType::thermoType &mixture_ =
                     this->cellMixture(celli);
-                heList_[i].primitiveFieldRef()[celli] = this->speciesData()[i].Ha(pCells[celli], TCells[celli]);
+                heList_[i].primitiveFieldRef()[celli] = this->speciesData()[i].Hs(pCells[celli], TCells[celli]);
 
                 Dimix_[i].primitiveFieldRef()[celli] = mixture_.Dimix(pCells[celli], TCells[celli], i);
             }
@@ -229,7 +229,7 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate_init()
 
                         pDimix[facei] = mixture_.Dimix(pp[facei], pT[facei], i);
 
-                        pheList[facei] = this->speciesData()[i].Ha(pp[facei], pT[facei]);
+                        pheList[facei] = this->speciesData()[i].Hs(pp[facei], pT[facei]);
                     }
                 }
                 else
@@ -239,7 +239,7 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate_init()
                         const typename MixtureType::thermoType &mixture_ =
                             this->patchFaceMixture(patchi, facei);
                         pDimix[facei] = mixture_.Dimix(pp[facei], pT[facei], i);
-                        pheList[facei] = this->speciesData()[i].Ha(pp[facei], pT[facei]); // TODO check Hs
+                        pheList[facei] = this->speciesData()[i].Hs(pp[facei], pT[facei]); // TODO check Hs
                     }
                 }
             }
@@ -275,24 +275,48 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
     if (!boundary_flag)
     {
         this->newTimeStep();
-
-        forAll(TCells, celli)
+        if (DF_)
         {
-            const typename MixtureType::thermoType &mixture_ = this->cellMixture(celli);
-
-            // std::tie(TCells[celli], psiCells[celli], vaporfracCells[celli], soundspeedCells[celli]) = mixture_.Tpsivfc_XHP(hCells[celli] + pCells[celli] / rhoCells[celli], pCells[celli], TCells[celli]);
-            std::tie(TCells[celli], hCells[celli], vaporfracCells[celli], soundspeedCells[celli], rho_G_[celli]) = mixture_.THvfc_G_rhoY_XrhoP(rhoCells[celli], pCells[celli], TCells[celli], Y_temp);
-            //hCells[celli] = mixture_.HE(pCells[celli], TCells[celli]);
-            hCells[celli] -= pCells[celli] / rhoCells[celli];
-            //ZCells[celli] = mixture_.Z(pCells[celli], TCells[celli]);
-            for (int i = 0; i < Y_temp.size(); i++)
+            do
             {
-                Y_G_List_[i][celli] = Y_temp[i];
-            }
-            // autoPtr<typename MixtureType::thermoType::solution> sol;
-            // std::tie(TCells[celli], temppsi, vaporfracCells[celli], soundspeedCells[celli], sol) = mixture_.Tpsivfcsol_XHP(hCells[celli] + pCells[celli] / rhoCells[celli], pCells[celli], TCells[celli]);
-            // rhoCells[celli] = psiCells[celli] * pCells[celli];
-            psiCells[celli] = rhoCells[celli] / pCells[celli];
+                forAll(TCells, celli)
+                {
+                    const typename MixtureType::thermoType &mixture_ = this->cellMixture(celli);
+
+                    // std::tie(TCells[celli], psiCells[celli], vaporfracCells[celli], soundspeedCells[celli]) = mixture_.Tpsivfc_XHP(hCells[celli] + pCells[celli] / rhoCells[celli], pCells[celli], TCells[celli]);
+                    std::tie(TCells[celli], hCells[celli], vaporfracCells[celli], soundspeedCells[celli], rho_G_[celli]) = mixture_.THvfc_G_rhoY_XrhoP(rhoCells[celli], pCells[celli], TCells[celli], Y_temp);
+                    //std::tie(hCells[celli], rhoCells[celli], vaporfracCells[celli], soundspeedCells[celli], rho_G_Cells[celli]) = mixture_.Erhovfc_G_rhoY_ISAT(pCells[celli], TCells[celli], Y_temp);
+
+                    hCells[celli] -= pCells[celli] / rhoCells[celli];
+
+                    for (int i = 0; i < Y_temp.size(); i++)
+                    {
+                        Y_G_List_[i][celli] = Y_temp[i];
+                    }
+                    // autoPtr<typename MixtureType::thermoType::solution> sol;
+                    // std::tie(TCells[celli], temppsi, vaporfracCells[celli], soundspeedCells[celli], sol) = mixture_.Tpsivfcsol_XHP(hCells[celli] + pCells[celli] / rhoCells[celli], pCells[celli], TCells[celli]);
+                    // rhoCells[celli] = psiCells[celli] * pCells[celli];
+                    psiCells[celli] = rhoCells[celli] / pCells[celli];
+                }
+            } while (this->newLoop());
+        }
+        else
+        {
+            do
+            {
+                forAll(TCells, celli)
+                {
+                    const typename MixtureType::thermoType &mixture_ = this->cellMixture(celli);
+
+                    std::tie(TCells[celli], pCells[celli], vaporfracCells[celli], soundspeedCells[celli], rho_G_[celli]) = mixture_.TPvfc_G_rhoY_XErho(hCells[celli], rhoCells[celli], TCells[celli], pCells[celli], Y_temp);
+
+                    for (int i = 0; i < Y_temp.size(); i++)
+                    {
+                        Y_G_List_[i][celli] = Y_temp[i];
+                    }
+                    psiCells[celli] = rhoCells[celli] / pCells[celli];
+                }
+            } while (this->newLoop());
         }
 
         if (!inviscid_)
@@ -312,7 +336,7 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
                 {
                     const typename MixtureType::thermoType &mixture_ =
                         this->cellMixture(celli);
-                    heList_[i].primitiveFieldRef()[celli] = this->speciesData()[i].Ha(pCells[celli], TCells[celli]);
+                    heList_[i].primitiveFieldRef()[celli] = this->speciesData()[i].Hs(pCells[celli], TCells[celli]);
 
                     Dimix_[i].primitiveFieldRef()[celli] = mixture_.Dimix(pCells[celli], TCells[celli], i);
                 }
@@ -354,7 +378,7 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
 
         volScalarField::Boundary &rho_G_Bf =
             this->rho_G_.boundaryFieldRef();
-        
+
         //volScalarField::Boundary &ZBf =
         //    this->Z_.boundaryFieldRef();
 
@@ -445,7 +469,7 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
                                 this->patchFaceMixture(patchi, facei);
 
                             pDimix[facei] = mixture_.Dimix(pp[facei], pT[facei], i);
-                            pheList[facei] = this->speciesData()[i].Ha(pp[facei], pT[facei]);
+                            pheList[facei] = this->speciesData()[i].Hs(pp[facei], pT[facei]);
                         }
                     }
                     else
@@ -456,7 +480,7 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
                                 this->patchFaceMixture(patchi, facei);
                             pDimix[facei] = mixture_.Dimix(pp[facei], pT[facei], i);
 
-                            pheList[facei] = this->speciesData()[i].Ha(pp[facei], pT[facei]);
+                            pheList[facei] = this->speciesData()[i].Hs(pp[facei], pT[facei]);
                         }
                     }
                 }
@@ -488,7 +512,7 @@ Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::ISATVLEheRhoThermo(
               mesh.time().timeName(),
               mesh,
               IOobject::NO_READ,
-              IOobject::NO_WRITE),
+              IOobject::AUTO_WRITE),
           mesh,
           dimVelocity),
       kappa_(
@@ -509,7 +533,7 @@ Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::ISATVLEheRhoThermo(
               IOobject::NO_WRITE),
           mesh,
           dimDensity),
-/*       Z_(
+      /*       Z_(
           IOobject(
               "thermo:Z",
               mesh.time().timeName(),
@@ -533,6 +557,8 @@ Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::ISATVLEheRhoThermo(
             IOobject::NO_WRITE,
             false));
     inviscid_ = thermoDict.lookupOrDefault<bool>("inviscid", false);
+    nloop = thermoDict.lookupOrDefault<label>("nloop", 1);
+    DF_ = thermoDict.lookupOrDefault<bool>("doubleFlux", true);
     //noVLE_ = thermoDict.lookupOrDefault<bool>("noVLE", false);
     //MixtureType::thermoType::noVLE = noVLE_;
     // FatalErrorInFunction
@@ -636,32 +662,32 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::correct()
 template <class BasicPsiThermo, class MixtureType>
 void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::customChemistry(scalar temperature, scalar pressure, scalar density)
 {
-
+    
     // Mw kg/mol
     const typename MixtureType::thermoType &mixture_ =
         this->cellMixture(0);
-
+    
     W_r[0] = 0.170338;//(mixture_[0].W())*1E-3; // c12h26
     W_r[1] = 0.032;//(mixture_[1].W())*1E-3; // O2
     W_r[2] = 0.04401;//(mixture_[2].W())*1E-3; // co2
     W_r[3] =  0.0280101;//(mixture_[3].W())*1E-3; // co
     W_r[4] = 0.018;//(mixture_[4].W())*1E-3; // h2o
     W_r[5] = 0.0280134;//(mixture_[5].W())*1E-3; // N2
-
+    
     Hc[0] = -290.9; // c12h26   kJ/mol
     Hc[1] = 0.0; // O2
     Hc[2] = -393.51; // co2
     Hc[3] = -110.53; // co
     Hc[4] = -241.826; // h2o
     Hc[5] = 0.0;// N2
-
+    
     for(int i = 0;i<6;i++)
-    {
+    {   
         Hc[i] = Hc[i] * 1E3 / W_r[i];  //J/kg
         //Info<<Hc[i]<<endl;
     }
     //Info<<temperature<<"\t"<<pressure<<"\t"<<"\t"<<density;
-
+    
     setThermo(temperature, pressure, density);
 }
 
@@ -676,18 +702,18 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::setThermo(scalar tem
 
 template <class BasicPsiThermo, class MixtureType>
 void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::setY(double Y, int speciesLabel)
-{
+{   
     Ygas_r[speciesLabel] = Y;
-
+    
     //Info<<"y \t"<<speciesLabel<<"\t"<<Ygas_r[speciesLabel]<<endl;
 }
 
 template <class BasicPsiThermo, class MixtureType>
 void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::setConc()
 {
-
+    
     for (int i = 0; i < 6; i++)
-    {
+    {   
         c_r[i] = rho_r * Ygas_r[i] *1E-6 / W_r[i];
     }
     // for(int i=0;i<6;i++){
@@ -742,33 +768,30 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::setRate()
 
     T_ini = Z*Tf + (1-Z)*To;
 
-    //if (err>5) Info<<"Gas phase temperature "<<T_r<<"\t"<<Temp<<endl; 
-
     x_f = Ygas_r[0]*Mavg/W_r[0];
     x_o = Ygas_r[1]*Mavg/W_r[1];
 
     phi_st = (x_f/(x_o+1E-30))/(1.0/18.5);
-    
     // 0 = c12h26. 1 = o2, 2 = co2, 3 = co, 4 = h2o, 5 = inert
     A1 = exp(t0 + t1 * exp(t2 * phi_st) + t3 * tanh((t4 + t5 * phi_st) * T_ini + t6));
     R1 = A1 * exp(-31944.0 / (R_r * T_r)) * pow(c_r[0], 0.25) * pow(c_r[1], 1.25);
     R2f = 3.98 * 1E14 * exp(-40000.0 / (R_r * T_r)) * pow(c_r[3], 1.0) * pow(c_r[4], 0.5) * pow(c_r[1], 0.25);
     R2b = 5.0 * 1E8 * exp(-40000.0 / (R_r * T_r)) * pow(c_r[2], 1.0);
-    
-    if(Ygas_r[0] < 0.000001 || Ygas_r[1] < 0.000001){   
-        R1 = 0.0; 
+
+    if(Ygas_r[0] < 0.00001 || Ygas_r[1] < 0.00001){
+        R1 = 0.0;
     }
 
-    if(Ygas_r[1] < 0.000001 || Ygas_r[3] < 0.000001 || Ygas_r[4] < 0.000001){   
-        R2f = 0.0; 
+    if(Ygas_r[1] < 0.00001 || Ygas_r[3] < 0.00001 || Ygas_r[4] < 0.00001){
+        R2f = 0.0;
     }
 
-    if(Ygas_r[2] < 0.000001){   
-        R2b = 0.0; 
-    } 
+    if(Ygas_r[2] < 0.00001){
+        R2b = 0.0;
+    }
 
-    R2 = R2f - R2b;   
-    
+    R2 = R2f - R2b;
+
     reactRate_r[0] = -R1;
     reactRate_r[1] = -12.5 * R1 - 0.5 * R2;
     reactRate_r[2] = R2;
@@ -821,79 +844,3 @@ double Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::gasPhaseY(label ce
     const typename MixtureType::thermoType &mixture_ = this->cellMixture(celli);
     return 0;
 }
-
-
-// template <class BasicPsiThermo, class MixtureType>
-// void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>:: customCHemistry(volScalarField temperature, volScalarField pressure, volScalarField density, PtrList<volScalarField> Y)
-// {
-//     Temperature = temperature;
-//     Pressure = pressure;
-//     rho = density;
-//     forAll(Y,i)
-//     {
-//         Yrxn[i] = Y[i];
-//     }
-
-//     W_r[0] = 0.170338;//(mixture_[0].W())*1E-3; // c12h26
-//     W_r[1] = 0.032;//(mixture_[1].W())*1E-3; // O2
-//     W_r[2] = 0.04401;//(mixture_[2].W())*1E-3; // co2
-//     W_r[3] =  0.0280101;//(mixture_[3].W())*1E-3; // co
-//     W_r[4] = 0.018;//(mixture_[4].W())*1E-3; // h2o
-//     W_r[5] = 0.0280134;//(mixture_[5].W())*1E-3; // N2
-
-//     Hc[0] = -290.9; // c12h26   kJ/mol
-//     Hc[1] = 0; // O2
-//     Hc[2] = -393.51; // co2
-//     Hc[3] = -110.53; // co
-//     Hc[4] = -241.826; // h2o
-//     Hc[5] = 0;// N2
-
-//     for(int i = 0;i<6;i++)
-//     {
-//         Hc[i] = Hc[i] * 1E3 / W_r[i];  //J/kg
-//     }
-
-
-//     calculateReactions();
-// }
-
-
-// template <class BasicPsiThermo, class MixtureType>
-// void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>:: calculateReactions()
-// {
-//     forAll(Temperature,celli)
-//     {
-//         forAll(Yrxn,i)
-//         {
-//             conc[i][celli] =  rho[celli] * Yrxn[i][celli] * 1E-6 / W_r[i];
-//         }
-
-//         scalar R1 = R1(celli);
-//         scalar R2 = R2(celli);
-
-//         rate[0][celli] = -R1;
-//         rate[1][celli] = -12.5 * R1 - 0.5 * R2;
-//         rate[2][celli] = R2;
-//         rate[3][celli] = 12.0 * R1 - R2;
-//         rate[4][celli] = 13.0 * R1;
-//         rate[5][celli] = 0.0; // inert
-
-//         Qdot[celli] = 0;
-//         forAll(Yrxn,i)
-//         {
-//             Qdot[celli] = Qdot[celli] - rate[i][celli]*Hc[i];
-//         }
-//     }
-// }
-
-// template <class BasicPsiThermo, class MixtureType>
-// volScalarField Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>:: RR(label i)
-// {
-//     return rate[i];
-// }
-
-// template <class BasicPsiThermo, class MixtureType>
-// volScalarField Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>:: Qdot()
-// {
-//      return Qdot;
-// }

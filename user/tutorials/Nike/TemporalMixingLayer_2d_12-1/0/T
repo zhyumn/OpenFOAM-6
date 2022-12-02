@@ -42,7 +42,7 @@ internalField   #codeStream
 
             double dx=2.159e-5;
             double thickness =dx/29.16;//5.901;
-            double Ttop=595;
+            double Ttop=400;//595;
             double Tbottom=593.0;
 
             scalarField T(mesh.nCells());
