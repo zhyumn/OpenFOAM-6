@@ -19,7 +19,7 @@ libs            ("libISATVLERhoReactingThermo.so");
 
 application     rhoCentralRealgasFoam;
 
-startFrom       startTime;
+startFrom       latestTime;
 
 startTime       0;
 
@@ -31,7 +31,7 @@ deltaT          1e-8;
 
 writeControl    adjustableRunTime;
 
-writeInterval   1e-5;
+writeInterval   1e-7;
 
 purgeWrite      0;
 
@@ -45,7 +45,7 @@ timeFormat      general;
 
 timePrecision   6;
 
-adjustTimeStep  yes;
+adjustTimeStep  no;
 
 maxCo           0.1;
 

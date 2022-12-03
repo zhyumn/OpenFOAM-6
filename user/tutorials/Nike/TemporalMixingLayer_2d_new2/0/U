@@ -48,7 +48,7 @@ internalField   #codeStream
 
             double Utop = 100.50747659147686;
             double Ubottom = -78.87911772752321;
-            double F2D = 0.05;//0.05;
+            double F2D = 100;//0.05;//0.05;
             double dU = mag(Utop - Ubottom);
             double Gamma3 = lambda1*dU;
             

@@ -270,6 +270,19 @@ forAll(Y, i)
     );
 }
 
+volScalarField rhoGas
+(
+    IOobject
+    (
+        "rhoGas",
+        runTime.timeName(),
+        mesh,
+        IOobject::READ_IF_PRESENT,
+        IOobject::AUTO_WRITE
+    ),
+    mesh,
+    dimensionedScalar("rhoGas", dimMass / dimVolume, 0.0)
+);
 //- Creates Molecular weight field [kg/kmol]
 Info << "Creating field molecular weight - W" << endl;
 volScalarField Wmix(
@@ -281,6 +294,23 @@ volScalarField Wmix(
         //IOobject::AUTO_WRITE
         IOobject::NO_WRITE),
     thermo.W());
+
+dimensionedScalar unitW("unit1", dimMass / dimMoles, 1);
+PtrList<volScalarField> X(Y.size());
+forAll(Y, i)
+{
+    X.set(
+        i,
+        new volScalarField(
+            IOobject(
+                "X." + species[i],
+                runTime.timeName(),
+                mesh,
+                IOobject::NO_READ,
+                IOobject::AUTO_WRITE),
+            Wmix * Y[i] * 1e3 / unitW / composition.W(i)));
+}
+
 // - for Energy Equation
 volScalarField sumHeatDiffusion(
     IOobject(

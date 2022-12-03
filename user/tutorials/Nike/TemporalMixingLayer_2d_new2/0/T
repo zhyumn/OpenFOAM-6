@@ -41,8 +41,8 @@ internalField   #codeStream
             const scalar PI = 3.1415926535897932384626;
 
             double thickness =5.436e-07;//5.901;
-            double Ttop=555;
-            double Tbottom=293.0;
+            double Ttop=400;
+            double Tbottom=900.0;
 
             scalarField T(mesh.nCells());
             forAll(T, i)

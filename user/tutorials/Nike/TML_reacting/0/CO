@@ -40,7 +40,7 @@ internalField   #codeStream
             const fvMesh& mesh = refCast<const fvMesh>(d.db());
             const scalar PI = 3.1415926535897932384626;
 
-            double thickness = 1.0/15;
+            double thickness = 1.0;
             double Htop=0.0001;//0.05;
             double Hbottom=0.0001;//0.0001;
 
