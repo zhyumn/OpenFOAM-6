@@ -41,17 +41,20 @@ Description
 #include "fvcSmooth.H"
 #include "mathematicalConstants.H"
 #include "thermodynamicConstants.H"
+#include "clockTime.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 int main(int argc, char *argv[])
 {
 #define NO_CONTROL
-Foam::argList::addBoolOption
-(
-    "init",
-    "initailize"
-);
+    Foam::argList::addBoolOption(
+        "init",
+        "initailize");
+
+    Foam::argList::addBoolOption(
+        "updateZero",
+        "updateZero");
 #include "postProcess.H"
 
 #include "setRootCaseLists.H"
@@ -80,10 +83,10 @@ Foam::argList::addBoolOption
     if (args.optionFound("init"))
     {
         double rho_bottom = rho[0];
-        double rho_top = rho[rho.size()-1];
-        forAll (rho,i)
+        double rho_top = rho[rho.size() - 1];
+        forAll(rho, i)
         {
-            rho[i] = (Y[0][i]+Y[1][i])/(Y[0][i]/rho_top+Y[1][i]/rho_bottom);
+            rho[i] = (Y[0][i] + Y[1][i]) / (Y[0][i] / rho_top + Y[1][i] / rho_bottom);
             //rho[i] = Y[0][i]*rho_top+Y[1][i]*rho_bottom;
         }
         thermo.correct();
@@ -97,8 +100,20 @@ Foam::argList::addBoolOption
         return 0;
     }
 
+    if (args.optionFound("updateZero"))
+    {
+        e.write();
+        rho.write();
+        frac.write();
+        return 0;
+    }
+
+    double cputime;
+
     while (runTime.run())
     {
+        cputime = 0;
+        clockTime_.timeIncrement();
         // --- Directed interpolation of primitive fields onto faces
 
         surfaceScalarField rho_pos(interpolate(rho, pos));
@@ -287,16 +302,16 @@ Foam::argList::addBoolOption
         e = rhoE / rho - 0.5 * magSqr(U);
         //e = rhoe / rho;
         e.correctBoundaryConditions();
-        
+
         if (!inviscid)
         {
             volScalarField &he = thermo.he();
             fvScalarMatrix EEqn(
                 fvm::ddt(rho, e) - fvc::ddt(rho, e)
-                    //- fvm::laplacian(turbulence->alphaEff(), e)
-                    //- fvm::laplacian(kappa / Cp, he) //Todo kappa Cp
-                    //- fvm::laplacian(alpha, he) ==
-                   - fvc::laplacian(kappa, T) //==
+                //- fvm::laplacian(turbulence->alphaEff(), e)
+                //- fvm::laplacian(kappa / Cp, he) //Todo kappa Cp
+                //- fvm::laplacian(alpha, he) ==
+                - fvc::laplacian(kappa, T) //==
                 //-sumHeatDiffusion - sumHeatDiffusion2
                 //== fvOptions(rho, e)
             );
@@ -319,7 +334,6 @@ Foam::argList::addBoolOption
             p.max(1e3);
             p.min(1e7);
         }
-
 
         thermo.correct();
         p.correctBoundaryConditions();
@@ -367,8 +381,14 @@ Foam::argList::addBoolOption
             hei[i] = hei_t[i];
             // hei[i] = thermo.hei(i);
         }
-        surfbeta = frac*(1-frac);
+        surfbeta = frac * (1 - frac);
         runTime.write();
+
+        cputime += clockTime_.timeIncrement();
+
+        cputotal
+            << runTime.timeOutputValue()
+            << ",    " << cputime << endl;
 
         Info << "ExecutionTime = " << runTime.elapsedCpuTime() << " s"
              << "  ClockTime = " << runTime.elapsedClockTime() << " s"

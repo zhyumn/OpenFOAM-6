@@ -253,15 +253,27 @@ namespace Foam
             {
                 scalar T = in[in.size() - 2];
                 scalar P = in[in.size() - 1];
-                // scalar T, P;
-                /*scalarList test(2);
-                test[0] = 3.2647302995662537e-05;
-                test[1] = 0.99996735269700421;
-                T = 310.99984251699999;
-                P = 19999979.704999998;
+/*
+                //scalar T, P;
+                scalarList test(2);
+                test[0] = 0.997;
+                test[1] = 0.003;
+                T = 595;
+                P = 5e6;
                 p->setX(test);
                 autoPtr<typename Type::solution> sol1(p->TPN(P, T));
-                scalar E1 = p->Hs(P, T, sol1()) - P / p->rho(P, T, sol1());
+                scalar E1 = p->Hs(P, T, sol1()); //- P / p->rho(P, T, sol1());
+
+                test[0] = 0.999;
+                test[1] = 0.001;
+                p->setX(test);
+                autoPtr<typename Type::solution> sol2(p->TPN(P, T));
+                scalar E2 = p->Hs(P, T, sol2());
+
+                FatalErrorInFunction
+                    << exit(FatalError);
+                    */
+                /*
                 scalar dd= p->dEdXi(P,T,0,sol1());
                 autoPtr<scalarRectangularMatrix> grad(p->dErhovfcdXTP_simp(P, T, sol1()));
                 scalar dx = 1e-4;
@@ -270,6 +282,7 @@ namespace Foam
                 autoPtr<typename Type::solution> sol2(p->TPN(P, T));
                 scalar E2 = p->Hs(P, T, sol2()) - P / p->rho(P, T, sol2());
                 */
+
                 /*
                 test[0] = 5.881479846724812e-05;//3.2647302995662537e-05;
                 test[1] = 0.99994118520153286;//0.99996735269700421;

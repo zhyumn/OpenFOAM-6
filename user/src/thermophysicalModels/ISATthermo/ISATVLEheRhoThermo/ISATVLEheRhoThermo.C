@@ -271,10 +271,12 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
     static scalar maxdmu = 0;
     static int timeflag = 0;
     scalarList Y_temp(MixtureType::Y().size());
+    scalar VLEtime = 0;
 
     if (!boundary_flag)
     {
         this->newTimeStep();
+        clockTime_.timeIncrement();
         if (DF_)
         {
             do
@@ -318,6 +320,10 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
                 }
             } while (this->newLoop());
         }
+        VLEtime += clockTime_.timeIncrement();
+        cpuISAT_VLE_()
+            << this->time().timeOutputValue()
+            << ",    " << VLEtime << endl;
 
         if (!inviscid_)
         {
@@ -564,6 +570,7 @@ Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::ISATVLEheRhoThermo(
     // FatalErrorInFunction
     //     << "inviscid_:" <<inviscid_
     //     << exit(FatalError);
+    cpuISAT_VLE_ = logFile("VLEtime",mesh);
 
     forAll(Dimix_, i)
     {
@@ -655,6 +662,16 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::correct()
     {
         Info << "    Finished" << endl;
     }
+}
+
+template <class BasicPsiThermo, class MixtureType>
+inline Foam::autoPtr<Foam::OFstream>
+Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::logFile(const word &name, const fvMesh &mesh) const
+{
+    mkDir(mesh.time().path() / "ISAT_VLE");
+    return autoPtr<OFstream>(
+        new OFstream(
+            mesh.time().path() / "ISAT_VLE" / name));
 }
 
 // ************************************************************************* //

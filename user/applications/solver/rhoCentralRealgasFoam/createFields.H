@@ -23,7 +23,7 @@ volScalarField &T = thermo.T();
 //}
 
 volScalarField &e = thermo.he();
-
+e.writeOpt() = IOobject::AUTO_WRITE;
 const word inertSpecie(thermo.lookup("inertSpecie"));
 // correction terms for diffusion velocity
 volScalarField sumDiffusionCorrections1(
@@ -142,8 +142,7 @@ forAll(hei, i)
             hei_t[i]));
 }
 
-Info
-    << "Reading field U" << endl;
+Info << "Reading field U" << endl;
 volVectorField U(
     IOobject(
         "U",
@@ -390,6 +389,5 @@ volScalarField surfbeta(
         IOobject::NO_READ,
         IOobject::AUTO_WRITE),
     mesh, dimensionedScalar("zero", dimless, 0));
-
 
 //#include "createFvOptions.H"

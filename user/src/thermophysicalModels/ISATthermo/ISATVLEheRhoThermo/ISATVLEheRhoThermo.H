@@ -38,7 +38,7 @@ SourceFiles
 //#include "psiThermo.H"
 #include <tuple>
 #include "heThermo.H"
-
+#include "clockTime.H"
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 namespace Foam
@@ -69,6 +69,10 @@ namespace Foam
         bool inviscid_;
         bool DF_;
         label nloop;
+        const clockTime clockTime_;
+
+        autoPtr<OFstream> cpuISAT_VLE_;
+
         // bool noVLE_;
 
         // Private Member Functions
@@ -94,6 +98,8 @@ namespace Foam
 
         //- Destructor
         virtual ~ISATVLEheRhoThermo();
+
+        inline autoPtr<OFstream> logFile(const word &name, const fvMesh &mesh) const;
 
         // Member functions
 
