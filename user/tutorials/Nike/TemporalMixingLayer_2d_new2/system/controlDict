@@ -21,7 +21,7 @@ application     rhoCentralRealgasFoam;
 
 startFrom       latestTime;
 
-startTime       1.2e-5;
+startTime       0;//1.2e-5;
 
 stopAt          endTime;
 
