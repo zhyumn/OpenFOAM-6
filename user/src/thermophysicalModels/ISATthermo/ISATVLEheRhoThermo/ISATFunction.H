@@ -505,11 +505,13 @@ namespace Foam
                 scalar E = in[in.size() - 2];
                 scalar rho = in[in.size() - 1];
                 scalar T, P;
-                std::tie(P, T) = p->TrhoEs(E, rho, P0, T0, &Type::Es_ac, &Type::rho);
+                T = in2[0];
+                P = in2[1];
+                //std::tie(P, T) = p->TrhoEs(E, rho, P0, T0, &Type::Es_ac, &Type::rho);
 
                 p->setX(in);
                 //autoPtr<typename Type::solution> sol(p->TPN(P, T)); // sol(p->TPn_flash_New_TPD(P, T));//sol(p->TPn_flash(P, T));
-                sol.reset(p->TPN(P, T).ptr());
+                //sol.reset(p->TPN(P, T).ptr());
                 autoPtr<scalarRectangularMatrix> grad(p->dTPvfc_G_rhoY_dXErho(P, T, sol()));
                 // autoPtr<scalarRectangularMatrix> grad(p->dTPvfdXErho(P, T, sol()));
                 out = grad();
