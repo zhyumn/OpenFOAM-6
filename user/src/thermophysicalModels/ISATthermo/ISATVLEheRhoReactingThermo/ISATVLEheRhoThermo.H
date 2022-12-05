@@ -67,22 +67,17 @@ namespace Foam
         PtrList<volScalarField> Y_G_List_;
 
         bool inviscid_;
-       // bool noVLE_;
+        bool DF_;
+        label nloop;
 
-       const double R_r = 1.9872; //cal/K-mol
+        const double R_r = 1.9872; //cal/K-mol
         double T_r, P_r, rho_r;
         double c_r[6],Ygas_r[6];
         double reactRate_r[6];
         double W_r[6];
         double Hc[6];
 
-        // volScalarField Temperature;
-        // volScalarField Pressure;
-        // volScalarField rho;
-        // PtrList<volScalarField> Yrxn;
-        // PtrList<volScalarField> conc;
-        // PtrList<volScalarField> rate;
-        // volScalarField qdot;
+        // bool noVLE_;
 
         // Private Member Functions
 
@@ -123,10 +118,6 @@ namespace Foam
         scalar gasPhaseRho(scalar pressure, scalar temperature);
         scalar gasPhaseY(label celli, label speciesLabel);
 
-        // void customCHemistry(volScalarField temperature, volScalarField pressure, volScalarField density, PtrList<volScalarField> Y);
-        // void calculateReactions();
-        // volScalarField RR(label i);
-        // volScalarField Qdot();
     };
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
