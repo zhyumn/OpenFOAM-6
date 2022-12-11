@@ -472,7 +472,7 @@ namespace Foam
                 scalar rho = in[in.size() - 1];
                 scalar T, P;
                 p->setX(in);
-                std::tie(P, T) = p->TrhoEs(E, rho, P0, T0, &Type::Es_ac, &Type::rho);
+                std::tie(P, T) = p->TrhoEs(E, rho, P0, T0, &Type::Es_vle, &Type::rho);
 
                 sol.reset(p->TPN(P, T).ptr());
                 //autoPtr<typename Type::solution> sol(p->TPN(P, T));

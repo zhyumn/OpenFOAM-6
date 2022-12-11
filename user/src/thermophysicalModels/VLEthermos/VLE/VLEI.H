@@ -1382,9 +1382,9 @@ inline Foam::autoPtr<typename Foam::VLE<ThermoMixture>::solution> Foam::VLE<Ther
         else
             FatalErrorInFunction << "TPn_flash_Matheis" << exit(FatalError);
 
-        if (iter_outer > 0 && (vf > 0.99999 || vf < 0.00001))
+        if (iter_outer > 0 && (vf > 1-1e-8 || vf < 1e-8))
         {
-            if (vf > 0.99999)
+            if (vf > 1-1e-8)
                 vf = 1.0;
             else
                 vf = 0.0;
@@ -3741,6 +3741,13 @@ inline Foam::scalar Foam::VLE<ThermoMixture>::Hs(
     return Ha(p, T, sol) - Hc();
 }
 
+template <class ThermoMixture>
+inline Foam::scalar Foam::VLE<ThermoMixture>::Es_vle(
+    const scalar p,
+    const scalar T, solution &sol) const
+{
+    return Hs(p, T, sol) - p / this->rho(p, T, sol);
+}
 
 
 // Cp=dHadT system (T,P,X)

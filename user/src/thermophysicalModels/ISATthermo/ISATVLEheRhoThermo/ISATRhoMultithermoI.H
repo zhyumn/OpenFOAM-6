@@ -322,9 +322,8 @@ inline std::tuple<Foam::scalar, Foam::scalar> Foam::species::ISATRhoMultithermo<
     scalar rho,
     scalar p0,
     scalar T0,
-    scalar (ISATRhoMultithermo<ThermoMixture, Type>::*Fe)(const scalar, const scalar) const,
-    scalar (ISATRhoMultithermo<ThermoMixture, Type>::*Frho)(const scalar, const scalar)
-        const)
+    scalar (ISATRhoMultithermo<ThermoMixture, Type>::*Fe)(const scalar, const scalar, typename ISATRhoMultithermo<ThermoMixture, Type>::solution &) const,
+    scalar (ISATRhoMultithermo<ThermoMixture, Type>::*Frho)(const scalar, const scalar, typename ISATRhoMultithermo<ThermoMixture, Type>::solution &) const)
 {
     if (T0 < 0)
     {
@@ -346,8 +345,9 @@ inline std::tuple<Foam::scalar, Foam::scalar> Foam::species::ISATRhoMultithermo<
 
     scalar T1 = T0;
     scalar p1 = p0;
-    scalar e11 = (this->*Fe)(p1, T1), e21, e12;
-    scalar rho11 = (this->*Frho)(p1, T1), rho21, rho12;
+    auto sol(this->TPN(p1, T1));
+    scalar e11 = (this->*Fe)(p1, T1,sol()), e21, e12;
+    scalar rho11 = (this->*Frho)(p1, T1,sol()), rho21, rho12;
     scalar T2 = T1 + 1, p2 = p1 + 10; //(this->*limit)(T0+1);
     scalar Ttol = T0 * tol_, ptol = p0 * tol_;
     scalar de = 0, drho = 0, dedT = 0, dedp = 0, drhodT = 0, drhodp = 0;
@@ -358,11 +358,12 @@ inline std::tuple<Foam::scalar, Foam::scalar> Foam::species::ISATRhoMultithermo<
     scalar dTdE, dPdE, dTdrho, dPdrho;
     scalar minf = sqr(e11 - e) + sqr(rho11 - rho);
     scalar t_f;
+    std::tie(dTdE, dPdE, dTdrho, dPdrho) = this->dTPdErho(p1, T1, sol());
 
     //double x1[2], y1[2], x2[2], y2[2], dx[2], dy[2];
     scalar dT = 1e-2;
     scalar dp = 1;
-/*     x1[0] = p0;
+    /*     x1[0] = p0;
     x1[1] = T0;
     x2[0] = p0 + dp;
     x2[1] = T0 + dT;
@@ -398,7 +399,7 @@ inline std::tuple<Foam::scalar, Foam::scalar> Foam::species::ISATRhoMultithermo<
     //H1[0][1] = 0;
     //H1[1][0] = 0;
     //H1[1][1] = 0.01;
-    
+
     //H1[1][1] *= -y1[1]*y1[1];
     //H1[0][1] *= -y1[1]*y1[1];
 
@@ -464,8 +465,6 @@ inline std::tuple<Foam::scalar, Foam::scalar> Foam::species::ISATRhoMultithermo<
         */
 
         
-        auto sol(this->TPN(p1, T1));
-        std::tie(dTdE, dPdE, dTdrho, dPdrho) = this->dTPdErho(p1, T1, sol());
 
         de = (e11 - e);
         drho = (rho11 - rho);
@@ -484,21 +483,22 @@ inline std::tuple<Foam::scalar, Foam::scalar> Foam::species::ISATRhoMultithermo<
 
         //T1 = T1 > 1 ? T1 : 1;
         //p1 = p1 > 100 ? p1 : 100;
-
-        e11 = (this->*Fe)(p1 + dp, T1 + dT);
-        rho11 = (this->*Frho)(p1 + dp, T1 + dT);
+        auto sol2(this->TPN(p1+ dp, T1 + dT));
+        e11 = (this->*Fe)(p1 + dp, T1 + dT, sol2());
+        rho11 = (this->*Frho)(p1 + dp, T1 + dT, sol2());
         t_f = sqr(e11 - e) + sqr(rho11 - rho);
 
         if (t_f > minf)
         {
             //maxratio *= 0.9;
-            if (maxratio > 0.01)
+            if (maxratio > 1e-5)
             {
                 maxratio *= 0.9;
             }
         }
         T1 = T1 + dT;
         p1 = p1 + dp;
+        std::tie(dTdE, dPdE, dTdrho, dPdrho) = this->dTPdErho(p1, T1, sol2());
         if (t_f < minf)
         {
             minf = t_f;
@@ -559,11 +559,11 @@ inline std::tuple<Foam::scalar, Foam::scalar> Foam::species::ISATRhoMultithermo<
         H1[1][0] = H2[1][0];
         H1[1][1] = H2[1][1];
         */
-        if (iter++ > 100 * maxIter_)
+        if (iter++ > 5 * maxIter_)
         {
             WarningInFunction << setprecision(50)
                               << "Maximum number of iterations exceeded: " << iter - 1
-                              << " error:" << minf  //mag(y2[1] - e) + mag(y2[0] - rho)
+                              << " error:" << sqrt(minf) //mag(y2[1] - e) + mag(y2[0] - rho)
                               << " e: " << e
                               << " rho: " << rho
                               << " T0: " << T0
@@ -571,11 +571,13 @@ inline std::tuple<Foam::scalar, Foam::scalar> Foam::species::ISATRhoMultithermo<
                               << " T1: " << T1
                               << "  p1: " << p1
                               << " X: " << this->X_
+                              << setprecision(6)
                               << endl;
             //<< abort(FatalError);
+            //continue;
             break;
         }
-    } while ((mag(e11 - e) > 1e-3 || mag(rho11 - rho) > 1e-5));//while ((mag(y2[1] - e) > 1e-2 || mag(y2[0] - rho) > 1e-7)); //while ((mag(e11 - e) > 1e-3 || mag(rho11 - rho) > 1e-5)); // && (mag(dT) > 1e-5 || mag(dp) > 1e-4));
+    } while ((mag(e11 - e) > 1e-1 || mag(rho11 - rho) > 1e-4)); //while ((mag(y2[1] - e) > 1e-2 || mag(y2[0] - rho) > 1e-7)); //while ((mag(e11 - e) > 1e-3 || mag(rho11 - rho) > 1e-5)); // && (mag(dT) > 1e-5 || mag(dp) > 1e-4));
 
     //return std::make_tuple(x2[0], x2[1]);
     return std::make_tuple(p1, T1);

@@ -97,6 +97,8 @@ Foam::nonlinearMixture<ThermoType, ThermoMixtureType>::nonlinearMixture
             new ThermoType(*thermoData[species_[i]])
         );
     }
+    temp_mixture_.chung_init();
+    mixture_.chung_init();
     //mixture_.temp_p=&temp_mixture_;
 
     correctMassFractions();

@@ -177,8 +177,8 @@ namespace Foam
                 scalar rho,
                 scalar p0,
                 scalar T0,
-                scalar (ISATRhoMultithermo<ThermoMixture, Type>::*Fe)(const scalar, const scalar) const,
-                scalar (ISATRhoMultithermo<ThermoMixture, Type>::*Frho)(const scalar, const scalar) const);
+                scalar (ISATRhoMultithermo<ThermoMixture, Type>::*Fe)(const scalar, const scalar, typename ISATRhoMultithermo<ThermoMixture, Type>::solution &) const,
+                scalar (ISATRhoMultithermo<ThermoMixture, Type>::*Frho)(const scalar, const scalar,typename ISATRhoMultithermo<ThermoMixture, Type>::solution &) const);
 
         public:
             //- The thermodynamics of the individual species'

@@ -31,26 +31,26 @@ namespace Foam
 {
     template <class Thermo>
     Foam::multispecie<Thermo>::multispecie(
-        const word& name,
-        PtrList<Thermo>& speciesData,
-        const speciesTable& specieNames,
-        const dictionary& thermoDict)
+        const word &name,
+        PtrList<Thermo> &speciesData,
+        const speciesTable &specieNames,
+        const dictionary &thermoDict)
         : N_(specieNames.size()),
-        Y_(specieNames.size()),
-        X_(specieNames.size()),
-        speciesData_(speciesData),
-        species_(specieNames) //,
-                              //changed(1)
+          Y_(specieNames.size()),
+          X_(specieNames.size()),
+          speciesData_(speciesData),
+          species_(specieNames) //,
+                                //changed(1)
     {
     }
 
     template <class Thermo>
-    Foam::multispecie<Thermo>::multispecie(const dictionary& thermoDict, PtrList<Thermo>& speciesData)
+    Foam::multispecie<Thermo>::multispecie(const dictionary &thermoDict, PtrList<Thermo> &speciesData)
         : Y_(0),
-        X_(0),
-        speciesData_(0),
-        species_(speciesData) //,
-                              //changed(1)
+          X_(0),
+          speciesData_(0),
+          species_(speciesData) //,
+                                //changed(1)
 
     {
         wordList s(thermoDict.lookup("species"));
@@ -67,7 +67,7 @@ namespace Foam
         }
     }
     template <class Thermo>
-    inline void Foam::multispecie<Thermo>::setY(const scalarList& Y)
+    inline void Foam::multispecie<Thermo>::setY(const scalarList &Y)
     {
         //changed=1;
         scalar sum = 0;
@@ -83,7 +83,7 @@ namespace Foam
     }
 
     template <class Thermo>
-    inline void Foam::multispecie<Thermo>::setX(const scalarList& X)
+    inline void Foam::multispecie<Thermo>::setX(const scalarList &X)
     {
         //changed=1;
         scalar sum = 0, sn = 0;
@@ -141,32 +141,32 @@ template<class Thermo>
     {
     }
 */
-// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
+    // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
     template <class Thermo>
-    inline const Thermo& Foam::multispecie<Thermo>::operator[](const label i) const
+    inline const Thermo &Foam::multispecie<Thermo>::operator[](const label i) const
     {
         return *speciesData_(i);
     }
     template <class Thermo>
-    inline const PtrList<Thermo>& Foam::multispecie<Thermo>::speciesData() const
+    inline const PtrList<Thermo> &Foam::multispecie<Thermo>::speciesData() const
     {
         return speciesData_;
     }
 
     template <class Thermo>
-    inline const speciesTable& Foam::multispecie<Thermo>::species() const
+    inline const speciesTable &Foam::multispecie<Thermo>::species() const
     {
         return species_;
     }
 
     template <class Thermo>
-    inline const scalarList& Foam::multispecie<Thermo>::Y() const
+    inline const scalarList &Foam::multispecie<Thermo>::Y() const
     {
         return Y_;
     }
 
     template <class Thermo>
-    inline const scalarList& Foam::multispecie<Thermo>::X() const
+    inline const scalarList &Foam::multispecie<Thermo>::X() const
     {
         return X_;
     }
@@ -191,8 +191,8 @@ template<class Thermo>
         return RR / molWeight_;
     }
 */
-// * * * * * * * * * * * * * * * Member Operators  * * * * * * * * * * * * * //
-/*
+    // * * * * * * * * * * * * * * * Member Operators  * * * * * * * * * * * * * //
+    /*
 inline void multispecie::operator=(const multispecie &st)
 {
     // name_ = st.name_;
@@ -216,8 +216,8 @@ inline void multispecie::operator*=(const scalar s)
     Y_ *= s;
 }
 */
-// * * * * * * * * * * * * * * * Friend Operators  * * * * * * * * * * * * * //
-/*
+    // * * * * * * * * * * * * * * * Friend Operators  * * * * * * * * * * * * * //
+    /*
 inline multispecie operator+(const multispecie &st1, const multispecie &st2)
 {
     const scalar sumY = max(st1.Y_ + st2.Y_, small);
@@ -261,7 +261,7 @@ inline multispecie operator==(const multispecie &st1, const multispecie &st2)
     return multispecie(diffY, molWeight);
 }
 */
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 } // End namespace Foam
 

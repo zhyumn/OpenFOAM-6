@@ -37,7 +37,10 @@ SourceFiles
 
 #ifndef chungTransportMixture_H
 #define chungTransportMixture_H
-
+#include <tuple>
+using std::make_tuple;
+using std::tie;
+using std::tuple;
 #include "IOstreams.H"
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -51,18 +54,18 @@ namespace Foam
 
     template <class ThermoMixture>
     inline chungTransportMixture<ThermoMixture> operator+(
-        const chungTransportMixture<ThermoMixture>&,
-        const chungTransportMixture<ThermoMixture>&);
+        const chungTransportMixture<ThermoMixture> &,
+        const chungTransportMixture<ThermoMixture> &);
 
     template <class ThermoMixture>
     inline chungTransportMixture<ThermoMixture> operator*(
         const scalar,
-        const chungTransportMixture<ThermoMixture>&);
+        const chungTransportMixture<ThermoMixture> &);
 
     template <class ThermoMixture>
-    Ostream& operator<<(
-        Ostream&,
-        const chungTransportMixture<ThermoMixture>&);
+    Ostream &operator<<(
+        Ostream &,
+        const chungTransportMixture<ThermoMixture> &);
 
     /*---------------------------------------------------------------------------*\
                            Class chungTransportMixture Declaration
@@ -73,30 +76,53 @@ namespace Foam
         : public ThermoMixture
     {
         // Private data
+        scalarListList w_global;
+        scalarListList sigma_global;
+        scalarListList e_k0_global;
+        scalarListList kij_global;
+        scalarListList mwij_global;
+        scalarListList pow3_sigma_global;
+        scalarListList sqr_sigma_global;
+        scalarListList sqrt_mwij_global;
+        scalarListList mu_M_global;
+        scalarListList Mmd_global;
+        scalarListList sigmd_global;
+        scalarListList sqrt_Mmd_global;
+        scalarListList sqr_sigmd_global;
+        scalarListList mw_binary_M_global;
+        scalarListList e_k_mix_M_global;
+        scalarListList w_mix_M_global;
+
+        mutable scalarListList Dimix_opt_list1;
+        mutable scalarListList Dimix_opt_list2;
+        mutable scalarList Dimix_opt_list3;
+        mutable scalarListList kappa_mu_opt_list1;
 
         // Private Member Functions
 
         //- Construct from components
         inline chungTransportMixture(
-            const ThermoMixture& t);
+            const ThermoMixture &t);
 
     public:
         typedef typename ThermoMixture::SingleThermoType SingleThermoType;
         // Constructors
 
         //- Construct as named copy
-        inline chungTransportMixture(const word&, const chungTransportMixture&);
+        inline chungTransportMixture(const word &, const chungTransportMixture &);
 
         //- Construct from dictionary
-        chungTransportMixture(const dictionary& dict, PtrList<SingleThermoType>& speciesData);
+        chungTransportMixture(const dictionary &dict, PtrList<SingleThermoType> &speciesData);
 
-        inline chungTransportMixture(const word& name, PtrList<SingleThermoType>&, const speciesTable&, const dictionary&);
+        inline chungTransportMixture(const word &name, PtrList<SingleThermoType> &, const speciesTable &, const dictionary &);
 
         //- Construct and return a clone
         inline autoPtr<chungTransportMixture> clone() const;
 
         // Selector from dictionary
-        inline static autoPtr<chungTransportMixture> New(const dictionary& dict);
+        inline static autoPtr<chungTransportMixture> New(const dictionary &dict);
+
+        inline void chung_init();
 
         // Member functions
 
@@ -107,26 +133,31 @@ namespace Foam
         }
 
         //- Dynamic viscosity [kg/ms]
-        inline scalar mu(const scalar p, const scalar T, const label pf = 2, const scalarList* Xinp = NULL) const;
+        inline scalar mu(const scalar p, const scalar T, const label pf = 2, const scalarList *Xinp = NULL) const;
 
-        inline scalar mu_rho(const scalar p, const scalar T, scalar rho, const scalarList& Xinp) const;
+        inline scalar mu_rho(const scalar p, const scalar T, scalar rho, const scalarList &Xinp) const;
         inline scalar mu_rho(const scalar p, const scalar T, scalar rho) const { return mu_rho(p, T, rho, this->X_); };
-
+        inline scalar mu_opt(const scalar p, const scalar T, scalar rho, const scalarList &Xinp) const;
+        inline scalar mu_opt(const scalar p, const scalar T, scalar rho) const { return mu_opt(p, T, rho, this->X_); };
         /*inline scalar mu(const scalar p, const scalar T, const label pf = 2) const
         {
             return mu(p, T, pf, NULL);
         }*/
 
         inline scalar phi(scalar PRR, scalar TRR) const;
+        inline scalar phi_opt(scalar PRR, scalar TRR) const;
 
         inline scalar Dimix(const scalar p, const scalar T, label speciei) const;
-
+        inline scalar Dimix_opt(const scalar p, const scalar T, label speciei) const;
+        
         //- Thermal conductivity [W/mK]
-        inline scalar kappa(const scalar p, const scalar T, const label pf = 2, const scalarList* Xinp = NULL) const;
+        inline scalar kappa(const scalar p, const scalar T, const label pf = 2, const scalarList *Xinp = NULL) const;
 
-        inline scalar kappa_rho(const scalar p, const scalar T, scalar rho, const scalarList& Xinp) const;
+        inline scalar kappa_rho(const scalar p, const scalar T, scalar rho, const scalarList &Xinp) const;
         inline scalar kappa_rho(const scalar p, const scalar T, scalar rho) const { return kappa_rho(p, T, rho, this->X_); };
-
+        inline scalar kappa_opt(const scalar p, const scalar T, scalar rho, const scalarList &Xinp) const;
+        inline scalar kappa_opt(const scalar p, const scalar T, scalar rho) const { return kappa_opt(p, T, rho, this->X_); };
+        inline tuple<scalar, scalar> kappa_mu_opt(const scalar p, const scalar T, scalar rho) const;
         //- Thermal diffusivity of enthalpy [kg/ms]
         inline scalar alphah(const scalar p, const scalar T) const;
 
@@ -134,31 +165,31 @@ namespace Foam
         // inline scalar D(const scalar p, const scalar T) const;
 
         //- Write to Ostream
-        void write(Ostream& os) const;
+        void write(Ostream &os) const;
 
         // Member operators
 
         // inline void operator=(const chungTransportMixture&);
 
-        inline void operator+=(const chungTransportMixture&);
+        inline void operator+=(const chungTransportMixture &);
 
         inline void operator*=(const scalar);
 
         // Friend operators
 
         friend chungTransportMixture operator+<ThermoMixture>(
-            const chungTransportMixture&,
-            const chungTransportMixture&);
+            const chungTransportMixture &,
+            const chungTransportMixture &);
 
         friend chungTransportMixture operator*<ThermoMixture>(
             const scalar,
-            const chungTransportMixture&);
+            const chungTransportMixture &);
 
         // Ostream Operator
 
-        friend Ostream& operator<<<ThermoMixture>(
-            Ostream&,
-            const chungTransportMixture&);
+        friend Ostream &operator<<<ThermoMixture>(
+            Ostream &,
+            const chungTransportMixture &);
     };
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

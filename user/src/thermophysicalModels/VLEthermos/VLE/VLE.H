@@ -238,6 +238,7 @@ namespace Foam
         inline scalar Hs(scalar p, scalar T) const;
         inline scalar Hs_ideal(scalar p, scalar T) const;
         inline scalar Hs(scalar p, scalar T, solution &sol) const;
+        inline scalar Es_vle(scalar p, scalar T, solution &sol) const;
         inline scalar G(scalar p, scalar T) const;
         inline scalar dGdT(scalar p, scalar T) const;
         inline scalar dCpdT(scalar p, scalar T) const;

@@ -280,6 +280,7 @@ namespace Foam
         bool retrieve(const Foam::scalarList &value, scalarList &out);
 
         bool grow(ISATleaf *plf, const scalarList &dvalue, scalarList &data1, const scalarList &data2);
+        bool grow2(ISATleaf *plf, const scalarList &dvalue, scalarList &data1);
 
         double distance(const scalarList &l, const scalarList &r);
         double normalized_distance(const scalarList &l, const scalarList &r);

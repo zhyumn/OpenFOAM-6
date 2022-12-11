@@ -207,9 +207,22 @@ void Foam::ISATmanager<FuncType>::call(
         }
         else
         {
+
+            //pfunc->value(leafvalue - dvalue, out2, arg...);
+            scalarList dvalue(value.size(), Zero);
+            for (int i = 0; i < tableTree_.n_in_; i++)
+            {
+                dvalue[i] = value[i] - pleaf->value()[i];
+            }
+            pfunc->value(value, out, arg...);
+
+            if (!grow2(pleaf, dvalue, out))
+                add(value, out, arg...);
+
             //if (Tname == treename_ && pleaf->value()[1] < 1.4982e+07 && pleaf->value()[1]>1.4980e+07 && pleaf->value()[2] < 550.48 && pleaf->value()[2]>550.478)
             //    aaa = 5;
-            scalarList dvalue(value.size(), Zero);
+            // check opposite point, but this is removed to get better perfomance
+            /* scalarList dvalue(value.size(), Zero);
             scalarList leafvalue(value.size(), Zero);
             for (int i = 0; i < tableTree_.n_in_; i++)
             {
@@ -220,7 +233,9 @@ void Foam::ISATmanager<FuncType>::call(
             {
                 leafvalue[i] = value[i];
             }
-            //pfunc->value(leafvalue + dvalue, out, arg...);
+
+            
+            
             scalarList out2(out.size());
             scalarList others = leafvalue - dvalue;
             bool flag_others = pfunc->valid_in(others);
@@ -228,17 +243,14 @@ void Foam::ISATmanager<FuncType>::call(
             {
                 flag_others = flag_others && mag(dvalue[i]) <= maxLeafsize_[i];
             }
-            /*
-            for (int i = 0;i < others.size();i++)
-            {
-                flag_others = flag_others && others[i] >= 0;
-            }*/
+            
             scalar sumother = 0;
             for (int i = 0; i < others.size() - 2; i++)
             {
                 sumother += others[i];
             }
             flag_others = flag_others && sumother <= 1;
+            
             if (!flag_others)
             {
                 pfunc->value(leafvalue + dvalue, out, arg...);
@@ -248,15 +260,10 @@ void Foam::ISATmanager<FuncType>::call(
             {
                 pfunc->value(leafvalue - dvalue, out2, arg...);
                 pfunc->value(leafvalue + dvalue, out, arg...);
-                //Info<<out<<endl;
 
-                //scalarList out2, value2;
-                //value2 = 2 * pleaf->value_ - value;
-                //value2[0] = value[0];
-                //pfunc->value(value2, out2);
                 if (!grow(pleaf, dvalue, out, out2))
                     add(value, out, arg...);
-            }
+            } */
         }
     } /*
     else {
@@ -417,6 +424,47 @@ bool Foam::ISATmanager<FuncType>::grow(
     //if ((distance(ret, data) <= epsilon_ || distance(ret, data) <= relepsilon_ * norm(data)))
     //if (distance(ret1, data1) <= epsilon_ && distance(ret2, data2) <= epsilon_)
     if (normalized_distance(ret1, data1) <= 1.0 && normalized_distance(ret2, data2) <= 1.0)
+    {
+        data1 = ret1;
+        plf->grow(plf->value() + dvalue_m * (1 + 1e-3), scaleIn_);
+        tableTree_.timeTagList().renew(plf->pTimeTagList());
+        nGrowth_++;
+        modified_ = true;
+        return true;
+    }
+    // The actual solution and the approximation given by ISAT are too different
+    else
+    {
+        return false;
+    }
+}
+
+template <class FuncType>
+bool Foam::ISATmanager<FuncType>::grow2(
+    ISATleaf *plf,
+    const scalarList &dvalue,
+    scalarList &data1)
+{
+    // If the pointer to the chemPoint is nullptr, the function stops
+    if (!plf)
+    {
+        return false;
+    }
+
+    // If the solution RphiQ is still within the tolerance we try to grow it
+    // in some cases this might result in a failure and the grow function of
+    // the chemPoint returns false
+    scalarList ret1(data1.size()); //, ret2(data.size());
+    scalarList dvalue_m(plf->value().size());
+    for (int i = 0; i < dvalue_m.size(); i++)
+    {
+        dvalue_m[i] = dvalue[i];
+    }
+    //plf->eval(value2, ret2);
+    plf->eval(plf->value() + dvalue_m, ret1);
+    //plf->eval(plf->value() - dvalue_m, ret2);
+
+    if (normalized_distance(ret1, data1) <= 1.0)
     {
         data1 = ret1;
         plf->grow(plf->value() + dvalue_m * (1 + 1e-3), scaleIn_);

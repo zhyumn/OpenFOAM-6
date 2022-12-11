@@ -67,8 +67,9 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate_init()
         {
             const typename MixtureType::thermoType &mixture_ =
                 this->cellMixture(celli);
-            muCells[celli] = mixture_.mu_rho(pCells[celli], TCells[celli], rhoCells[celli]);
-            kappaCells[celli] = mixture_.kappa_rho(pCells[celli], TCells[celli], rhoCells[celli]);
+            tie(kappaCells[celli], muCells[celli]) = mixture_.kappa_mu_opt(pCells[celli], TCells[celli], rhoCells[celli]);
+            //muCells[celli] = mixture_.mu_opt(pCells[celli], TCells[celli], rhoCells[celli]);
+            //kappaCells[celli] = mixture_.kappa_opt(pCells[celli], TCells[celli], rhoCells[celli]);
         }
 
         forAll(heList_, i)
@@ -79,7 +80,7 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate_init()
                     this->cellMixture(celli);
                 heList_[i].primitiveFieldRef()[celli] = this->speciesData()[i].Hs(pCells[celli], TCells[celli]);
 
-                Dimix_[i].primitiveFieldRef()[celli] = mixture_.Dimix(pCells[celli], TCells[celli], i);
+                Dimix_[i].primitiveFieldRef()[celli] = mixture_.Dimix_opt(pCells[celli], TCells[celli], i);
             }
         }
     }
@@ -180,8 +181,10 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate_init()
                 {
                     const typename MixtureType::thermoType &mixture_ =
                         this->patchFaceMixture(patchi, facei);
-                    pmu[facei] = mixture_.mu_rho(pp[facei], pT[facei], prho[facei]);
-                    pkappa[facei] = mixture_.kappa_rho(pp[facei], pT[facei], prho[facei]);
+                    tie(pkappa[facei], pmu[facei]) = mixture_.kappa_mu_opt(pp[facei], pT[facei], prho[facei]);
+                    //pmu[facei] = mixture_.mu_opt(pp[facei], pT[facei], prho[facei]);
+                    //pkappa[facei] = mixture_.kappa_opt(pp[facei], pT[facei], prho[facei]);
+
                     // pmu[facei] = mixture_.mu_rho(pp[facei], pT[facei], prho[facei]);
                     // pkappa[facei] = mixture_.kappa_rho(pp[facei], pT[facei]);
                     // palpha[facei] = mixture_.alphah(pp[facei], pT[facei]);
@@ -193,8 +196,9 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate_init()
                 {
                     const typename MixtureType::thermoType &mixture_ =
                         this->patchFaceMixture(patchi, facei);
-                    pmu[facei] = mixture_.mu_rho(pp[facei], pT[facei], prho[facei]);
-                    pkappa[facei] = mixture_.kappa_rho(pp[facei], pT[facei], prho[facei]);
+                    tie(pkappa[facei], pmu[facei]) = mixture_.kappa_mu_opt(pp[facei], pT[facei], prho[facei]);
+                    //pmu[facei] = mixture_.mu_opt(pp[facei], pT[facei], prho[facei]);
+                    //pkappa[facei] = mixture_.kappa_opt(pp[facei], pT[facei], prho[facei]);
                     // pmu[facei] = mixture_.mu_rho(pp[facei], pT[facei], prho[facei]);
                     // pkappa[facei] = mixture_.kappa_rho(pp[facei], pT[facei]);
                     // palpha[facei] = mixture_.alphah(pp[facei], pT[facei]);
@@ -227,7 +231,7 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate_init()
                         const typename MixtureType::thermoType &mixture_ =
                             this->patchFaceMixture(patchi, facei);
 
-                        pDimix[facei] = mixture_.Dimix(pp[facei], pT[facei], i);
+                        pDimix[facei] = mixture_.Dimix_opt(pp[facei], pT[facei], i);
 
                         pheList[facei] = this->speciesData()[i].Hs(pp[facei], pT[facei]);
                     }
@@ -238,7 +242,7 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate_init()
                     {
                         const typename MixtureType::thermoType &mixture_ =
                             this->patchFaceMixture(patchi, facei);
-                        pDimix[facei] = mixture_.Dimix(pp[facei], pT[facei], i);
+                        pDimix[facei] = mixture_.Dimix_opt(pp[facei], pT[facei], i);
                         pheList[facei] = this->speciesData()[i].Hs(pp[facei], pT[facei]); // TODO check Hs
                     }
                 }
@@ -331,8 +335,9 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
             {
                 const typename MixtureType::thermoType &mixture_ =
                     this->cellMixture(celli);
-                muCells[celli] = mixture_.mu_rho(pCells[celli], TCells[celli], rhoCells[celli]);
-                kappaCells[celli] = mixture_.kappa_rho(pCells[celli], TCells[celli], rhoCells[celli]);
+                tie(kappaCells[celli], muCells[celli]) = mixture_.kappa_mu_opt(pCells[celli], TCells[celli], rhoCells[celli]);
+                //muCells[celli] = mixture_.mu_opt(pCells[celli], TCells[celli], rhoCells[celli]);
+                //kappaCells[celli] = mixture_.kappa_opt(pCells[celli], TCells[celli], rhoCells[celli]);
                 // alphaCells[celli] = mixture_.alphah(pCells[celli], TCells[celli]);//kappaCells[celli] / mixture_.Cp(pCells[celli], TCells[celli]);
             }
 
@@ -344,7 +349,7 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
                         this->cellMixture(celli);
                     heList_[i].primitiveFieldRef()[celli] = this->speciesData()[i].Hs(pCells[celli], TCells[celli]);
 
-                    Dimix_[i].primitiveFieldRef()[celli] = mixture_.Dimix(pCells[celli], TCells[celli], i);
+                    Dimix_[i].primitiveFieldRef()[celli] = mixture_.Dimix_opt(pCells[celli], TCells[celli], i);
                 }
             }
         }
@@ -446,8 +451,9 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
                 {
                     const typename MixtureType::thermoType &mixture_ =
                         this->patchFaceMixture(patchi, facei);
-                    pmu[facei] = mixture_.mu_rho(pp[facei], pT[facei], prho[facei]);
-                    pkappa[facei] = mixture_.kappa_rho(pp[facei], pT[facei], prho[facei]);
+                    tie(pkappa[facei], pmu[facei]) = mixture_.kappa_mu_opt(pp[facei], pT[facei], prho[facei]);
+                    //pmu[facei] = mixture_.mu_opt(pp[facei], pT[facei], prho[facei]);
+                    //pkappa[facei] = mixture_.kappa_opt(pp[facei], pT[facei], prho[facei]);
                 }
             }
         }
@@ -474,7 +480,7 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
                             const typename MixtureType::thermoType &mixture_ =
                                 this->patchFaceMixture(patchi, facei);
 
-                            pDimix[facei] = mixture_.Dimix(pp[facei], pT[facei], i);
+                            pDimix[facei] = mixture_.Dimix_opt(pp[facei], pT[facei], i);
                             pheList[facei] = this->speciesData()[i].Hs(pp[facei], pT[facei]);
                         }
                     }
@@ -484,7 +490,7 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
                         {
                             const typename MixtureType::thermoType &mixture_ =
                                 this->patchFaceMixture(patchi, facei);
-                            pDimix[facei] = mixture_.Dimix(pp[facei], pT[facei], i);
+                            pDimix[facei] = mixture_.Dimix_opt(pp[facei], pT[facei], i);
 
                             pheList[facei] = this->speciesData()[i].Hs(pp[facei], pT[facei]);
                         }
@@ -570,7 +576,7 @@ Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::ISATVLEheRhoThermo(
     // FatalErrorInFunction
     //     << "inviscid_:" <<inviscid_
     //     << exit(FatalError);
-    cpuISAT_VLE_ = logFile("VLEtime",mesh);
+    cpuISAT_VLE_ = logFile("VLEtime", mesh);
 
     forAll(Dimix_, i)
     {
