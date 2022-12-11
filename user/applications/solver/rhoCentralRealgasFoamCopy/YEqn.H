@@ -82,8 +82,8 @@ PtrList<volScalarField> tempY(Y.size());
         Mavg_G = 1.0/Mavg_G;
         double mass_frac = Mavg_G*frac[celli]/Mavg;
 
-        double rho_i = mass_frac*rho[celli]; //thermo.gasPhaseRho(T_i, P_i);
-        rhoGas[celli] = rho_i;
+        double rho_i = frac[celli]*rho_G[celli];//mass_frac*rho[celli]; //thermo.gasPhaseRho(T_i, P_i);
+        rhoGas[celli] = mass_frac*rho[celli];
 
         thermo.customChemistry(T_i,P_i,rho_i);
 
@@ -128,9 +128,9 @@ PtrList<volScalarField> tempY(Y.size());
             Mavg_G = 1.0/Mavg_G;
             double mass_frac = Mavg_G*frac.boundaryField()[patchi][facei]/Mavg;
 
-            double rho_i = mass_frac*rho.boundaryField()[patchi][facei]; //thermo.gasPhaseRho(T_i, P_i);
+            double rho_i =  frac.boundaryField()[patchi][facei]*rho_G.boundaryField()[patchi][facei]; //thermo.gasPhaseRho(T_i, P_i);
 
-            thermo.customChemistry(T_i,P_i,rho_i);
+            //thermo.customChemistry(T_i,P_i,rho_i);
 
             thermo.customChemistry(T_i,P_i,rho_i);
 
@@ -179,7 +179,7 @@ PtrList<volScalarField> tempY(Y.size());
 
             surfaceScalarField phiYi("phiYi", aphiv_pos * rhoYi_pos + aphiv_neg * rhoYi_neg - 0*rhoYQ);
 
-            solve(fvm::ddt(rhoYi) + fvc::div(phiYi));
+            solve(fvm::ddt(rhoYi) + fvc::div(phiYi) == reactRate[i]);
             
 
             Yi = rhoYi / rho;
@@ -197,7 +197,7 @@ PtrList<volScalarField> tempY(Y.size());
                     // - fvm::laplacian(turbulence->muEff(), Yi)
                     ==
                     //reaction->R(Yi)
-                    reactRate[i]+fvm::laplacian(rho * Dimix[i], Yi) + fvc::laplacian(rho * Dimix[i] * Yi / Wmix, Wmix) - sumDiffusionCorrections1 - sumDiffusionCorrections2
+                    fvm::laplacian(rho * Dimix[i], Yi) + fvc::laplacian(rho * Dimix[i] * Yi / Wmix, Wmix) - sumDiffusionCorrections1 - sumDiffusionCorrections2
                     //+ fvOptions(rho, Yi)
                 );
 

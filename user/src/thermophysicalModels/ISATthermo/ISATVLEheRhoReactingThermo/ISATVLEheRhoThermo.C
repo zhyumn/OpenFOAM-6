@@ -21,7 +21,7 @@ License
     You should have received a copy of the GNU General Public License
     along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
 
-\*---------------------------------------------------------------------------*/
+*---------------------------------------------------------------------------*/
 
 #include "ISATVLEheRhoThermo.H"
 
@@ -766,7 +766,7 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::setRate()
     S = s*yff/(yoo+1E-30);
     Z = (S*yf - yo + 1)/(S+1);
 
-    T_ini = Z*Tf + (1-Z)*To;
+    T_ini = 900;//Z*Tf + (1-Z)*To;
 
     x_f = Ygas_r[0]*Mavg/W_r[0];
     x_o = Ygas_r[1]*Mavg/W_r[1];
@@ -778,19 +778,27 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::setRate()
     R2f = 3.98 * 1E14 * exp(-40000.0 / (R_r * T_r)) * pow(c_r[3], 1.0) * pow(c_r[4], 0.5) * pow(c_r[1], 0.25);
     R2b = 5.0 * 1E8 * exp(-40000.0 / (R_r * T_r)) * pow(c_r[2], 1.0);
 
-    if(Ygas_r[0] < 0.00001 || Ygas_r[1] < 0.00001){
+    if(Ygas_r[0] < 0.0001 || Ygas_r[1] < 0.0001){
         R1 = 0.0;
     }
 
-    if(Ygas_r[1] < 0.00001 || Ygas_r[3] < 0.00001 || Ygas_r[4] < 0.00001){
+    if(Ygas_r[1] < 0.0001 || Ygas_r[3] < 0.0001 || Ygas_r[4] < 0.0001){
         R2f = 0.0;
     }
 
-    if(Ygas_r[2] < 0.00001){
+    if(Ygas_r[2] < 0.0001){
         R2b = 0.0;
     }
 
+    if(phi_st <0.5 || phi_st>2.0)
+    {
+        R1 = 0.0;
+        //R2b = 0.0;
+        //R2f = 0.0;
+    }
+
     R2 = R2f - R2b;
+
 
     reactRate_r[0] = -R1;
     reactRate_r[1] = -12.5 * R1 - 0.5 * R2;

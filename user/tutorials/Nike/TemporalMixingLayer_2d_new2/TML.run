@@ -30,7 +30,7 @@ source ~/.bashrc
 #rm -r 1e-05
 #sed -i 's/endTime         1e-05;/endTime         0.005;/' system/controlDict 
 #decomposePar -latestTime -force
-#blockMesh
+blockMesh
 decomposePar -time 0 -force
 mpirun -np 128 rhoCentralRealgasFoam  -parallel
 #reconstructParMesh -newTimes

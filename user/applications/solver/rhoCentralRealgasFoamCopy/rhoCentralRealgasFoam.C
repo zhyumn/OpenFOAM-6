@@ -281,7 +281,7 @@ Foam::argList::addBoolOption
             rhoEEqn -= fvc::div(sigmaDotU);
         }
 
-        solve(rhoEEqn);
+        solve(rhoEEqn == Qdot);
         //solve(rhoeEqn);
 
         e = rhoE / rho - 0.5 * magSqr(U);
@@ -296,9 +296,9 @@ Foam::argList::addBoolOption
                     //- fvm::laplacian(turbulence->alphaEff(), e)
                     //- fvm::laplacian(kappa / Cp, he) //Todo kappa Cp
                     //- fvm::laplacian(alpha, he) ==
-                   - fvc::laplacian(kappa, T) - Qdot
-                   //==
-                //-sumHeatDiffusion - sumHeatDiffusion2
+                   - fvc::laplacian(kappa, T)
+                   ==
+                -sumHeatDiffusion - sumHeatDiffusion2
                 //== fvOptions(rho, e)
             );
             /*forAll(Y, k)
