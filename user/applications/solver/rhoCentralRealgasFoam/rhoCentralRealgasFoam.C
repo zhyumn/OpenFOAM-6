@@ -384,11 +384,14 @@ int main(int argc, char *argv[])
         surfbeta = frac * (1 - frac);
         runTime.write();
 
-        cputime += clockTime_.timeIncrement();
-
-        cputotal
-            << runTime.timeOutputValue()
-            << ",    " << cputime << endl;
+        
+        if (logflag == true)
+        {
+            cputime += clockTime_.timeIncrement();
+            cputotal()
+                << runTime.timeOutputValue()
+                << ",    " << cputime << endl;
+        }
 
         Info << "ExecutionTime = " << runTime.elapsedCpuTime() << " s"
              << "  ClockTime = " << runTime.elapsedClockTime() << " s"

@@ -72,6 +72,7 @@ namespace Foam
         const clockTime clockTime_;
 
         autoPtr<OFstream> cpuISAT_VLE_;
+        bool ISATlog_;
 
         // bool noVLE_;
 

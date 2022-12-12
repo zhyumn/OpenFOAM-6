@@ -324,10 +324,14 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
                 }
             } while (this->newLoop());
         }
-        VLEtime += clockTime_.timeIncrement();
-        cpuISAT_VLE_()
-            << this->time().timeOutputValue()
-            << ",    " << VLEtime << endl;
+        
+        if (ISATlog_)
+        {
+            VLEtime += clockTime_.timeIncrement();
+            cpuISAT_VLE_()
+                << this->time().timeOutputValue()
+                << ",    " << VLEtime << endl;
+        }
 
         if (!inviscid_)
         {
@@ -571,12 +575,16 @@ Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::ISATVLEheRhoThermo(
     inviscid_ = thermoDict.lookupOrDefault<bool>("inviscid", false);
     nloop = thermoDict.lookupOrDefault<label>("nloop", 1);
     DF_ = thermoDict.lookupOrDefault<bool>("doubleFlux", true);
+    ISATlog_ = thermoDict.lookupOrDefault<bool>("ISATlog", false);
     //noVLE_ = thermoDict.lookupOrDefault<bool>("noVLE", false);
     //MixtureType::thermoType::noVLE = noVLE_;
     // FatalErrorInFunction
     //     << "inviscid_:" <<inviscid_
     //     << exit(FatalError);
-    cpuISAT_VLE_ = logFile("VLEtime", mesh);
+    if (ISATlog_)
+    {
+        cpuISAT_VLE_ = logFile("VLEtime", mesh);
+    }
 
     forAll(Dimix_, i)
     {

@@ -27,8 +27,13 @@ forAll(Y_G, i)
 
 //volScalarField& rho_thermo = mesh.objectRegistry::lookupObjectRef<volScalarField>("rho_thermo");
 //Info << frac[0] << endl;
-
-OFstream cputotal(mesh.time().path() / "ISAT_VLE" / "cputotal");
+bool logflag=thermo.lookupOrDefault<bool>("ISATlog", false);
+autoPtr<OFstream> cputotal;
+if(logflag==true)
+{
+    cputotal.set(new OFstream(mesh.time().path() / "ISAT_VLE" / "cputotal"));
+}
+//autoPtr<OFstream> cputotal(new OFstream(mesh.time().path() / "ISAT_VLE" / "cputotal"));
 const clockTime clockTime_;
 
 //FatalErrorInFunction << "break " << exit(FatalError);
