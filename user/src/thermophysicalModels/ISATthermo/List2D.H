@@ -1,19 +1,20 @@
 #ifndef LIST2D_H
 #define LIST2D_H
-#include<vector>
-#include<iostream>
+#include <vector>
+#include <iostream>
 
-template<class T>
+template <class T>
 class List2D
 {
 public:
     struct Node
     {
-        Node* next;
-        Node* prev;
-        T* data;
+        Node *next;
+        Node *prev;
+        T *data;
         int timetag;
     };
+
 private:
     int timeSteps_;
     int size_;
@@ -27,7 +28,7 @@ private:
 public:
     inline List2D(int n) : timeSteps_(0), size_(0), NtimeSteps_(n), list_(n), start_(0), end_(n - 1), sum(n)
     {
-        for (int i = 0;i < NtimeSteps_;i++)
+        for (int i = 0; i < NtimeSteps_; i++)
         {
             list_[i].next = &list_[i];
             list_[i].prev = &list_[i];
@@ -36,12 +37,12 @@ public:
         }
         sumflag = false;
     }
-    inline const int& NtimeSteps()const
+    inline const int &NtimeSteps() const
     {
         return NtimeSteps_;
     }
 
-    inline std::vector<Node>& list()
+    inline std::vector<Node> &list()
     {
         return list_;
     }
@@ -51,9 +52,9 @@ public:
         //if (size_ > 0)
         //    print_simple();
 
-        for (int i = 0;i < NtimeSteps_;i++)
+        for (int i = 0; i < NtimeSteps_; i++)
         {
-            for (Node* p = list_[i].next->next;p->prev != &list_[i];p = p->next)
+            for (Node *p = list_[i].next->next; p->prev != &list_[i]; p = p->next)
             {
                 //std::cout << "1! ";
                 //std::cout << (p->prev) << " " << &list_[i];
@@ -65,8 +66,9 @@ public:
         }
         //std::cout << "1!!" << std::endl;
     }
-    inline Node* insert(T* x) {
-        Node* temp = new Node;
+    inline Node *insert(T *x)
+    {
+        Node *temp = new Node;
         temp->data = x;
         temp->timetag = timeSteps_;
         temp->prev = list_[start_].prev;
@@ -76,21 +78,22 @@ public:
         size_++;
         return temp;
     }
-    inline T* pop()
+    inline T *pop()
     {
         if (size_ == 0)
             return nullptr;
         int i = end_;
-        for (;list_[i].prev == &list_[i];i = (i + NtimeSteps_ - 1) % NtimeSteps_);
-        Node* pnode = list_[i].prev;
-        T* temp = pnode->data;
+        for (; list_[i].prev == &list_[i]; i = (i + NtimeSteps_ - 1) % NtimeSteps_)
+            ;
+        Node *pnode = list_[i].prev;
+        T *temp = pnode->data;
         pnode->prev->next = pnode->next;
         pnode->next->prev = pnode->prev;
         size_--;
         delete pnode;
         return temp;
     }
-    inline void renew(Node* x)
+    inline void renew(Node *x)
     {
         if (x->timetag == timeSteps_)
             return;
@@ -123,25 +126,23 @@ public:
     {
         int j;
         std::cout << "size_:" << size_ << std::endl;
-        for (int i = 0;i < NtimeSteps_;i++)
+        for (int i = 0; i < NtimeSteps_; i++)
         {
             std::cout << i << " :";
             j = (i + start_) % NtimeSteps_;
-            for (Node* p = &list_[j];p->next != &list_[j];p = p->next)
+            for (Node *p = &list_[j]; p->next != &list_[j]; p = p->next)
             {
-                std::cout << "(" << p->next->data->value()[0] << "," << p->next->data->value()[1] << ")" << "->";
+                std::cout << "(" << p->next->data->value()[0] << "," << p->next->data->value()[1] << ")"
+                          << "->";
             }
             std::cout << std::endl;
         }
-
     }
     inline void print_simple() const
     {
-
-        int j;
         calcSum();
         std::cout << "size_:" << size_ << std::endl;
-        for (int i = 0;i < NtimeSteps_;i++)
+        for (int i = 0; i < NtimeSteps_; i++)
         {
             std::cout << i << " :";
             std::cout << sum[i] << std::endl;
@@ -151,9 +152,8 @@ public:
     inline int sizeSum(int x) const
     {
         int s = 0;
-        int j;
         calcSum();
-        for (int i = 0;i < x - 1;i++)
+        for (int i = 0; i < x - 1; i++)
         {
             s += sum[i];
         }
@@ -165,11 +165,11 @@ public:
         if (sumflag == false)
         {
             int j;
-            for (int i = 0;i < NtimeSteps_;i++)
+            for (int i = 0; i < NtimeSteps_; i++)
             {
                 sum[i] = 0;
                 j = (i + start_) % NtimeSteps_;
-                for (const Node* p = &list_[j];p->next != &list_[j];p = p->next)
+                for (const Node *p = &list_[j]; p->next != &list_[j]; p = p->next)
                 {
                     sum[i]++;
                 }
@@ -178,21 +178,20 @@ public:
         }
     }
 
-    inline void leaflist(T* retlist[])
+    inline void leaflist(T *retlist[])
     {
         int iter = 0;
         int j;
-        for (int i = 0;i < NtimeSteps_;i++)
+        for (int i = 0; i < NtimeSteps_; i++)
         {
             j = (i + start_) % NtimeSteps_;
 
-            for (Node* p = &list_[j];p->next != &list_[j];p = p->next)
+            for (Node *p = &list_[j]; p->next != &list_[j]; p = p->next)
             {
                 retlist[iter++] = p->next->data;
             }
         }
         //std::cout << iter  << std::endl;
-
     }
 };
 

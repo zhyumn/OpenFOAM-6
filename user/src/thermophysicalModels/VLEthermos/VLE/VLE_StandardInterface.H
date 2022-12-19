@@ -763,9 +763,8 @@ Foam::VLE<ThermoMixture>::drrhodT(scalar p, scalar T) const
     autoPtr<solution> sol(TPN(p, T));
     scalar Z_M_ = Z(p, T, sol());
     scalar dZdT_M_ = dZdT(p, T, sol());
-    scalar drhodT_M_ = -p * this->W() / (Z_M_ * Z_M_ * RR * 1.0e-03 * T * T) *
-                       (dZdT_M_ * T + Z_M_);
-    return -1 / sqr(rho(p, T)) * drhodT(p, T);
+    scalar drhodT_M_ = -p * this->W() / (Z_M_ * Z_M_ * RR * 1.0e-03 * T * T) * (dZdT_M_ * T + Z_M_);
+    return -1 / sqr(rho(p, T)) * drhodT_M_;
 }
 
 template <class ThermoMixture>
@@ -1130,10 +1129,10 @@ Foam::VLE<ThermoMixture>::c_ideal(scalar p, scalar T) const
 {
     scalar W_ = this->W();
 
-    scalar rho_= W_*p / ( RR * 1.0e-03 * T);
-    scalar drhodP_ = W_ / ( RR * 1.0e-03 * T);
+    scalar rho_ = W_ * p / (RR * 1.0e-03 * T);
+    scalar drhodP_ = W_ / (RR * 1.0e-03 * T);
     scalar kappaT_ = drhodP_ / rho_;
-    scalar Cp_ = this->dHidealdT(p,T,this->X_);
+    scalar Cp_ = this->dHidealdT(p, T, this->X_);
     scalar dZdT_M_ = 0;
     scalar drhodT_ = -p * W_ / (RR * 1.0e-03 * T * T);
     scalar alphaP_ = -drhodT_ / rho_;

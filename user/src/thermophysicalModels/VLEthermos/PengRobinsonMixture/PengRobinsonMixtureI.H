@@ -336,7 +336,7 @@ inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::d2AdTdxi(
     const scalarList &Xinp) const
 {
     const PengRobinsonMixture<ThermoMixture> &This = *this;
-    scalar Amix = 0.0, Ai, Aj;
+    scalar Amix = 0.0, Ai;//, Aj;
     scalar sqrtT = sqrt(T);
     scalar rSqrtT = 1 / sqrtT;
     scalar rT = 1 / T;
@@ -1746,7 +1746,7 @@ inline bool Foam::PengRobinsonMixture<ThermoMixture>::Ln_fugacityCoefficient_opt
     return retflag;
 }
 
-template <class ThermoMixture>
+/*template <class ThermoMixture>
 inline void Foam::PengRobinsonMixture<ThermoMixture>::Ln_fugacityCoefficient_opt_NIO(
     scalar p, //input
     scalar T,
@@ -1826,7 +1826,7 @@ inline void Foam::PengRobinsonMixture<ThermoMixture>::Ln_fugacityCoefficient_opt
         fugcoef[spid] = phaseData.basic.B[spid] * coe_b + coe_Amix2 * Amix2[spid] - logZMB;
     }
     return;
-}
+}*/
 
 template <class ThermoMixture>
 inline Foam::autoPtr<scalarList> Foam::PengRobinsonMixture<ThermoMixture>::ln_fugacityCoefficient(

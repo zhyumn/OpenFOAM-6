@@ -127,14 +127,27 @@ namespace Foam
             }
         };
 
-        struct VLE_data
+        struct VLE_core
         {
             typename ThermoMixture::Basic_data basic;
             typename ThermoMixture::Phase_data Liq, Gas;
 
             scalarList K;
-            scalar vaporFraction, dg;
-            VLE_data(label nspecie) : basic(nspecie), Liq(nspecie, basic), Gas(nspecie, basic), K(nspecie), vaporFraction(0){};
+            scalar vaporFraction;
+            VLE_core(label nspecie) : basic(nspecie), Liq(nspecie, basic), Gas(nspecie, basic), K(nspecie), vaporFraction(0){};
+        };
+
+        struct VLE_data : public VLE_core
+        {
+            VLE_data(label nspecie) : VLE_core(nspecie) {}
+        };
+
+        struct VLE_D1_data : public VLE_data
+        {
+            scalar dZdT, dZdP;
+            scalar dHsdT, dHsdP;
+            scalar dvfdT, dvfdP;
+            VLE_D1_data(label nspecie) : VLE_data(nspecie) {}
         };
 
         // Fundamental properties
@@ -154,6 +167,8 @@ namespace Foam
         inline scalar rho_ideal(scalar p, scalar T) const;
         inline scalar rrho(scalar p, scalar T) const;
         inline scalar rrho(scalar p, scalar T, solution &sol) const;
+        inline scalar rrho(scalar p, scalar T, VLE_D1_data &sol) const;
+        inline scalar rrho_NIO(scalar p, scalar T, VLE_D1_data &sol) const;
         inline scalar rho(scalar p, scalar T, solution &sol) const;
         inline scalar drhodT(scalar p, scalar T, solution &sol) const;
         inline scalar drhodT(scalar p, scalar T) const;
@@ -213,6 +228,11 @@ namespace Foam
         //- Return compression factor []
         inline scalar Z(scalar p, scalar T) const;
         inline scalar Z(scalar p, scalar T, solution &sol) const;
+        inline scalar Z_NIO(scalar p, scalar T, VLE_data &sol) const;
+        inline scalar rho_NIO(scalar p, scalar T, VLE_data &sol) const;
+        inline scalar Ha_NIO(scalar p, scalar T, VLE_data &sol) const;
+        inline scalar Hs_NIO(scalar p, scalar T, VLE_data &sol) const;
+        inline scalar Es_NIO(scalar p, scalar T, VLE_data &sol) const;
 
         inline scalar kappa_dev(scalar p, scalar T) const;
         inline scalar mu_dev(scalar p, scalar T) const;
@@ -239,6 +259,7 @@ namespace Foam
         inline scalar Hs_ideal(scalar p, scalar T) const;
         inline scalar Hs(scalar p, scalar T, solution &sol) const;
         inline scalar Es_vle(scalar p, scalar T, solution &sol) const;
+        inline scalar Es(scalar p, scalar T, VLE_data &sol) const;
         inline scalar G(scalar p, scalar T) const;
         inline scalar dGdT(scalar p, scalar T) const;
         inline scalar dCpdT(scalar p, scalar T) const;
@@ -256,32 +277,46 @@ namespace Foam
 
         inline scalar dvfdT(scalar p, scalar T, solution &sol) const;
         inline scalar dvfdT(scalar p, scalar T, solution &sol, scalarList &dvidT_) const;
+        inline scalar dvfdT_NIO(scalar p, scalar T, VLE_D1_data &sol, scalarList &dvidT_) const;
         inline scalar dvfdP(scalar p, scalar T, solution &sol) const;
         inline scalar dvfdP(scalar p, scalar T, solution &sol, scalarList &dvidP_) const;
+        inline scalar dvfdP_NIO(scalar p, scalar T, VLE_D1_data &sol, scalarList &dvidP_) const;
         inline scalar dvfdXi(scalar p, scalar T, label di, solution &sol) const;
         inline autoPtr<scalarList> dXdT_gas(scalar p, scalar T, solution &sol) const;
         inline autoPtr<scalarList> dXdT_gas(scalar p, scalar T, solution &sol, autoPtr<scalarList> &dvidt) const;
+        inline autoPtr<scalarList> dXdT_gas_NIO(scalar p, scalar T, VLE_D1_data &sol, autoPtr<scalarList> &dvidt) const;
         inline autoPtr<scalarList> dXdP_gas(scalar p, scalar T, solution &sol) const;
         inline autoPtr<scalarList> dXdP_gas(scalar p, scalar T, solution &sol, autoPtr<scalarList> &dvidp) const;
+        inline autoPtr<scalarList> dXdP_gas_NIO(scalar p, scalar T, VLE_D1_data &sol, autoPtr<scalarList> &dvidp) const;
         inline autoPtr<scalarList> dXdT_liq(scalar p, scalar T, solution &sol) const;
         inline autoPtr<scalarList> dXdT_liq(scalar p, scalar T, solution &sol, autoPtr<scalarList> &dvidt) const;
+        inline autoPtr<scalarList> dXdT_liq_NIO(scalar p, scalar T, VLE_D1_data &sol, autoPtr<scalarList> &dvidt) const;
         inline autoPtr<scalarList> dXdP_liq(scalar p, scalar T, solution &sol) const;
         inline autoPtr<scalarList> dXdP_liq(scalar p, scalar T, solution &sol, autoPtr<scalarList> &dvidp) const;
+        inline autoPtr<scalarList> dXdP_liq_NIO(scalar p, scalar T, VLE_D1_data &sol, autoPtr<scalarList> &dvidp) const;
         inline scalar dWdT_gas(scalar p, scalar T, solution &sol) const;
         inline scalar dWdT_gas(scalar p, scalar T, solution &sol, autoPtr<scalarList> &dvidt) const;
+        inline scalar dWdT_gas_NIO(scalar p, scalar T, VLE_D1_data &sol, autoPtr<scalarList> &dvidt) const;
         inline scalar dWdP_gas(scalar p, scalar T, solution &sol) const;
+        inline scalar dWdP_gas_NIO(scalar p, scalar T, VLE_D1_data &sol, autoPtr<scalarList> &dvidt) const;
         inline scalar dWdXi_gas(scalar p, scalar T, label di, solution &sol) const;
         inline scalar dWdT_liq(scalar p, scalar T, solution &sol) const;
         inline scalar dWdXi_liq(scalar p, scalar T, label di, solution &sol) const;
         inline scalar dWdXi(label di) const;
 
         inline autoPtr<scalarSquareMatrix> A_dvid_(scalar p, scalar T, solution &sol) const;
+        inline autoPtr<scalarSquareMatrix> A_dvid_NIO(scalar p, scalar T, VLE_data &sol) const;
         inline autoPtr<scalarList> dvidT(scalar p, scalar T, solution &sol) const;
+        inline autoPtr<scalarList> dvidT(scalar p, scalar T, VLE_data &sol) const;
         inline autoPtr<scalarList> dvidT(scalar p, scalar T, solution &sol, scalarSquareMatrix &A, labelList &pivotIndices) const;
+        inline autoPtr<scalarList> dvidT_NIO(scalar p, scalar T, VLE_D1_data &sol, scalarSquareMatrix &A, labelList &pivotIndices) const;
         inline autoPtr<scalarList> dvidP(scalar p, scalar T, solution &sol) const;
+        inline autoPtr<scalarList> dvidP(scalar p, scalar T, VLE_data &sol) const;
         inline autoPtr<scalarList> dvidP(scalar p, scalar T, solution &sol, scalarSquareMatrix &A, labelList &pivotIndices) const;
+        inline autoPtr<scalarList> dvidP_NIO(scalar p, scalar T, VLE_D1_data &sol, scalarSquareMatrix &A, labelList &pivotIndices) const;
 
         inline autoPtr<scalarList> dvidXi(scalar p, scalar T, label di, solution &sol) const;
+        inline autoPtr<scalarList> dvidXi_NIO(scalar p, scalar T, label di, VLE_D1_data &sol) const;
         inline autoPtr<scalarList> dXdXi_gas(scalar p, scalar T, label di, solution &sol) const;
         inline autoPtr<scalarList> dXdXi_liq(scalar p, scalar T, label di, solution &sol) const;
         inline autoPtr<scalarList> myinitial(scalar p, scalar T) const;
@@ -293,14 +328,20 @@ namespace Foam
         autoPtr<solution> TPn_flash_New_TPD_Tudisco(scalar p, scalar T, const scalarList &Xinp) const;
         autoPtr<solution> TPn_flash_New_TPD_Tudisco(scalar p, scalar T) const { return TPn_flash_New_TPD_Tudisco(p, T, this->X_); };
         autoPtr<solution> TPn_flash_New_TPD(scalar p, scalar T) const;
-        void TPn_flash_New_TPD_Tudisco_NIO(scalar p, scalar T, const scalarList &Xinp, VLE_data *&solution) const;
-        bool TPn_flash_Matheis_NIO(scalar p, scalar T, const scalarList &Xinp, Foam::scalarList &K_init, VLE_data &solution) const;
+        void TPn_flash_New_TPD_Tudisco_NIO(scalar p, scalar T, const scalarList &Xinp, VLE_data &solution) const;
+
+        inline void TPn_flash_Matheis_NIO(scalar p, scalar T, const scalarList &Xinp, Foam::scalarList &K_init, bool &success, VLE_data &ret_solution, scalar &dg) const;
+        //bool TPn_flash_Matheis_NIO(scalar p, scalar T, const scalarList &Xinp, Foam::scalarList &K_init, VLE_data &solution) const;
         inline tuple<bool, autoPtr<scalarList>, bool> solveTPD_BFGS(scalar p, scalar T) const;
         inline tuple<bool, Foam::autoPtr<List<scalarList>>, bool, autoPtr<scalarList>> solveTPD_BFGS_v2(scalar p, scalar T, const scalarList &Xinp) const;
         inline tuple<bool, Foam::autoPtr<List<scalarList>>, bool, autoPtr<scalarList>> solveTPD_BFGS_v3(scalar p, scalar T, const scalarList &Xinp) const;
         inline tuple<bool, Foam::autoPtr<List<scalarList>>, bool, autoPtr<scalarList>> solveTPD_BFGS_v2(scalar p, scalar T) const { return solveTPD_BFGS_v2(p, T, this->X_); };
         inline tuple<bool, Foam::autoPtr<List<scalarList>>, bool, autoPtr<scalarList>> solveTPD_BFGS_v3(scalar p, scalar T) const { return solveTPD_BFGS_v3(p, T, this->X_); };
         void TPn_validation(scalar p, scalar T) const;
+
+        inline tuple<Foam::scalar, Foam::scalar> UVn_flash_NIO(scalar e, scalar rho, scalar p0, scalar T0, VLE_D1_data &retSol);
+
+        inline scalar PV_nflash_NIO(scalar rho, scalar p, scalar T0, VLE_D1_data &sol) const;
 
         //HPX system
         inline scalar dPdP() const { return 1.0; }
@@ -346,17 +387,21 @@ namespace Foam
         //inline autoPtr<scalarRectangularMatrix> dTPvfsoldXErho_constC(scalar p, scalar T, solution& sol) const;
         inline autoPtr<scalarRectangularMatrix> dTPvfdXErho_simp(scalar p, scalar T, solution &sol) const;
         inline autoPtr<scalarRectangularMatrix> dTPvfc_G_rhoY_dXErho(scalar p, scalar T, solution &sol) const;
+        inline autoPtr<scalarRectangularMatrix> dTPvfcdXErho(scalar p, scalar T, solution &sol) const;
+        inline autoPtr<scalarRectangularMatrix> dTPvfcdXErho_NIO(scalar p, scalar T, VLE_D1_data &sol) const;
         inline autoPtr<scalarRectangularMatrix> dTHvfcdXrhoP(scalar p, scalar T, solution &sol) const;
+        inline autoPtr<scalarRectangularMatrix> dTHvfcdXrhoP_NIO(scalar p, scalar T, VLE_D1_data &sol) const;
         inline autoPtr<scalarRectangularMatrix> dTHvfc_G_rhoY_dXrhoP(scalar p, scalar T, solution &sol) const;
         inline autoPtr<scalarRectangularMatrix> dTHvf_G_rhoY_dXrhoP(scalar p, scalar T, solution &sol) const;
 
         inline autoPtr<scalarRectangularMatrix> dErhovfcdXTP_simp(scalar p, scalar T, solution &sol) const;
         inline autoPtr<scalarRectangularMatrix> dErhovfcdXTP(scalar p, scalar T, solution &sol) const;
+        inline autoPtr<scalarRectangularMatrix> dErhovfcdXTP_NIO(scalar p, scalar T, VLE_D1_data &sol) const;
         inline autoPtr<scalarRectangularMatrix> dErhovfc_G_rhoY_dXTP(scalar p, scalar T, solution &sol) const;
         inline autoPtr<scalarRectangularMatrix> dErhovf_G_rhoY_dXTP(scalar p, scalar T, solution &sol) const;
-        
 
         inline tuple<scalar, scalar, scalar, scalar> dTPdErho(scalar p, scalar T, solution &sol) const;
+        inline tuple<scalar, scalar, scalar, scalar> dTPdErho_NIO(scalar p, scalar T, VLE_D1_data &ret_solution) const;
 
         inline scalar dvfdH_HsP(scalar p, scalar T, solution &sol) const;
         inline scalar dvfdP_HsP(scalar p, scalar T, solution &sol) const;
@@ -367,9 +412,12 @@ namespace Foam
         inline scalar kappaS(scalar p, scalar T, solution &sol) const;
         inline scalar c_opt(scalar p, scalar T, scalar rho, solution &sol) const;
         inline scalar c_opt_full(scalar p, scalar T, scalar rho, solution &sol) const;
+        inline scalar c_NIO(scalar p, scalar T, scalar rho, VLE_D1_data &sol) const;
         inline scalar c(scalar p, scalar T, solution &sol) const;
         inline scalar c(scalar p, scalar T) const;
         inline scalar c_ideal(scalar p, scalar T) const;
+
+        inline scalar c_full_NIO(scalar p, scalar T, scalar rho_, VLE_D1_data &sol) const;
 
         inline scalar kappaT_noVLE(scalar p, scalar T, solution &sol) const;
         inline scalar alphaP_noVLE(scalar p, scalar T, solution &sol) const;
@@ -434,6 +482,7 @@ namespace Foam
 #include "VLEI.H"
 #include "VLE_StandardInterface.H"
 #include "VLE_Opt.H"
+#include "VLE_NIO.H"
 
 #ifdef NoRepository
 #include "VLE.C"

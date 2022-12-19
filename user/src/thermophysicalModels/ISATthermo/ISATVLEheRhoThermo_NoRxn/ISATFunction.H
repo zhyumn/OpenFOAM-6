@@ -49,11 +49,11 @@ namespace Foam
         };
 
         template <class Type>
-        struct thermofunction_TrhoP_to_THvfc_G_rhoY : basicFunction
+        struct thermofunction_TrhoP_to_THvfc : basicFunction
         {
             Type *p;
-            thermofunction_TrhoP_to_THvfc_G_rhoY(Type *pin) : p(pin) {}
-            void value(const scalarList &in, scalarList &out, scalar T0, autoPtr<typename Type::solution> &sol) const
+            thermofunction_TrhoP_to_THvfc(Type *pin) : p(pin) {}
+            void value(const scalarList &in, scalarList &out, scalar T0, typename Type::VLE_D1_data &sol_NIO) const
             {
                 scalar rho = in[in.size() - 2];
                 scalar P = in[in.size() - 1];
@@ -62,7 +62,16 @@ namespace Foam
                 //scalar T = p->T(1 / rho, P, T0, &Type::rrho, &Type::drrhodT, &Type::limit);
 
                 //scalar T = P * p->W() / (RR * 1.0e-03 * rho);
-                scalar T = p->Tsol(1 / rho, P, T0, &Type::rrho, &Type::drrhodT, &Type::limit, sol);
+                //scalar T = p->Tsol(1 / rho, P, T0, &Type::rrho, &Type::drrhodT, &Type::limit, sol);
+                scalar T = p->PV_nflash_NIO(P, rho, T0, sol_NIO);
+                /*if (mag(T - T2) > 1e-8)
+                {
+                    Info << "here1" << endl;
+                    Info << T << endl;
+                    Info << T2 << endl;
+                    Info << endl;
+                    NotImplemented;
+                }*/
 
                 //typename Type::VLE_data *psolution;
                 //p->TPn_flash_New_TPD_Tudisco_NIO(P, T, p->X(), psolution);
@@ -79,7 +88,7 @@ namespace Foam
 
                 //sol.reset(p->TPN(P, T).ptr());
 
-                out.resize(5 + p->X_.size());
+                out.resize(4);
 
                 /*
                 out[0] = T;
@@ -90,17 +99,11 @@ namespace Foam
                 */
 
                 out[0] = T;
-                out[1] = p->Hs(P, T, sol());
-                out[2] = sol().vaporfra;
+                out[1] = p->Hs_NIO(P, T, sol_NIO);
+                out[2] = sol_NIO.vaporFraction; //sol().vaporfra;
                 //out[3] = p->c_opt(P, T, rho, sol());
-                out[3] = p->c_opt_full(P, T, rho, sol());
-
-                scalar W_G_ = p->W(sol().X_gas());
-                out[4] = P * W_G_ / (p->Type::singlePhaseMixtureThermoType::Z(P, T, sol().X_gas(), 1) * RR * 1.0e-03 * T);
-                for (int i = 0; i < sol().X_gas().size(); i++)
-                {
-                    out[i + 5] = sol().X_gas()[i] * (*p)[i].W() * 1e-3 / W_G_;
-                }
+                //out[3] = p->c_opt_full(P, T, rho, sol());
+                out[3] = p->c_full_NIO(P, T, rho, sol_NIO);
 
                 /*
                 scalar xx = p->c_opt(P, T, rho, sol());
@@ -113,9 +116,9 @@ namespace Foam
                 }*/
             }
 
-            void derive(const scalarList &in, const scalarList &in2, scalarRectangularMatrix &out, scalar T0, autoPtr<typename Type::solution> &sol)
+            void derive(const scalarList &in, const scalarList &in2, scalarRectangularMatrix &out, scalar T0, typename Type::VLE_D1_data &sol_NIO)
             {
-                scalar rho = in[in.size() - 2];
+                //scalar rho = in[in.size() - 2];
                 scalar P = in[in.size() - 1];
                 p->setX(in);
                 scalar T = in2[0];
@@ -123,7 +126,24 @@ namespace Foam
 
                 //sol.reset(p->TPN(P, T).ptr());
                 //autoPtr<typename Type::solution> sol(p->TPN(P, T)); // sol(p->TPn_flash_New_TPD(P, T));//sol(p->TPn_flash(P, T));
-                autoPtr<scalarRectangularMatrix> grad(p->dTHvfc_G_rhoY_dXrhoP(P, T, sol()));
+                //autoPtr<scalarRectangularMatrix> grad(p->dTHvfcdXrhoP(P, T, sol()));
+                autoPtr<scalarRectangularMatrix> grad(p->dTHvfcdXrhoP_NIO(P, T, sol_NIO));
+
+                /*                 if (mag(grad1()[0][0] - grad()[0][0]) > 1e-8)
+                {
+                    Info << "here2" << endl;
+                    Info << sol().vaporfra << endl;
+                    Info << sol_NIO.vaporFraction << endl;
+                    Info << sol().X_gas() << endl;
+                    Info << sol_NIO.Gas.X << endl;
+                    Info << sol().X_liq() << endl;
+                    Info << sol_NIO.Liq.X << endl;
+                    Info << grad1()[0][0] << endl;
+                    Info << grad()[0][0] << endl;
+                    Info << endl;
+                    NotImplemented;
+                } */
+
                 // autoPtr<scalarRectangularMatrix> grad(p->dTPvfdXErho(P, T, sol()));
                 out = grad();
             }
@@ -165,31 +185,13 @@ namespace Foam
                     }
                 }
 
-                //toleranceOut_in = scalarList(ISATDict_.lookup("toleranceOut"));
+                toleranceOut_in = scalarList(ISATDict_.lookup("toleranceOut"));
                 scalarList toleranceOut_temp(ISATDict_.lookup("toleranceOut"));
-                if (toleranceOut_temp.size() != 6 && toleranceOut_temp.size() != toleranceOut_in.size())
+                if (toleranceOut_temp.size() != 4)
                 {
                     FatalErrorInFunction
                         << "toleranceOut error"
                         << abort(FatalError);
-                }
-                if (toleranceOut_temp.size() == 6)
-                {
-                    for (int i = 0; i < 5; i++)
-                    {
-                        toleranceOut_in[i] = toleranceOut_temp[i];
-                    }
-                    for (int i = 5; i < toleranceOut_in.size(); i++)
-                    {
-                        toleranceOut_in[i] = toleranceOut_temp[5];
-                    }
-                }
-                else
-                {
-                    for (int i = 0; i < toleranceOut_in.size(); i++)
-                    {
-                        toleranceOut_in[i] = toleranceOut_temp[i];
-                    }
                 }
 
                 scalarList initToleranceIn_temp(ISATDict_.lookup("initToleranceIn"));
@@ -245,11 +247,11 @@ namespace Foam
         };
 
         template <class Type>
-        struct thermofunction_TPX_to_Erhovfc_G_rhoY : public basicFunction
+        struct thermofunction_TPX_to_Erhovfc : public basicFunction
         {
             Type *p;
-            thermofunction_TPX_to_Erhovfc_G_rhoY(Type *pin) : p(pin) {}
-            void value(const scalarList &in, scalarList &out, autoPtr<typename Type::solution> &sol) const
+            thermofunction_TPX_to_Erhovfc(Type *pin) : p(pin) {}
+            void value(const scalarList &in, scalarList &out, typename Type::VLE_D1_data &sol_NIO) const
             {
                 scalar T = in[in.size() - 2];
                 scalar P = in[in.size() - 1];
@@ -291,7 +293,7 @@ namespace Foam
                 */
                 // std::tie(P, T) = p->TrhoE(E, rho, P0, T0);
                 // scalarList temp(p->X_.size());
-                out.resize(5 + p->X_.size());
+                out.resize(4);
                 // out.resize(3);
                 /*
                 for (int i = 0;i < p->X_.size();i++)
@@ -309,19 +311,22 @@ namespace Foam
                 out[3] = p->c_ideal(P, T);
                 */
 
-                sol.reset(p->TPN(P, T).ptr());
+                //sol.reset(p->TPN(P, T).ptr());
+                p->TPn_flash_New_TPD_Tudisco_NIO(P, T, p->X_, sol_NIO);
                 //autoPtr<typename Type::solution> sol(p->TPN(P, T));
-                out[0] = p->Hs(P, T, sol()) - P / p->rho(P, T, sol());
-                out[1] = p->rho(P, T, sol());
-                out[2] = sol().vaporfra;
-                out[3] = p->c(P, T, sol());
-
-                scalar W_G_ = p->W(sol().X_gas());
-                out[4] = P * W_G_ / (p->Type::singlePhaseMixtureThermoType::Z(P, T, sol().X_gas(), 1) * RR * 1.0e-03 * T);
-                for (int i = 0; i < sol().X_gas().size(); i++)
+                out[0] = p->Hs_NIO(P, T, sol_NIO) - P / p->rho_NIO(P, T, sol_NIO);
+                out[1] = p->rho_NIO(P, T, sol_NIO);
+                out[2] = sol_NIO.vaporFraction; //sol().vaporfra;
+                //out[3] = p->c(P, T, sol());
+                out[3] = p->c_full_NIO(P, T, out[1], sol_NIO);
+                //scalar c_test = p->c_full_NIO(P, T, out[1], sol_NIO);
+                /*                 if (mag(out[3] - c_test) > 1e-8)
                 {
-                    out[i + 5] = sol().X_gas()[i] * (*p)[i].W() * 1e-3 / W_G_;
-                }
+                    Info << out[3] << endl;
+                    Info << c_test << endl;
+                    Info << endl;
+                    NotImplemented;
+                } */
 
                 /*
                 FatalErrorInFunction
@@ -333,7 +338,7 @@ namespace Foam
                     */
             }
 
-            void derive(const scalarList &in, scalarList &in2, scalarRectangularMatrix &out, autoPtr<typename Type::solution> &sol)
+            void derive(const scalarList &in, scalarList &in2, scalarRectangularMatrix &out, typename Type::VLE_D1_data &sol_NIO)
             {
                 scalar T = in[in.size() - 2];
                 scalar P = in[in.size() - 1];
@@ -342,7 +347,16 @@ namespace Foam
 
                 p->setX(in);
                 //autoPtr<typename Type::solution> sol(p->TPN(P, T)); // sol(p->TPn_flash_New_TPD(P, T));//sol(p->TPn_flash(P, T));
-                autoPtr<scalarRectangularMatrix> grad(p->dErhovfc_G_rhoY_dXTP(P, T, sol()));
+                //autoPtr<scalarRectangularMatrix> grad(p->dErhovfcdXTP(P, T, sol()));
+                autoPtr<scalarRectangularMatrix> grad(p->dErhovfcdXTP_NIO(P, T, sol_NIO));
+
+                /*if (mag(grad()[0][0] - grad2()[0][0]) > 1e-8)
+                {
+                    Info << grad2()[0][0] << endl;
+                    Info << grad()[0][0] << endl;
+                    Info << endl;
+                    NotImplemented;
+                }*/
                 // autoPtr<scalarRectangularMatrix> grad(p->dTPvfdXErho(P, T, sol()));
                 out = grad();
             }
@@ -382,31 +396,13 @@ namespace Foam
                     }
                 }
 
-                //toleranceOut_in = scalarList(ISATDict_.lookup("toleranceOut"));
+                toleranceOut_in = scalarList(ISATDict_.lookup("toleranceOut"));
                 scalarList toleranceOut_temp(ISATDict_.lookup("toleranceOut"));
-                if (toleranceOut_temp.size() != 6 && toleranceOut_temp.size() != toleranceOut_in.size())
+                if (toleranceOut_temp.size() != 4)
                 {
                     FatalErrorInFunction
                         << "toleranceOut error"
                         << abort(FatalError);
-                }
-                if (toleranceOut_temp.size() == 6)
-                {
-                    for (int i = 0; i < 5; i++)
-                    {
-                        toleranceOut_in[i] = toleranceOut_temp[i];
-                    }
-                    for (int i = 5; i < toleranceOut_in.size(); i++)
-                    {
-                        toleranceOut_in[i] = toleranceOut_temp[5];
-                    }
-                }
-                else
-                {
-                    for (int i = 0; i < toleranceOut_in.size(); i++)
-                    {
-                        toleranceOut_in[i] = toleranceOut_temp[i];
-                    }
                 }
 
                 scalarList initToleranceIn_temp(ISATDict_.lookup("initToleranceIn"));
@@ -462,20 +458,20 @@ namespace Foam
         };
 
         template <class Type>
-        struct thermofunction_ErhoX_to_TPvfc_G_rhoY : public basicFunction
+        struct thermofunction_ErhoX_to_TPvfc : public basicFunction
         {
             Type *p;
-            thermofunction_ErhoX_to_TPvfc_G_rhoY(Type *pin) : p(pin) {}
-            void value(const scalarList &in, scalarList &out, scalar T0, scalar P0, autoPtr<typename Type::solution> &sol, typename Type::VLE_D1_data &sol_NIO) const
+            thermofunction_ErhoX_to_TPvfc(Type *pin) : p(pin) {}
+            void value(const scalarList &in, scalarList &out, scalar T0, scalar P0, typename Type::VLE_D1_data &sol_NIO) const
             {
                 scalar E = in[in.size() - 2];
                 scalar rho = in[in.size() - 1];
                 scalar T, P;
-                scalar T1, P1;
+                //scalar T1, P1;
                 p->setX(in);
-                std::tie(P, T) = p->TrhoEs(E, rho, P0, T0, &Type::Es_vle, &Type::rho, sol);
+                //std::tie(P, T) = p->TrhoEs(E, rho, P0, T0, &Type::Es_vle, &Type::rho, sol);
                 //typename Type::VLE_D1_data solnn_NIO(p->X_.size());
-                std::tie(P1, T1) = p->UVn_flash_NIO(E, rho, P0, T0, sol_NIO);
+                std::tie(P, T) = p->UVn_flash_NIO(E, rho, P0, T0, sol_NIO);
 
                 //if (mag(P1 - P) + mag(T1 - T) > 1e-8)
                 //{
@@ -502,7 +498,7 @@ namespace Foam
                 //sol.reset(p->TPN(P, T).ptr());
                 //autoPtr<typename Type::solution> sol(p->TPN(P, T));
 
-                out.resize(5 + p->X_.size());
+                out.resize(4);
 
                 out[0] = T;
                 out[1] = P;
@@ -513,13 +509,13 @@ namespace Foam
                 //Info << sol_NIO.vaporFraction << endl;
                 //Info << endl;
 
-                if (mag(sol().vaporfra - sol_NIO.vaporFraction) > 1e-8)
+                /*                 if (mag(sol().vaporfra - sol_NIO.vaporFraction) > 1e-8)
                 {
                     Info << sol().vaporfra << endl;
                     Info << sol_NIO.vaporFraction << endl;
                     Info << endl;
                     NotImplemented;
-                }
+                } */
                 /*if ((1 - sol().vaporfra) * sol().vaporfra > 0.1)
                 {
                     Info << P << endl;
@@ -529,26 +525,18 @@ namespace Foam
                 }*/
 
                 //out[3] = p->c(P, T, sol());
+                //scalar c_test = p->c(P, T, sol());
                 out[3] = p->c_NIO(P, T, p->rho_NIO(P, T, sol_NIO), sol_NIO);
                 //scalar c_test = p->c_opt_full_NIO(P, T, p->rho_NIO(P,T,solnn_NIO), solnn_NIO);
-                /*
-                if (mag(out[3] - c_test) > 1e-8)
+
+                /*                 if (mag(out[3] - c_test) > 1e-8)
                 {
                     Info << out[3] << endl;
                     Info << c_test << endl;
                     Info << endl;
                     NotImplemented;
-                }*/
+                } */
 
-                //scalar W_G_ = p->W(sol().X_gas());
-                scalar W_G_ = p->W(sol_NIO.Gas.X);
-                //out[4] = P * W_G_ / (p->Type::singlePhaseMixtureThermoType::Z(P, T, sol().X_gas(), 1) * RR * 1.0e-03 * T);
-                out[4] = P * W_G_ / (p->Type::singlePhaseMixtureThermoType::Z(P, T, sol_NIO.Gas.X, 1) * RR * 1.0e-03 * T);
-                for (int i = 0; i < sol().X_gas().size(); i++)
-                {
-                    //out[i + 5] = sol().X_gas()[i] * (*p)[i].W() * 1e-3 / W_G_;
-                    out[i + 5] = sol_NIO.Gas.X[i] * (*p)[i].W() * 1e-3 / W_G_;
-                }
                 /*
                                 FatalErrorInFunction
                                     << "T1: " << P
@@ -559,20 +547,35 @@ namespace Foam
                                     */
             }
 
-            void derive(const scalarList &in, scalarList &in2, scalarRectangularMatrix &out, scalar T0, scalar P0, autoPtr<typename Type::solution> &sol, typename Type::VLE_D1_data &sol_NIO)
+            void derive(const scalarList &in, scalarList &in2, scalarRectangularMatrix &out, scalar T0, scalar P0, typename Type::VLE_D1_data &sol_NIO)
             {
-                scalar E = in[in.size() - 2];
-                scalar rho = in[in.size() - 1];
-                scalar T, P;
-                T = in2[0];
-                P = in2[1];
+                //scalar E = in[in.size() - 2];
+                //scalar rho = in[in.size() - 1];
+                scalar &T = in2[0];
+                scalar &P = in2[1];
+                //T = in2[0];
+                //P = in2[1];
                 //std::tie(P, T) = p->TrhoEs(E, rho, P0, T0, &Type::Es_ac, &Type::rho);
 
                 p->setX(in);
                 //autoPtr<typename Type::solution> sol(p->TPN(P, T)); // sol(p->TPn_flash_New_TPD(P, T));//sol(p->TPn_flash(P, T));
                 //sol.reset(p->TPN(P, T).ptr());
-                autoPtr<scalarRectangularMatrix> grad(p->dTPvfc_G_rhoY_dXErho(P, T, sol()));
-                autoPtr<scalarRectangularMatrix> grad2(p->dTPvfc_G_rhoY_dXErho_NIO(P, T, sol_NIO));
+                //autoPtr<scalarRectangularMatrix> grad1(p->dTPvfc_G_rhoY_dXErho(P, T, sol()));
+                autoPtr<scalarRectangularMatrix> grad(p->dTPvfcdXErho_NIO(P, T, sol_NIO));
+                /*               autoPtr<scalarRectangularMatrix> grad0(new scalarRectangularMatrix(p->X_.size() + 2, 4));
+                for (int i = 0; i < grad0().m(); i++)
+                    for (int j = 0; j < grad0().n(); j++)
+                    {
+                        grad0()(i, j) = grad1()(i, j);
+                    }
+
+                if (mag(grad1()[0][0] - grad()[0][0]) > 1e-8)
+                {
+                    Info << grad1()[0][0] << endl;
+                    Info << grad()[0][0] << endl;
+                    Info << endl;
+                    NotImplemented;
+                } */
 
                 // autoPtr<scalarRectangularMatrix> grad(p->dTPvfdXErho(P, T, sol()));
                 out = grad();
@@ -615,31 +618,13 @@ namespace Foam
                     }
                 }
 
-                //toleranceOut_in = scalarList(ISATDict_.lookup("toleranceOut"));
-                scalarList toleranceOut_temp(ISATDict_.lookup("toleranceOut"));
-                if (toleranceOut_temp.size() != 6 && toleranceOut_temp.size() != toleranceOut_in.size())
+                toleranceOut_in = scalarList(ISATDict_.lookup("toleranceOut"));
+
+                if (toleranceOut_in.size() != 4)
                 {
                     FatalErrorInFunction
                         << "toleranceOut error"
                         << abort(FatalError);
-                }
-                if (toleranceOut_temp.size() == 6)
-                {
-                    for (int i = 0; i < 5; i++)
-                    {
-                        toleranceOut_in[i] = toleranceOut_temp[i];
-                    }
-                    for (int i = 5; i < toleranceOut_in.size(); i++)
-                    {
-                        toleranceOut_in[i] = toleranceOut_temp[5];
-                    }
-                }
-                else
-                {
-                    for (int i = 0; i < toleranceOut_in.size(); i++)
-                    {
-                        toleranceOut_in[i] = toleranceOut_temp[i];
-                    }
                 }
 
                 scalarList initToleranceIn_temp(ISATDict_.lookup("initToleranceIn"));
