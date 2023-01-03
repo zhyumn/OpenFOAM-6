@@ -108,6 +108,7 @@ public:
     double P();
     double T();
     double vaporfra();
+    double vaporFraction();
     double rho();
     double mu();
     double Cp();
@@ -121,6 +122,8 @@ public:
     double Es();
     double W();
     double S();
+    double dcdT();
+    double d2rhodT2();
     
     
     std::vector<double> Y_G();

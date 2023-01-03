@@ -1094,6 +1094,11 @@ double solver_new::vaporfra()
     TPn_flash_update();
     return sol.vaporfra;
 }
+double solver_new::vaporFraction()
+{
+    TPn_flash_update();
+    return sol.vaporfra;
+}
 
 std::vector<double> solver_new::X_gas()
 {
@@ -1133,6 +1138,19 @@ double solver_new::rho()
     return thermo->rho(P_, T_);
     */
 }
+
+double solver_new::dcdT()
+{
+    TPn_flash_update();
+    return thermo->dcdT(P_, T_, sol);
+}
+
+double solver_new::d2rhodT2()
+{
+    TPn_flash_update();
+    return thermo->d2rhodT2(P_, T_, sol);
+}
+
 
 double solver_new::S()
 {

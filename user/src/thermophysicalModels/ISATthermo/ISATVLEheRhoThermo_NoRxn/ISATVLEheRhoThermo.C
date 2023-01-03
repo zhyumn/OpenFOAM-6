@@ -31,6 +31,7 @@ template <class BasicPsiThermo, class MixtureType>
 void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate_init()
 {
     //const scalarField &hCells = this->he_;
+    scalarField &hCells = this->he_;
     const scalarField &pCells = this->p_;
 
     scalarField &TCells = this->T_.primitiveFieldRef();
@@ -51,8 +52,8 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate_init()
         const typename MixtureType::thermoType &mixture_ =
             this->cellMixture(celli);
 
-        std::tie(he_temp, rhoCells[celli], vaporfracCells[celli], soundspeedCells[celli]) = mixture_.Erhovfc_XPT(pCells[celli], TCells[celli]);
-
+        //std::tie(he_temp, rhoCells[celli], vaporfracCells[celli], soundspeedCells[celli]) = mixture_.Erhovfc_XPT(pCells[celli], TCells[celli]);
+        std::tie(hCells[celli], rhoCells[celli], vaporfracCells[celli], soundspeedCells[celli]) = mixture_.Erhovfc_XPT(pCells[celli], TCells[celli]);
         psiCells[celli] = rhoCells[celli] / pCells[celli];
     }
 
@@ -255,7 +256,7 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
     {
         this->newTimeStep();
         clockTime_.timeIncrement();
-        if (DF_)
+        if (scheme_ == "doubleFlux")
         {
             do
             {
@@ -271,7 +272,7 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
                 }
             } while (this->newLoop());
         }
-        else
+        else if (scheme_ == "conservativeFlux")
         {
             do
             {
@@ -280,6 +281,27 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
                     const typename MixtureType::thermoType &mixture_ = this->cellMixture(celli);
 
                     std::tie(TCells[celli], pCells[celli], vaporfracCells[celli], soundspeedCells[celli]) = mixture_.TPvfc_XErho(hCells[celli], rhoCells[celli], TCells[celli], pCells[celli]);
+
+                    psiCells[celli] = rhoCells[celli] / pCells[celli];
+                }
+            } while (this->newLoop());
+        }
+        else if (scheme_ == "mix")
+        {
+            do
+            {
+                forAll(TCells, celli)
+                {
+                    const typename MixtureType::thermoType &mixture_ = this->cellMixture(celli);
+                    if ((*FCcell)[celli] == 0)
+                    {
+                        std::tie(TCells[celli], hCells[celli], vaporfracCells[celli], soundspeedCells[celli]) = mixture_.THvfc_XrhoP(rhoCells[celli], pCells[celli], TCells[celli]);
+                        hCells[celli] -= pCells[celli] / rhoCells[celli];
+                    }
+                    else if ((*FCcell)[celli] == 1)
+                    {
+                        std::tie(TCells[celli], pCells[celli], vaporfracCells[celli], soundspeedCells[celli]) = mixture_.TPvfc_XErho(hCells[celli], rhoCells[celli], TCells[celli], pCells[celli]);
+                    }
 
                     psiCells[celli] = rhoCells[celli] / pCells[celli];
                 }
@@ -405,7 +427,6 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
                     const typename MixtureType::thermoType &mixture_ =
                         this->patchFaceMixture(patchi, facei);
                     tie(pkappa[facei], pmu[facei]) = mixture_.kappa_mu_opt(pp[facei], pT[facei], prho[facei]);
-
                 }
             }
         }
@@ -511,6 +532,7 @@ Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::ISATVLEheRhoThermo(
       WList_(MixtureType::Y().size()),
       //Y_G_List_(MixtureType::Y().size()),
       inviscid_(false)
+
 {
     IOdictionary thermoDict(
         IOobject(
@@ -522,13 +544,15 @@ Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::ISATVLEheRhoThermo(
             false));
     inviscid_ = thermoDict.lookupOrDefault<bool>("inviscid", false);
     nloop = thermoDict.lookupOrDefault<label>("nloop", 1);
-    DF_ = thermoDict.lookupOrDefault<bool>("doubleFlux", true);
+    //DF_ = thermoDict.lookupOrDefault<bool>("doubleFlux", true);
     ISATlog_ = thermoDict.lookupOrDefault<bool>("ISATlog", false);
+    scheme_ = word(thermoDict.lookup("scheme"));
     //noVLE_ = thermoDict.lookupOrDefault<bool>("noVLE", false);
     //MixtureType::thermoType::noVLE = noVLE_;
     // FatalErrorInFunction
     //     << "inviscid_:" <<inviscid_
     //     << exit(FatalError);
+    FCcell = &mesh.objectRegistry::lookupObjectRef<volScalarField>("FCcell");
     if (ISATlog_)
     {
         cpuISAT_VLE_ = logFile("VLEtime", mesh);

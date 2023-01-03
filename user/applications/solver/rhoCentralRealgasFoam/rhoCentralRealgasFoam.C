@@ -107,6 +107,7 @@ int main(int argc, char *argv[])
         frac.write();
         return 0;
     }
+    int nloop = 0;
 
     double cputime;
 
@@ -252,7 +253,7 @@ int main(int argc, char *argv[])
         fvScalarMatrix rhoEEqn(fvm::ddt(rhoE));
         //fvScalarMatrix rhoeEqn(fvm::ddt(rhoe));
 
-        surfaceScalarField rhoEstar_pos((ap * rho_neg * (e_pos_neg + 0.5 * magSqr(U_neg)) - am * rho_pos * (e_pos_pos + 0.5 * magSqr(U_pos)) - ((U_neg & mesh.Sf()) * (rho_neg * (e_pos_neg + 0.5 * magSqr(U_neg)) + p_neg) - (U_pos & mesh.Sf()) * (rho_pos * (e_pos_pos + 0.5 * magSqr(U_pos)) + p_pos))) / (ap - am));
+        /*         surfaceScalarField rhoEstar_pos((ap * rho_neg * (e_pos_neg + 0.5 * magSqr(U_neg)) - am * rho_pos * (e_pos_pos + 0.5 * magSqr(U_pos)) - ((U_neg & mesh.Sf()) * (rho_neg * (e_pos_neg + 0.5 * magSqr(U_neg)) + p_neg) - (U_pos & mesh.Sf()) * (rho_pos * (e_pos_pos + 0.5 * magSqr(U_pos)) + p_pos))) / (ap - am));
         surfaceScalarField rhoEQ_pos = minMod(rho_neg * (e_pos_neg + 0.5 * magSqr(U_neg)) - rhoEstar_pos, rhoEstar_pos - rho_pos * (e_pos_pos + 0.5 * magSqr(U_pos))) * ap * am / (ap - am);
 
         surfaceScalarField rhoEstar_neg((ap * rho_neg * (e_neg_neg + 0.5 * magSqr(U_neg)) - am * rho_pos * (e_neg_pos + 0.5 * magSqr(U_pos)) - ((U_neg & mesh.Sf()) * (rho_neg * (e_neg_neg + 0.5 * magSqr(U_neg)) + p_neg) - (U_pos & mesh.Sf()) * (rho_pos * (e_neg_pos + 0.5 * magSqr(U_pos)) + p_pos))) / (ap - am));
@@ -260,30 +261,67 @@ int main(int argc, char *argv[])
 
         surfaceScalarField phiEp_pos(
             "phiEp_pos",
-            aphiv_pos * (rho_pos * (e_pos_pos + 0.5 * magSqr(U_pos)) + p_pos) + aphiv_neg * (rho_neg * (e_pos_neg + 0.5 * magSqr(U_neg)) + p_neg) + aSf * p_pos - aSf * p_neg - 0 * rhoEQ_pos);
+            aphiv_pos * (rho_pos * (e_pos_pos + 0.5 * magSqr(U_pos)) + p_pos) + aphiv_neg * (rho_neg * (e_pos_neg + 0.5 * magSqr(U_neg)) + p_neg) + aSf * p_pos - aSf * p_neg); //- 0 * rhoEQ_pos)
 
         surfaceScalarField phiEp_neg(
             "phiEp_pos",
-            aphiv_pos * (rho_pos * (e_neg_pos + 0.5 * magSqr(U_pos)) + p_pos) + aphiv_neg * (rho_neg * (e_neg_neg + 0.5 * magSqr(U_neg)) + p_neg) + aSf * p_pos - aSf * p_neg - 0 * rhoEQ_neg);
+            aphiv_pos * (rho_pos * (e_neg_pos + 0.5 * magSqr(U_pos)) + p_pos) + aphiv_neg * (rho_neg * (e_neg_neg + 0.5 * magSqr(U_neg)) + p_neg) + aSf * p_pos - aSf * p_neg); //- 0 * rhoEQ_neg)
 
+        surfaceScalarField phiEp(
+            "phiEp",
+            aphiv_pos * (rho_pos * (e_pos + 0.5 * magSqr(U_pos)) + p_pos) + aphiv_neg * (rho_neg * (e_neg + 0.5 * magSqr(U_neg)) + p_neg) + aSf * p_pos - aSf * p_neg); */
         //surfaceScalarField phiep_pos("phiep_pos", aphiv_pos * (rho_pos * e_pos_pos) + aphiv_neg * (rho_neg * e_pos_neg));
 
         //surfaceScalarField phiep_neg("phiep_pos", aphiv_pos * (rho_pos * e_neg_pos) + aphiv_neg * (rho_neg * e_neg_neg));
 
-        if (divScheme == "Doubleflux")
+        if (scheme == "doubleFlux")
         {
+            surfaceScalarField phiEp_pos(
+                "phiEp_pos",
+                aphiv_pos * (rho_pos * (e_pos_pos + 0.5 * magSqr(U_pos)) + p_pos) + aphiv_neg * (rho_neg * (e_pos_neg + 0.5 * magSqr(U_neg)) + p_neg) + aSf * p_pos - aSf * p_neg); //- 0 * rhoEQ_pos)
+
+            surfaceScalarField phiEp_neg(
+                "phiEp_pos",
+                aphiv_pos * (rho_pos * (e_neg_pos + 0.5 * magSqr(U_pos)) + p_pos) + aphiv_neg * (rho_neg * (e_neg_neg + 0.5 * magSqr(U_neg)) + p_neg) + aSf * p_pos - aSf * p_neg); //- 0 * rhoEQ_neg)
 
             rhoEEqn += fvc::div_doubleflux(phiEp_pos, phiEp_neg);
             //rhoeEqn += fvc::div_doubleflux(phiep_pos, phiep_neg);
         }
-        else if (divScheme == "Conservativeflux")
+        else if (scheme == "conservativeFlux")
         {
-
             surfaceScalarField phiEp(
                 "phiEp",
                 aphiv_pos * (rho_pos * (e_pos + 0.5 * magSqr(U_pos)) + p_pos) + aphiv_neg * (rho_neg * (e_neg + 0.5 * magSqr(U_neg)) + p_neg) + aSf * p_pos - aSf * p_neg);
 
             rhoEEqn += fvc::div(phiEp);
+        }
+        else if (scheme == "mix")
+        {
+            surfaceScalarField phiEp_pos(
+                "phiEp_pos",
+                aphiv_pos * (rho_pos * (e_pos_pos + 0.5 * magSqr(U_pos)) + p_pos) + aphiv_neg * (rho_neg * (e_pos_neg + 0.5 * magSqr(U_neg)) + p_neg) + aSf * p_pos - aSf * p_neg); //- 0 * rhoEQ_pos)
+
+            surfaceScalarField phiEp_neg(
+                "phiEp_pos",
+                aphiv_pos * (rho_pos * (e_neg_pos + 0.5 * magSqr(U_pos)) + p_pos) + aphiv_neg * (rho_neg * (e_neg_neg + 0.5 * magSqr(U_neg)) + p_neg) + aSf * p_pos - aSf * p_neg); //- 0 * rhoEQ_neg)
+            surfaceScalarField phiEp(
+                "phiEp",
+                aphiv_pos * (rho_pos * (e_pos + 0.5 * magSqr(U_pos)) + p_pos) + aphiv_neg * (rho_neg * (e_neg + 0.5 * magSqr(U_neg)) + p_neg) + aSf * p_pos - aSf * p_neg);
+
+            forAll(owner, facei)
+            {
+                if (FCcell[owner[facei]] == 1)
+                {
+                    phiEp_pos[facei] = phiEp[facei];
+                    //phiEp_neg[facei] = phiEp[facei];
+                }
+                if (FCcell[neighbour[facei]] == 1)
+                {
+                    //phiEp_pos[facei] = phiEp[facei];
+                    phiEp_neg[facei] = phiEp[facei];
+                }
+            }
+            rhoEEqn += fvc::div_doubleflux(phiEp_pos, phiEp_neg);
         }
         if (!inviscid)
         {
@@ -328,11 +366,11 @@ int main(int argc, char *argv[])
             // thermo.correct();
         }
 
-        if (divScheme == "Doubleflux")
+        if (scheme == "doubleFlux" || scheme == "mix")
         {
             p.ref() = (e() - eStar()) * rho() * (gammaStar() - 1);
             p.max(1e3);
-            p.min(1e7);
+            //p.min(1e7);
         }
 
         thermo.correct();
@@ -374,17 +412,43 @@ int main(int argc, char *argv[])
         gammaStar = rho * c * c / p;
         eStar = e - p / (rho * (gammaStar - 1));
         Wmix = thermo.W();
-        forAll(Dimix, i)
+        //forAll(Dimix, i)
+        //{
+        //Dimix[i] = Dimix_t[i];
+        // Dimix[i] = thermo.Dimix(i);
+        //hei[i] = hei_t[i];
+        // hei[i] = thermo.hei(i);
+        //}
+        surfalpha = frac * (1 - frac);
+
+        Drho *= 0;
+        forAll(owner, facei)
         {
-            Dimix[i] = Dimix_t[i];
-            // Dimix[i] = thermo.Dimix(i);
-            hei[i] = hei_t[i];
-            // hei[i] = thermo.hei(i);
+            drho = mag(rho[owner[facei]] - rho[neighbour[facei]]);
+            if (drho > rho[owner[facei]] * Drho[owner[facei]])
+            {
+                Drho[owner[facei]] = drho / rho[owner[facei]];
+            }
+            if (drho > rho[neighbour[facei]] * Drho[neighbour[facei]])
+            {
+                Drho[neighbour[facei]] = drho / rho[neighbour[facei]];
+            }
         }
-        surfbeta = frac * (1 - frac);
+
+        forAll(FCcell, i)
+        {
+            if (Drho[i] > Drho_min)
+            {
+                FCcell[i] = 1;
+            }
+            else
+            {
+                FCcell[i] = 0;
+            }
+        }
+
         runTime.write();
 
-        
         if (logflag == true)
         {
             cputime += clockTime_.timeIncrement();

@@ -336,7 +336,7 @@ inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::d2AdTdxi(
     const scalarList &Xinp) const
 {
     const PengRobinsonMixture<ThermoMixture> &This = *this;
-    scalar Amix = 0.0, Ai;//, Aj;
+    scalar Amix = 0.0, Ai; //, Aj;
     scalar sqrtT = sqrt(T);
     scalar rSqrtT = 1 / sqrtT;
     scalar rT = 1 / T;
@@ -2154,6 +2154,18 @@ inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::Hs // internal ene
 }
 
 template <class ThermoMixture>
+inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::Hs // internal energy with unit of J/kg
+    (
+        scalar p,
+        scalar T,
+        const scalar Zin,
+        const scalarList &Xinp,
+        const label pf) const
+{
+    return Ha(p, T, Zin, Xinp, pf) - this->Hideal(1, Tstd, Xinp); //+11990129.829480369 +3991.2*1000;
+}
+
+template <class ThermoMixture>
 inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::Ha // internal energy with unit of J/kg
     (
         scalar p,
@@ -2179,7 +2191,39 @@ inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::Ha // internal ene
         dH = (z - 1) * RR * 1e-3 * T;
     }
 
-    dH =  dH / this->W(Xinp); // J/kg
+    dH = dH / this->W(Xinp); // J/kg
+    //Info << "dH=" << dH << ",Hideal=" << this->Hideal(p, T, Xinp) << endl;
+    return dH + this->Hideal(p, T, Xinp);
+}
+
+template <class ThermoMixture>
+inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::Ha // internal energy with unit of J/kg
+    (
+        scalar p,
+        scalar T,
+        const scalar Zin,
+        const scalarList &Xinp,
+        const label pf) const
+{
+    scalar bmix = this->b(p, T, Xinp);
+    scalar cc1 = 1.0 + sqrt(2.0);
+    scalar cc2 = 1.0 - sqrt(2.0);
+    const scalar &z = Zin;
+    scalar VV = this->W(Xinp) / this->rho(p, T, z, Xinp, pf); //m3*mol-1, phase specific volume
+
+    scalar xxx = ((VV + cc1 * bmix) / (VV + cc2 * bmix));
+    scalar dH;
+
+    if (xxx > 0)
+    {
+        dH = (z - 1) * RR * 1e-3 * T + ((T * this->dadt(p, T, Xinp) - this->a(p, T, Xinp)) / (2.0 * sqrt(2.0) * bmix)) * log(xxx);
+    }
+    else
+    {
+        dH = (z - 1) * RR * 1e-3 * T;
+    }
+
+    dH = dH / this->W(Xinp); // J/kg
     //Info << "dH=" << dH << ",Hideal=" << this->Hideal(p, T, Xinp) << endl;
     return dH + this->Hideal(p, T, Xinp);
 }
@@ -2224,6 +2268,48 @@ inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::dHadT // internal 
 
     return ddT_dH + this->dHidealdT(p, T, Xinp);
 }
+
+template <class ThermoMixture>
+inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::dHadT // internal energy with unit of J/kg
+    (
+        scalar p,
+        scalar T,
+        const scalar Zin,
+        const scalarList &Xinp,
+        const label pf) const
+{
+    scalar bmix = this->b(p, T, Xinp);
+    //scalar dbmixdT = 0;
+    const scalar cc1 = 1.0 + sqrt(2.0);
+    const scalar cc2 = 1.0 - sqrt(2.0);
+    const scalar &z = Zin;
+    scalar rho_ = this->rho(p, T, z, Xinp, pf);
+    scalar VV = this->W(Xinp) / rho_; //m3*mol-1, phase specific volume
+    scalar dVVdT = -this->W(Xinp) / (rho_ * rho_) * this->drhodT(p, T, z, Xinp, pf);
+    scalar xxx = ((VV + cc1 * bmix) / (VV + cc2 * bmix));
+    scalar ddT_dH;
+
+    //scalar a_b=this->a(p, T, Xinp);
+    //scalar dadt_b=this->dadt(p, T, Xinp);
+    //scalar z_b=Z(p, T, Xinp, pf);
+    //Info<<"!!!dH1="<<Z(p, T, Xinp, pf) <<"!!!\n";
+    if (xxx > 0)
+    {
+        ddT_dH = dZdT(p, T, z, Xinp, pf) * RR * 1e-3 * T + (z - 1) * RR * 1e-3;
+        ddT_dH += ((T * this->d2adt2(p, T, Xinp)) / (2.0 * sqrt(2.0) * bmix)) * log(xxx);
+        //ddT_dH = this->d2adt2(p, T, Xinp);
+        ddT_dH += ((T * this->dadt(p, T, Xinp) - this->a(p, T, Xinp)) / (2.0 * sqrt(2.0) * bmix)) * (dVVdT / (VV + cc1 * bmix) - dVVdT / (VV + cc2 * bmix));
+    }
+    else
+    {
+        ddT_dH = dZdT(p, T, z, Xinp, pf) * RR * 1e-3 * T + (z - 1) * RR * 1e-3;
+    }
+    //Info << "haha=" << setw(20) << setprecision(20) << this->dHadT(p, T, &flag, &(sol().X_gas())) << endl;
+    ddT_dH = ddT_dH / this->W(Xinp); // J/kg
+    // Based on Eq.12, Internal energy is estimated based on ideal(close to absolute 0 T) + departure
+
+    return ddT_dH + this->dHidealdT(p, T, Xinp);
+}
 template <class ThermoMixture>
 inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::dHsdT // internal energy with unit of J/kg
     (
@@ -2233,6 +2319,17 @@ inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::dHsdT // internal 
         const label pf) const
 {
     return dHadT(p, T, Xinp, pf); //+11990129.829480369 +3991.2*1000;
+}
+template <class ThermoMixture>
+inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::dHsdT // internal energy with unit of J/kg
+    (
+        scalar p,
+        scalar T,
+        const scalar Zin,
+        const scalarList &Xinp,
+        const label pf) const
+{
+    return dHadT(p, T, Zin, Xinp, pf); //+11990129.829480369 +3991.2*1000;
 }
 template <class ThermoMixture>
 inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::dHadP // internal energy with unit of J/kg
@@ -2272,6 +2369,46 @@ inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::dHadP // internal 
     //Info<<"!!!dH="<<dH<<"!!!Hi="<<this->Hideal(p, T, Xinp)<<"!!!\n";
     return ddT_dH;
 }
+
+template <class ThermoMixture>
+inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::dHadP // internal energy with unit of J/kg
+    (
+        scalar p,
+        scalar T,
+        const scalar Zin,
+        const scalarList &Xinp,
+        const label pf) const
+{
+    scalar bmix = this->b(p, T, Xinp);
+    //scalar dbmixdT = 0;
+    scalar cc1 = 1.0 + sqrt(2.0);
+    scalar cc2 = 1.0 - sqrt(2.0);
+    const scalar &z = Zin;
+    scalar rho_ = this->rho(p, T, z, Xinp, pf);
+    scalar VV = this->W(Xinp) / rho_; //m3*mol-1, phase specific volume
+    scalar dVVdT = -this->W(Xinp) / (rho_ * rho_) * this->drhodP(p, T, z, Xinp, pf);
+    scalar xxx = ((VV + cc1 * bmix) / (VV + cc2 * bmix));
+    scalar ddT_dH;
+    //scalar z = Z(p, T, Xinp, pf);
+    //scalar a_b=this->a(p, T, Xinp);
+    //scalar dadt_b=this->dadt(p, T, Xinp);
+    //scalar z_b=Z(p, T, Xinp, pf);
+    //Info<<"!!!dH1="<<Z(p, T, Xinp, pf) <<"!!!\n";
+    if (xxx > 0)
+    {
+        ddT_dH = dZdP(p, T, z, Xinp, pf) * RR * 1e-3 * T;
+        ddT_dH += ((T * this->dadt(p, T, Xinp) - this->a(p, T, Xinp)) / (2.0 * sqrt(2.0) * bmix)) * (dVVdT / (VV + cc1 * bmix) - dVVdT / (VV + cc2 * bmix));
+    }
+    else
+    {
+        ddT_dH = dZdP(p, T, z, Xinp, pf) * RR * 1e-3 * T;
+    }
+    //Info << "haha=" << setw(20) << setprecision(20) << this->dHadT(p, T, &flag, &(sol().X_gas())) << endl;
+    ddT_dH = ddT_dH / this->W(Xinp); // J/kg
+    // Based on Eq.12, Internal energy is estimated based on ideal(close to absolute 0 T) + departure
+    //Info<<"!!!dH="<<dH<<"!!!Hi="<<this->Hideal(p, T, Xinp)<<"!!!\n";
+    return ddT_dH;
+}
 template <class ThermoMixture>
 inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::dHsdP // internal energy with unit of J/kg
     (
@@ -2281,6 +2418,18 @@ inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::dHsdP // internal 
         const label pf) const
 {
     return dHadP(p, T, Xinp, pf); //+11990129.829480369 +3991.2*1000;
+}
+
+template <class ThermoMixture>
+inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::dHsdP // internal energy with unit of J/kg
+    (
+        scalar p,
+        scalar T,
+        const scalar Zin,
+        const scalarList &Xinp,
+        const label pf) const
+{
+    return dHadP(p, T, Zin, Xinp, pf); //+11990129.829480369 +3991.2*1000;
 }
 template <class ThermoMixture>
 inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::dHadxi // internal energy with unit of J/kg
@@ -2298,6 +2447,58 @@ inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::dHadxi // internal
     scalar cc1 = 1.0 + sqrt(2.0);
     scalar cc2 = 1.0 - sqrt(2.0);
     scalar z = Z(p, T, Xinp, pf);
+    scalar VV = this->W(Xinp) / this->rho(p, T, z, Xinp, pf); //m3*mol-1, phase specific volume
+    scalar dVVdxi = dZdxi(p, T, di, z, Xinp, pf) * RR * 1.0e-03 * T / p;
+    scalar xxx = ((VV + cc1 * bmix) / (VV + cc2 * bmix));
+    scalar ddxi_dH, dH;
+
+    //scalar a_b=this->a(p, T, Xinp);
+    //scalar dadt_b=this->dadt(p, T, Xinp);
+    //scalar z_b=Z(p, T, Xinp, pf);
+    //Info<<"!!!dH1="<<Z(p, T, Xinp, pf) <<"!!!\n";
+    if (xxx > 0)
+    {
+        scalar logxxx = log(xxx);
+        dH = (z - 1) * RR * 1e-3 * T + ((T * this->dadt(p, T, Xinp) - this->a(p, T, Xinp)) / (2.0 * sqrt(2.0) * bmix)) * logxxx;
+        //dH = 1;
+        ddxi_dH = dZdxi(p, T, di, z, Xinp, pf) * RR * 1e-3 * T;
+        //ddxi_dH = 0;
+        ddxi_dH += ((T * this->d2adtdxi(p, T, di, Xinp) - this->dadxi(p, T, di, Xinp)) / (2.0 * sqrt(2.0) * bmix)) * logxxx;
+        ddxi_dH -= ((T * this->dadt(p, T, Xinp) - this->a(p, T, Xinp)) / (2.0 * sqrt(2.0) * bmix * bmix) * dbmixdxi) * logxxx;
+        ddxi_dH += ((T * this->dadt(p, T, Xinp) - this->a(p, T, Xinp)) / (2.0 * sqrt(2.0) * bmix)) * ((dVVdxi + cc1 * dbmixdxi) / (VV + cc1 * bmix) - (dVVdxi + cc2 * dbmixdxi) / (VV + cc2 * bmix));
+        //dH = (T * this->dadt(p, T, Xinp) - this->a(p, T, Xinp))/bmix;
+        //ddxi_dH = (T * this->d2adtdxi(p, T, di, Xinp) - this->dadxi(p, T, di, Xinp))/bmix+(T * this->dadt(p, T, Xinp) - this->a(p, T, Xinp))/bmix/bmix*dbmixdxi;
+    }
+    else
+    {
+        ddxi_dH = dZdxi(p, T, di, z, Xinp, pf) * RR * 1e-3 * T;
+        dH = (z - 1) * RR * 1e-3 * T;
+    }
+    scalar w = this->W(Xinp);
+    ddxi_dH = ddxi_dH / w - dH / (w * w) * This[di].W() * 1e-3;
+    //dH = dH / this->W(Xinp); // J/kg
+    // Based on Eq.12, Internal energy is estimated based on ideal(close to absolute 0 T) + departure
+    //Info<<"!!!dH="<<dH<<"!!!Hi="<<this->Hideal(p, T, Xinp)<<"!!!\n";
+    return ddxi_dH + this->dHidealdxi(p, T, di, Xinp);
+}
+
+template <class ThermoMixture>
+inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::dHadxi // internal energy with unit of J/kg
+    (
+        scalar p,
+        scalar T,
+        label di,
+        const scalar Zin,
+        const scalarList &Xinp,
+        const label pf) const
+{
+    scalar bmix = this->b(p, T, Xinp);
+    const PengRobinsonMixture<ThermoMixture> &This = *this;
+    scalar dbmixdxi = This[di].b(p, T);
+
+    scalar cc1 = 1.0 + sqrt(2.0);
+    scalar cc2 = 1.0 - sqrt(2.0);
+    const scalar &z = Zin;
     scalar VV = this->W(Xinp) / this->rho(p, T, z, Xinp, pf); //m3*mol-1, phase specific volume
     scalar dVVdxi = dZdxi(p, T, di, z, Xinp, pf) * RR * 1.0e-03 * T / p;
     scalar xxx = ((VV + cc1 * bmix) / (VV + cc2 * bmix));
@@ -2386,6 +2587,19 @@ inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::dHsdxi // internal
         const label pf) const
 {
     return dHadxi(p, T, di, Xinp, pf) - this->dHidealdxi(1, Tstd, di, Xinp);
+}
+
+template <class ThermoMixture>
+inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::dHsdxi // internal energy with unit of J/kg
+    (
+        scalar p,
+        scalar T,
+        label di,
+        const scalar Zin,
+        const scalarList &Xinp,
+        const label pf) const
+{
+    return dHadxi(p, T, di, Zin, Xinp, pf) - this->dHidealdxi(1, Tstd, di, Xinp);
 }
 
 template <class ThermoMixture>

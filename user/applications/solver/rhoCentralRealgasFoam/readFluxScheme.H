@@ -14,6 +14,7 @@ if (mesh.schemesDict().readIfPresent("fluxScheme", fluxScheme))
             << abort(FatalError);
     }
 }
+/*
 word divScheme("Doubleflux");
 if (mesh.schemesDict().readIfPresent("divScheme", divScheme))
 {
@@ -30,3 +31,4 @@ if (mesh.schemesDict().readIfPresent("divScheme", divScheme))
             << abort(FatalError);
     }
 }
+*/

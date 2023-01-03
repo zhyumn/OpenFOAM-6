@@ -67,12 +67,15 @@ namespace Foam
         //PtrList<volScalarField> Y_G_List_;
 
         bool inviscid_;
-        bool DF_;
+        //bool DF_;
+        word scheme_;
         label nloop;
         const clockTime clockTime_;
 
         autoPtr<OFstream> cpuISAT_VLE_;
         bool ISATlog_;
+
+        volScalarField *FCcell; 
 
         // bool noVLE_;
 

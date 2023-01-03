@@ -3,16 +3,21 @@
 const volScalarField &psi = thermo.psi();
 const volScalarField &mu = thermo.mu();
 const label inertIndex(composition.species()[inertSpecie]);
-
+/*
 bool inviscid(true);
+
+
+inviscid true;
 
 if (max(mu.primitiveField()) > 0.0)
 {
     inviscid = false;
 }
+*/
+bool inviscid(thermo.lookup("inviscid"));
 //inviscid = true;
 
-volScalarField& frac = mesh.objectRegistry::lookupObjectRef<volScalarField>("vaporfrac");
+volScalarField &frac = mesh.objectRegistry::lookupObjectRef<volScalarField>("vaporfrac");
 
 volScalarField &alpha = mesh.objectRegistry::lookupObjectRef<volScalarField>("thermo:alpha");
 //volScalarField &rho_G = mesh.objectRegistry::lookupObjectRef<volScalarField>("thermo:rho_G");
@@ -27,9 +32,11 @@ forAll(Y_G, i)
 */
 //volScalarField& rho_thermo = mesh.objectRegistry::lookupObjectRef<volScalarField>("rho_thermo");
 //Info << frac[0] << endl;
-bool logflag=thermo.lookupOrDefault<bool>("ISATlog", false);
+bool logflag = thermo.lookupOrDefault<bool>("ISATlog", false);
+word scheme(thermo.lookup("scheme"));
+Info << "scheme is " << scheme << endl;
 autoPtr<OFstream> cputotal;
-if(logflag==true)
+if (logflag == true)
 {
     cputotal.set(new OFstream(mesh.time().path() / "ISAT_VLE" / "cputotal"));
 }

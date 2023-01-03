@@ -6,6 +6,15 @@ const word rhoYi_name("rhoYi");
 Info << "Reading thermophysical properties\n"
      << endl;
 
+volScalarField FCcell(
+    IOobject(
+        "FCcell",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::AUTO_WRITE),
+    mesh, dimensionedScalar("zero", dimless, 0));
+
 autoPtr<rhoReactionThermo> pThermo(
     rhoReactionThermo::New(mesh));
 rhoReactionThermo &thermo = pThermo();
@@ -23,8 +32,11 @@ volScalarField &T = thermo.T();
 //}
 
 volScalarField &e = thermo.he();
+
 e.writeOpt() = IOobject::AUTO_WRITE;
+
 const word inertSpecie(thermo.lookup("inertSpecie"));
+
 // correction terms for diffusion velocity
 volScalarField sumDiffusionCorrections1(
     IOobject(
@@ -45,8 +57,10 @@ volScalarField sumDiffusionCorrections2(
         IOobject::NO_WRITE),
     mesh,
     dimensionedScalar("zero", dimensionSet(1, -3, -1, 0, 0), 0.));
+
 //- Creates List of species name
 speciesTable species = composition.species();
+
 //const List<word>& speciesName = thermo.ListOfSpeciesName();
 
 PtrList<volVectorField> YVi(Y.size());
@@ -66,13 +80,14 @@ forAll(YVi, i)
 }
 
 //- Creates List of mass diffusivity field Dimix_i[m^2/s] of species ith in the mixture
-UPtrList<volScalarField> Dimix_t(species.size());
+UPtrList<volScalarField> Dimix(species.size());
 //List<volScalarField*> Dimix_t(species.size());
 forAll(species, i)
 {
-    Dimix_t.set(i, &mesh.objectRegistry::lookupObjectRef<volScalarField>("thermo:Dimix:" + species[i]));
+    Dimix.set(i, &mesh.objectRegistry::lookupObjectRef<volScalarField>("thermo:Dimix:" + species[i]));
     //Dimix_t[i] = &mesh.objectRegistry::lookupObjectRef<volScalarField>("thermo:Dimix:" + species[i]);
 }
+/*
 Info << "\nCreating field mass diffusivity Dimix_i" << endl;
 PtrList<volScalarField> Dimix(Y.size());
 forAll(Dimix, i)
@@ -89,7 +104,7 @@ forAll(Dimix, i)
                 //IOobject::AUTO_WRITE
                 ),
             Dimix_t[i]));
-}
+}*/
 
 volScalarField &kappa = mesh.objectRegistry::lookupObjectRef<volScalarField>("thermo:kappa");
 //- Create Thermal Conductivity field"kappa" [W/mK]
@@ -121,12 +136,12 @@ volScalarField Cp
 );*/
 
 //- Creates List of Enthalpy/Internal Energy field he_i[J/kg] of individual species
-UPtrList<volScalarField> hei_t(species.size());
+UPtrList<volScalarField> hei(species.size());
 forAll(species, i)
 {
-    hei_t.set(i, &mesh.objectRegistry::lookupObjectRef<volScalarField>("hei:" + species[i]));
+    hei.set(i, &mesh.objectRegistry::lookupObjectRef<volScalarField>("hei:" + species[i]));
 }
-Info << "\nCreating field individual enthalpy he_i" << endl;
+/* Info << "\nCreating field individual enthalpy he_i" << endl;
 PtrList<volScalarField> hei(Y.size());
 forAll(hei, i)
 {
@@ -140,7 +155,7 @@ forAll(hei, i)
                 IOobject::NO_READ, //IOobject::MUST_READ,
                 IOobject::NO_WRITE),
             hei_t[i]));
-}
+} */
 
 Info << "Reading field U" << endl;
 volVectorField U(
@@ -263,7 +278,9 @@ volScalarField Wmix(
         //IOobject::AUTO_WRITE
         IOobject::NO_WRITE),
     thermo.W());
+
 dimensionedScalar unitW("unit1", dimMass / dimMoles, 1);
+
 PtrList<volScalarField> X(Y.size());
 forAll(Y, i)
 {
@@ -306,7 +323,7 @@ volScalarField gammaStar(
         runTime.timeName(),
         mesh,
         IOobject::NO_READ,
-        IOobject::NO_WRITE),
+        IOobject::AUTO_WRITE),
     rho *c *c / p);
 
 volScalarField eStar(
@@ -318,16 +335,16 @@ volScalarField eStar(
         IOobject::NO_WRITE),
     e - p / (rho * (gammaStar - 1)));
 
-volScalarField rRhoStar(
+/* volScalarField rRhoStar(
     IOobject(
         "rStar",
         runTime.timeName(),
         mesh,
         IOobject::NO_READ,
         IOobject::NO_WRITE),
-    p / T);
+    p / T); */
 
-volScalarField S(
+/* volScalarField S(
     IOobject(
         "S",
         runTime.timeName(),
@@ -351,39 +368,39 @@ surfaceScalarField troubled(
         mesh,
         IOobject::NO_READ,
         IOobject::NO_WRITE),
-    mesh, dimensionedScalar("zero", dimless, 0));
+    mesh, dimensionedScalar("zero", dimless, 0)); */
 
-volScalarField troubledVol(
+/* volScalarField troubledVol(
     IOobject(
         "troubledVol",
         runTime.timeName(),
         mesh,
         IOobject::NO_READ,
-        IOobject::AUTO_WRITE),
-    mesh, dimensionedScalar("zero", dimless, 0));
+        IOobject::NO_WRITE),
+    mesh, dimensionedScalar("zero", dimless, 0)); */
 dimensionedScalar unit1("unit1", dimPressure, 1);
 dimensionedScalar unit2("unit2", dimensionSet(0, -3, 0, 0, 1, 0, 0), 1);
-S = log(p / unit1) - gammaStar * log(constant::thermodynamic::RR * 1e3 / Wmix * rho / unit2);
-forAll(Y, i)
+//S = log(p / unit1) - gammaStar * log(constant::thermodynamic::RR * 1e3 / Wmix * rho / unit2);
+/* forAll(Y, i)
 {
     S += (gammaStar - 1) * X[i] * log(X[i]);
-}
+} */
 
 const labelUList &owner = mesh.owner();
 const labelUList &neighbour = mesh.neighbour();
-Smin = 1e50;
+//Smin = 1e50;
 
-forAll(owner, facei)
+/* forAll(owner, facei)
 {
     if (Smin[owner[facei]] > S[neighbour[facei]])
         Smin[owner[facei]] = S[neighbour[facei]];
     if (Smin[neighbour[facei]] > S[owner[facei]])
         Smin[neighbour[facei]] = S[owner[facei]];
-}
+} */
 
-volScalarField surfbeta(
+volScalarField surfalpha(
     IOobject(
-        "surfbeta",
+        "alpha",
         runTime.timeName(),
         mesh,
         IOobject::NO_READ,
@@ -391,3 +408,40 @@ volScalarField surfbeta(
     mesh, dimensionedScalar("zero", dimless, 0));
 
 //#include "createFvOptions.H"
+
+volScalarField Drho(
+    IOobject(
+        "Drho",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::AUTO_WRITE),
+    mesh, dimensionedScalar("zero", dimless, 0));
+
+scalar drho;
+Drho *= 0;
+forAll(owner, facei)
+{
+    drho = mag(rho[owner[facei]] - rho[neighbour[facei]]);
+    if (drho > rho[owner[facei]] * Drho[owner[facei]])
+    {
+        Drho[owner[facei]] = drho / rho[owner[facei]];
+    }
+    if (drho > rho[neighbour[facei]] * Drho[neighbour[facei]])
+    {
+        Drho[neighbour[facei]] = drho / rho[neighbour[facei]];
+    }
+}
+scalar Drho_min = readScalar(thermo.lookup("phi"));
+
+forAll(FCcell, i)
+{
+    if (Drho[i] > Drho_min)
+    {
+        FCcell[i] = 1;
+    }
+    else
+    {
+        FCcell[i] = 0;
+    }
+}

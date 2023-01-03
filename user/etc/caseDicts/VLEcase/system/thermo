@@ -118,6 +118,48 @@ O2
     }
 }
 
+C8H18
+{
+    specie
+    {
+        molWeight      114.2285;//NIST
+    }
+    equationOfState
+    {
+        Tc       	    568.9;//NIST
+        rhoc            2.034;//NIST
+        Pc              24.9e+05;//NIST
+        omega           0.394; //isidoro martinez's table 
+    }
+    thermodynamics
+    {
+        Cp              1005;
+        Hf              0;
+        //JetSurF2.0
+        //https://shepherd.caltech.edu/EDL/PublicResources/sdt/cti_mech.html
+        Tlow            300;//300;
+        Tcommon         1590;
+        Thigh           5000;
+        lowCpCoeffs     (-1.37504530E+00  9.67642564E-02 -5.88723946E-05  1.76507663E-08 -2.04858958E-12 -2.85581753E+04  3.76140606E+01);
+        highCpCoeffs    ( 2.54698427E+01  3.90904009E-02 -1.33047327E-05  2.05885621E-09 -1.19180892E-13 -3.84029865E+04 -1.08362478E+02);
+    }
+    transport
+    {
+        Pr 0.7;
+        As              1.67212e-06;
+        Ts              170.672;
+
+        mu              0.00; //http://www.stenutz.eu/chem/solv6.php?name=octane
+        kappa           0.0; //kappa shows hydrogen-bonding effect, it should be zero. Chung T H, Ajlan M, Lee L L, et al. Generalized multiparameter correlation for nonpolar and polar fluid transport properties[J]. Industrial & engineering chemistry research, 1988, 27(4): 671-679.
+        sigmvi          167.64;  //Fuller E N, Schettler P D, Giddings J C. New method for prediction of binary gas-phase diffusion coefficients[J]. Industrial & Engineering Chemistry, 1966, 58(5): 18-27.
+    }
+    elements
+    {
+        C               8;
+        H               18;
+    }
+}
+
 C12H26
 {
     specie
@@ -129,7 +171,7 @@ C12H26
         Tc       	    658.2;//NIST
         rhoc            1.3;//NIST
         Pc              18e+05;//NIST
-        omega           0.576385; //0.5742; 
+        omega           0.562;//0.576385; //0.5742;  //isidoro martinez's table 
     }
     thermodynamics
     {
