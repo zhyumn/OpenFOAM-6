@@ -5,7 +5,8 @@
 #SBATCH --ntasks-per-node=1    # number of processors per node
 #SBATCH --cpus-per-task=1       # number of cpus per task
 #SBATCH -t 148:00:00      # run for 3 hr max
-#SBATCH --partition=ROME
+##SBATCH --partition=ROME
+#SBATCH --partition=crfel
 ###SBATCH --mail-type=begin   # send email when process begins...
 ###SBATCH --mail-type=end     # ...and when it ends...
 ###SBATCH --mail-type=fail    # ...or when it fails.
