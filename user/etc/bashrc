@@ -34,7 +34,7 @@ export FOAM_USER_PY=$FOAM_USER_DIR/platforms/$WM_OPTIONS/python
 export FOAM_USER_PF=$FOAM_USER_DIR/ThirdParty/platforms
 export PATH=$FOAM_USER_APPBIN:$FOAM_USER_PF/bin:$PATH
 export LD_LIBRARY_PATH=$FOAM_USER_LIBBIN:$LD_LIBRARY_PATH
-
+export WM_PROJECT_SITE=$FOAM_USER_DIR/etc
 alias opr="cd $WM_PROJECT_DIR"
 
 [ "$BASH" ] && . $FOAM_USER_DIR/etc/bash_completion

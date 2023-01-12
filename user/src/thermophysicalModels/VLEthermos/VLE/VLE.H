@@ -391,6 +391,7 @@ namespace Foam
         inline autoPtr<scalarRectangularMatrix> dTPvfcdXErho_NIO(scalar p, scalar T, VLE_D1_data &sol) const;
         inline autoPtr<scalarRectangularMatrix> dTHvfcdXrhoP(scalar p, scalar T, solution &sol) const;
         inline autoPtr<scalarRectangularMatrix> dTHvfcdXrhoP_NIO(scalar p, scalar T, VLE_D1_data &sol) const;
+        inline autoPtr<scalarRectangularMatrix> dTEvfcdXrhoP_NIO(scalar p, scalar T, VLE_D1_data &sol) const;
         inline autoPtr<scalarRectangularMatrix> dTHvfc_G_rhoY_dXrhoP(scalar p, scalar T, solution &sol) const;
         inline autoPtr<scalarRectangularMatrix> dTHvf_G_rhoY_dXrhoP(scalar p, scalar T, solution &sol) const;
 

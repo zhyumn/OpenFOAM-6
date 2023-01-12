@@ -133,10 +133,12 @@ namespace Foam
             ISATRhoMultithermo<ThermoMixture, Type> *temp_p;
             thermofunction_TPX_to_Erhovfc<ISATRhoMultithermo<ThermoMixture, Type>> Erhovfcfun_XTP;
             thermofunction_TrhoP_to_THvfc<ISATRhoMultithermo<ThermoMixture, Type>> THvfcfun_XrhoP;
+            thermofunction_TrhoP_to_TEvfc<ISATRhoMultithermo<ThermoMixture, Type>> TEvfcfun_XrhoP;
             thermofunction_ErhoX_to_TPvfc<ISATRhoMultithermo<ThermoMixture, Type>> TPvfcfun_XErho;
 
             mutable ISATmanager<thermofunction_TPX_to_Erhovfc<ISATRhoMultithermo<ThermoMixture, Type>>> Erhovfctree_XTP;
             mutable ISATmanager<thermofunction_TrhoP_to_THvfc<ISATRhoMultithermo<ThermoMixture, Type>>> THvfctree_XrhoP;
+            mutable ISATmanager<thermofunction_TrhoP_to_TEvfc<ISATRhoMultithermo<ThermoMixture, Type>>> TEvfctree_XrhoP;
             mutable ISATmanager<thermofunction_ErhoX_to_TPvfc<ISATRhoMultithermo<ThermoMixture, Type>>> TPvfctree_XErho;
 
             // Private Member Functions
@@ -237,6 +239,7 @@ namespace Foam
             inline std::tuple<scalar, scalar> Tpsi_HP(const scalar p, const scalar T, const scalar T0) const;
             //inline std::tuple<scalar, scalar, scalar, scalar > Tpsivfc_XHP(const scalar p, const scalar T, const scalar T0) const;
             inline std::tuple<scalar, scalar, scalar, scalar> THvfc_XrhoP(const scalar p, const scalar T, const scalar T0) const;
+            inline std::tuple<scalar, scalar, scalar, scalar> TEvfc_XrhoP(const scalar p, const scalar T, const scalar T0) const;
             inline std::tuple<scalar, scalar, scalar, scalar, scalar> THvfc_G_rhoY_XrhoP(const scalar p, const scalar T, const scalar T0, scalarList &Y) const;
             inline std::tuple<scalar, scalar, scalar, scalar, scalar> TPvfc_G_rhoY_XErho(const scalar E, const scalar rho, const scalar T0, const scalar P0, scalarList &Y) const;
             inline std::tuple<scalar, scalar, scalar, scalar> TPvfc_Erho(const scalar E, const scalar rho, const scalar T0, const scalar P0) const;
@@ -450,6 +453,8 @@ namespace Foam
             friend struct thermofunction_Tpsivfsol;
             template <class TypeName>
             friend struct thermofunction_TrhoP_to_THvfc;
+            template <class TypeName>
+            friend struct thermofunction_TrhoP_to_TEvfc;
             template <class TypeName>
             friend struct thermofunction_ErhoX_to_TPvfc;
         };

@@ -48,8 +48,10 @@ inline Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::ISATRhoMultitherm
       temp_p(pin),
       Erhovfcfun_XTP(temp_p ? temp_p : this),
       THvfcfun_XrhoP(temp_p ? temp_p : this),
+      TEvfcfun_XrhoP(temp_p ? temp_p : this),
       TPvfcfun_XErho(temp_p ? temp_p : this),
       Erhovfctree_XTP(speciesData.size() + 2, 4, Erhovfcfun_XTP, "Erhovfctree_XTP", ISATDict_),
+      TEvfctree_XrhoP(speciesData.size() + 2, 4, TEvfcfun_XrhoP, "TEvfctree_XrhoP", ISATDict_),
       THvfctree_XrhoP(speciesData.size() + 2, 4, THvfcfun_XrhoP, "THvfctree_XrhoP", ISATDict_),
       TPvfctree_XErho(speciesData.size() + 2, 4, TPvfcfun_XErho, "TPvfctree_XErho", ISATDict_)
 {
@@ -1200,6 +1202,26 @@ Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::THvfc_XrhoP(const scalar
     //psivftree.call(in, out);
     return std::make_tuple(out[0], out[1], out[2], out[3]);
 }
+
+template <class ThermoMixture, template <class> class Type>
+inline std::tuple<Foam::scalar, Foam::scalar, Foam::scalar, Foam::scalar>
+Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::TEvfc_XrhoP(const scalar rho, const scalar P, const scalar T0) const
+{
+    static scalarList in(this->X().size() + 2), out(4);
+    for (int i = 0; i < this->X().size(); i++)
+    {
+        in[i] = this->X_[i];
+    }
+    in[this->X().size()] = rho;
+    in[this->X().size() + 1] = P;
+
+    //Info << "psi_HP" << endl;
+    //autoPtr<typename ISATRhoMultithermo<ThermoMixture, Type>::solution> sol(nullptr);
+    static typename ISATRhoMultithermo<ThermoMixture, Type>::VLE_D1_data sol_NIO(this->X().size());
+    TEvfctree_XrhoP.call(in, out, T0, sol_NIO);
+    //psivftree.call(in, out);
+    return std::make_tuple(out[0], out[1], out[2], out[3]);
+}
 template <class ThermoMixture, template <class> class Type>
 inline std::tuple<Foam::scalar, Foam::scalar, Foam::scalar, Foam::scalar, Foam::scalar>
 Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::THvfc_G_rhoY_XrhoP(const scalar rho, const scalar P, const scalar T0, scalarList &Y) const
@@ -1328,6 +1350,7 @@ inline void Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::newTimeStep(
     //Tpsivfctree_XHP.newTimeStep();
     //Tpsivfcsoltree_XHP.newTimeStep();
     THvfctree_XrhoP.newTimeStep();
+    TEvfctree_XrhoP.newTimeStep();
     TPvfctree_XErho.newTimeStep();
     //kappatree_XTP.newTimeStep();
     //mutree_XTP.newTimeStep();
@@ -1337,7 +1360,7 @@ inline void Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::newTimeStep(
 template <class ThermoMixture, template <class> class Type>
 inline bool Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::newLoop()
 {
-    return THvfctree_XrhoP.newLoop() || TPvfctree_XErho.newLoop();
+    return THvfctree_XrhoP.newLoop() || TPvfctree_XErho.newLoop() || TEvfctree_XrhoP.newLoop();
 }
 
 template <class ThermoMixture, template <class> class Type>

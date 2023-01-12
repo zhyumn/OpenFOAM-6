@@ -15,8 +15,7 @@ volScalarField FCcell(
         IOobject::AUTO_WRITE),
     mesh, dimensionedScalar("zero", dimless, 0));
 
-autoPtr<rhoReactionThermo> pThermo(
-    rhoReactionThermo::New(mesh));
+autoPtr<rhoReactionThermo> pThermo(rhoReactionThermo::New(mesh));
 rhoReactionThermo &thermo = pThermo();
 
 volScalarField &c = mesh.objectRegistry::lookupObjectRef<volScalarField>("soundspeed");
