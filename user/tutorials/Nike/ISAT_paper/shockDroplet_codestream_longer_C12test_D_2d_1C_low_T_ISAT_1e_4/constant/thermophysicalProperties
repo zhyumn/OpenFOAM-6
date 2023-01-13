@@ -40,7 +40,7 @@ CHEMKINThermoFile "$FOAM_CASE/chemkin/therm.dat";
 CHEMKINTransportFile "$FOAM_CASE/chemkin/transportProperties";
 
 ISATDictFile "$FOAM_CASE/constant/ISATDict";
-
+ISATlog true;
 newFormat       yes;
 
 inertSpecie     N2;//CO2;

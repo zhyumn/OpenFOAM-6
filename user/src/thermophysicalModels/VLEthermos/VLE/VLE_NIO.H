@@ -34,6 +34,8 @@ License
 #include "string.H"
 #include <random>
 
+//#define HY_DEBUG
+
 // * * * * * * * * * * * * * * * * Basic properties  * * * * * * * * * * * * * *
 
 template <class ThermoMixture>
@@ -72,6 +74,7 @@ inline void Foam::VLE<ThermoMixture>::TPn_flash_Matheis_NIO(
     scalarList Ktmp(this->N_);
     scalarList R_(this->N_);
     scalarList lnK(this->N_);
+    scalar relax = 1.0;
     for (int i = 0; i < this->N_; i++)
     {
         lnK[i] = log(K[i]);
@@ -226,16 +229,24 @@ inline void Foam::VLE<ThermoMixture>::TPn_flash_Matheis_NIO(
 
         eps_outer = 0;
         scalarList R_(this->N_);
+
         for (int i = 0; i < this->N_; i++)
         {
             //scalar logK=log(K[i]);
             //F_old[i] = F[i];
             F[i] = Ln_fugcoef_liq()[i] - Ln_fugcoef_gas()[i] - lnK[i]; //log(K[i]);
-            R_[i] = exp(F[i]);
+            if (relax < 1)
+                R_[i] = exp(F[i] * relax * 2);
+            else
+                R_[i] = exp(F[i] * relax);
+
             eps_outer += F[i] * F[i];
         }
         eps_outer = sqrt(eps_outer);
-
+        if (relax < 1 || (iter_outer>300&& relax<4) ||(iter_outer>600&& relax<16)||(iter_outer>1000&& relax<32))
+            relax *= 4;
+        else
+            relax *= 2;
         if (eps_outer < tol_outer)
         {
             success = true;
@@ -244,8 +255,10 @@ inline void Foam::VLE<ThermoMixture>::TPn_flash_Matheis_NIO(
         else
         {
 
-            scalar relax = 2;
+            //scalar relax = 2;
             scalar sum1 = 0, sum2 = 0;
+
+            //relax *= 2;
 
             do
             {
@@ -264,8 +277,7 @@ inline void Foam::VLE<ThermoMixture>::TPn_flash_Matheis_NIO(
                     sum2 += Xinp[i] / Ktmp[i];
                     R_[i] = sqrt(R_[i]);
                 }
-
-            } while ((sum1 < 1.0 || sum2 < 1) && relax > 0.0001);
+            } while ((sum1 < 1.0 || sum2 < 1) && relax > 1e-10);
             for (int i = 0; i < this->N_; i++)
             {
                 //Ktmp[i] = exp(Ln_fugcoef_liq()[i] - Ln_fugcoef_gas()[i]);
@@ -276,7 +288,7 @@ inline void Foam::VLE<ThermoMixture>::TPn_flash_Matheis_NIO(
         }
         iter_outer++;
     }
-    //if (iter_outer > itermax_outer)
+    //if (iter_outer > itermax_outer||)
     //    success = true;
 
     return;
@@ -290,6 +302,13 @@ inline void Foam::VLE<ThermoMixture>::TPn_flash_New_TPD_Tudisco_NIO // TPn flash
         VLE_data &ret_solution  //output
         ) const
 {
+#ifdef HY_DEBUG
+    Info << setprecision(50) << "p=" << p << ",T=" << T << ",X=" << Xinp << endl;
+    p = 32922618.4166;
+    T = 602.504786692;
+    this->X_[0] = 0.215957373972;
+    this->X_[1] = 0.784042626028;
+#endif
     if (noVLE) //TODO: update all values
     {
         forAll(Xinp, i)
@@ -356,7 +375,20 @@ inline void Foam::VLE<ThermoMixture>::TPn_flash_New_TPD_Tudisco_NIO // TPn flash
             K_init[i] *= max((*this)[i].Pc_ / p, 1);
         }
         //Info << endl;
-        scalar rat = sqrt(maxK / minK), mid = sqrt(sqrt(maxK * minK));
+        scalar rat,mid;
+        if(maxK>1e4)
+        {
+            rat = sqrt(maxK / minK);
+            mid = sqrt(sqrt(maxK * minK));
+        }
+        else
+        {
+            rat = sqrt(maxK / minK)*10;
+            mid = sqrt(sqrt(maxK * minK));
+
+        }
+        //scalar rat = sqrt(maxK / minK), mid = sqrt(sqrt(maxK * minK));
+        //scalar rat = maxK / minK, mid = sqrt(maxK * minK);
         for (int i = 0; i < Xinp.size(); i++)
         {
             if (K_init[i] > mid)

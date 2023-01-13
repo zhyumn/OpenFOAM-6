@@ -1,0 +1,17 @@
+
+target=shockDroplet_codestream_longer_C12test_C_2d_1C_low_T
+tmp=shockDroplet_codestream_longer_C12test_C_2d_1C_low_T_compare_1e_3
+source=shockDroplet_codestream_longer_C12test_C_2d_1C_low_T_ISAT_1e_3
+final=C_2d_1C_low_T_1e-3
+cp -r $target $tmp
+cd $tmp
+./post1
+cd ..
+cp -rnv $source/* $tmp
+cd $tmp
+./post2
+mkdir ../$final/
+mv error.png ../$final/
+mv postProcessing ../$final/
+cd ..
+rm -r $tmp

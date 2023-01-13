@@ -214,9 +214,15 @@ void Foam::ISATmanager<FuncType>::call(
             {
                 dvalue[i] = value[i] - pleaf->value()[i];
             }
+
+            bool flag = true;
+            for (int i = 0; i < tableTree_.n_in_; i++)
+            {
+                flag = flag && mag(dvalue[i]) <= maxLeafsize_[i];
+            }
             pfunc->value(value, out, arg...);
 
-            if (!grow2(pleaf, dvalue, out))
+            if (!flag||!grow2(pleaf, dvalue, out))
                 add(value, out, arg...);
 
             //if (Tname == treename_ && pleaf->value()[1] < 1.4982e+07 && pleaf->value()[1]>1.4980e+07 && pleaf->value()[2] < 550.48 && pleaf->value()[2]>550.478)

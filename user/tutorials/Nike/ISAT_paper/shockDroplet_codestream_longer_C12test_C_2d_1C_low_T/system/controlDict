@@ -19,7 +19,7 @@ libs            ("libISATVLERhoThermo_NoRxn.so" "libboundaryConditions.so");//li
 
 application     rhoCentralRealgasFoam;
 
-startFrom       latestTime;//startTime;
+startFrom       startTime;
 
 startTime       0;
 

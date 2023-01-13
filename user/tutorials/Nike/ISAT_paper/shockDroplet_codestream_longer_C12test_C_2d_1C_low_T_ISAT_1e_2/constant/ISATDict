@@ -99,7 +99,7 @@ TPvfctree_XErho
         max 100000;
     }
     NtimeTag 20;
-    maxLeafsize (0.3 1e5 1e3);
+    maxLeafsize (0.3 1e2 1e2);
     toleranceOut (1e0 1e5 1e-2 1e0);//BUG input!!(1e-10 1e-10 1e-10);//(1e-0 1e-0 1e-3);//(1e-1 1e-8 1e-3);
     initToleranceIn (1e-4 1e-2 1e-4);
     scaleIn (1 100000 1e6);//(1 1 1 1);//(1 1 2.3e+07 500);
