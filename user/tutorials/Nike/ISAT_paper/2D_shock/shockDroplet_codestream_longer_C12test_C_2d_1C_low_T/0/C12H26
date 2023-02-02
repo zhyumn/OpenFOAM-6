@@ -1,0 +1,102 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  6
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volScalarField;
+    location    "0.00015";
+    object      C6H14;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+dimensions [0 0 0 0 0 0 0];
+
+internalField   #codeStream
+{
+    
+        codeInclude
+        #{
+            #include "fvCFD.H"
+        #};
+        codeOptions
+        #{
+            -I$(LIB_SRC)/finiteVolume/lnInclude \
+            -I$(LIB_SRC)/meshTools/lnInclude
+        #};  
+        codeLibs
+        #{
+            -lmeshTools \
+            -lfiniteVolume
+        #};
+        code
+        #{
+            const IOdictionary & d = static_cast<const IOdictionary&>(dict);
+            const fvMesh& mesh = refCast<const fvMesh>(d.db());
+
+            double r = 0.125e-3;
+            double x_center = 0.5e-3;
+            double y_center = 0.5e-3;
+            double thickness = 5e-5;
+            double omega=1e-5;
+            double Clow=0.001;
+            double Chigh=0.999;
+
+            scalarField C6H14(mesh.nCells(), Clow);
+            forAll(C6H14, i)
+            {
+                const scalar x = mesh.C()[i][0];
+                const scalar y = mesh.C()[i][1];
+                //const scalar z = mesh.C()[i][2];
+                scalar r_tmp=sqrt(sqr(y - y_center)+sqr(x-x_center));
+                if (r_tmp < r-thickness/2)
+                {
+                    C6H14[i] = Chigh;
+                }
+                else if (r_tmp < r+thickness/2)
+                {
+                    C6H14[i] =0.5*(Clow+Chigh)+0.5*(Clow-Chigh)*tanh((r_tmp-r)*5/omega);
+                }
+            }
+            C6H14.writeEntry( "", os);
+        #};
+    
+};
+
+boundaryField
+{
+    wall
+    {
+        type            empty;
+    }
+    top
+    {
+        type            zeroGradient;
+        //type            waveTransmissiveDF;
+    }
+    bottom
+    {
+        type            zeroGradient;
+        //type            waveTransmissiveDF;
+    }
+    inlet
+    {
+        //type            zeroGradient;
+        type            waveTransmissiveDF;
+        //gamma           2.7859;
+
+    }
+    outlet
+    {
+        //type            zeroGradient;
+        type            waveTransmissiveDF;
+    }
+}
+
+
+// ************************************************************************* //

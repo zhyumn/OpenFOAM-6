@@ -1,0 +1,11 @@
+postProcess -func "subtract(T_ex,T)"
+postProcess -func "mag(subtract(T_ex,T))"
+postProcess -func "cellMax(mag(subtract(T_ex,T)))"
+postProcess -func "volAverage(mag(subtract(T_ex,T)))"
+
+postProcess -func "subtract(e_ex,e)"
+postProcess -func "mag(subtract(e_ex,e))"
+postProcess -func "cellMax(mag(subtract(e_ex,e)))"
+postProcess -func "volAverage(mag(subtract(e_ex,e)))"
+
+python plot.py

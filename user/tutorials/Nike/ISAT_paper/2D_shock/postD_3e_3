@@ -1,0 +1,19 @@
+
+target=shockDroplet_codestream_longer_C12test_D_2d_1C_low_T_timing_new
+tmp=shockDroplet_codestream_longer_C12test_D_2d_1C_low_T_compare_3e_3
+source=shockDroplet_codestream_longer_C12test_D_2d_1C_low_T_ISAT_3e_3
+final=D_2d_1C_low_T_3e-3
+
+cp -r $source/ISAT_VLE D_total/time_3e_3
+cp -r $target $tmp
+cd $tmp
+./post1
+cd ..
+cp -rnv $source/* $tmp
+cd $tmp
+./post2
+mkdir ../$final/
+mv error.png ../$final/
+mv postProcessing ../$final/
+cd ..
+rm -r $tmp

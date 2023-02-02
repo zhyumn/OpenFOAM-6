@@ -1,0 +1,132 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  6
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      ISATDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+TEvfctree_XrhoP
+{
+    noISAT true;
+    checkInterval  20;
+    maxDepthFactor   2;
+
+    //maxNLeafs 10000; //tuning using activated leafs
+    maxNLeafs
+    {
+        type adaptive;//const; //adaptive 
+        value 10000;
+        base 100;
+        ratio 1.3;
+        range 4;
+        max 100000;
+    }
+    NtimeTag 5;
+    maxLeafsize (0.3 50 1e6);
+    toleranceOut (1e-1 100 1e-2 5);//(1e-0 1e-1 1e-3 1e-1);//BUG input!!(1e-10 1e-10 1e-10);//(1e-0 1e-0 1e-3);//(1e-1 1e-8 1e-3);
+    initToleranceIn (1e-5 1e-2 10);
+    scaleIn (1 200 1e7);//(1 1 1 1);//(1 1 2.3e+07 500);
+}
+
+
+Trhovfctree_XEP
+{
+    noISAT true;
+    checkInterval  20;
+    maxDepthFactor   2;
+
+    //maxNLeafs 10000; //tuning using activated leafs
+    maxNLeafs
+    {
+        type adaptive;//const; //adaptive 
+        value 10000;
+        base 100;
+        ratio 1.3;
+        range 4;
+        max 100000;
+    }
+    NtimeTag 5;
+    maxLeafsize (0.3 50 1e6);
+    toleranceOut (1e-1 100 1e-2 5);//(1e-0 1e-1 1e-3 1e-1);//BUG input!!(1e-10 1e-10 1e-10);//(1e-0 1e-0 1e-3);//(1e-1 1e-8 1e-3);
+    initToleranceIn (1e-5 1e-2 10);
+    scaleIn (1 200 1e7);//(1 1 1 1);//(1 1 2.3e+07 500);
+}
+
+THvfctree_XrhoP
+{
+    noISAT true;
+    checkInterval  20;
+    maxDepthFactor   2;
+
+    //maxNLeafs 10000; //tuning using activated leafs
+    maxNLeafs
+    {
+        type adaptive;//const; //adaptive 
+        value 10000;
+        base 100;
+        ratio 1.3;
+        range 4;
+        max 100000;
+    }
+    NtimeTag 5;
+    maxLeafsize (0.3 50 1e6);
+    toleranceOut (1e-1 100 1e-2 5);//(1e-0 1e-1 1e-3 1e-1);//BUG input!!(1e-10 1e-10 1e-10);//(1e-0 1e-0 1e-3);//(1e-1 1e-8 1e-3);
+    initToleranceIn (1e-5 1e-2 10);
+    scaleIn (1 200 1e7);//(1 1 1 1);//(1 1 2.3e+07 500);
+}
+Erhovfctree_XTP
+{
+    noISAT true;//true;
+    checkInterval  20;
+    maxDepthFactor   2;
+
+    //maxNLeafs 1000; //tuning using activated leafs
+
+    maxNLeafs
+    {
+        type const; //adaptive 
+        value 1000;
+    }
+    NtimeTag 5;
+    maxLeafsize (0.3 50 1e6);
+    toleranceOut (1e2 1e-1 1e-2 5);//BUG input!!(1e-10 1e-10 1e-10);//(1e-0 1e-0 1e-3);//(1e-1 1e-8 1e-3);
+    initToleranceIn (1e-4 1e-3 10);
+    scaleIn (1 100 1e7);//(1 1 1 1);//(1 1 2.3e+07 500);
+}
+
+TPvfctree_XErho
+{
+    noISAT true;//true;//false;//true;//false;//true;
+    checkInterval  40;
+    maxDepthFactor   3;
+    muted false;
+
+    //maxNLeafs 1000; //tuning using activated leafs
+
+    maxNLeafs
+    {
+        type adaptive;//const; //adaptive
+        value 10000;
+        base 3000;
+        ratio 1.3;
+        range 19;
+        max 100000;
+    }
+    NtimeTag 20;
+    maxLeafsize (0.3 1e5 1e3);
+    toleranceOut (1e0 1e4 1e-2 5);//BUG input!!(1e-10 1e-10 1e-10);//(1e-0 1e-0 1e-3);//(1e-1 1e-8 1e-3);
+    initToleranceIn (1e-4 1e-2 1e-4);
+    scaleIn (1 100000 1e6);//(1 1 1 1);//(1 1 2.3e+07 500);
+}
+
+

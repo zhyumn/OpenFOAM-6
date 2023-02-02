@@ -1,0 +1,2 @@
+find ./ -name "T" -exec mv {} {}_ex \;
+find ./ -name "p" -exec mv {} {}_ex \;
