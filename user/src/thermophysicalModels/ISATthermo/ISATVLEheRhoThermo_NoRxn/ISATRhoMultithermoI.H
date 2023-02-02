@@ -50,10 +50,12 @@ inline Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::ISATRhoMultitherm
       THvfcfun_XrhoP(temp_p ? temp_p : this),
       TEvfcfun_XrhoP(temp_p ? temp_p : this),
       TPvfcfun_XErho(temp_p ? temp_p : this),
+      Trhovfcfun_XEP(temp_p ? temp_p : this),
       Erhovfctree_XTP(speciesData.size() + 2, 4, Erhovfcfun_XTP, "Erhovfctree_XTP", ISATDict_),
       TEvfctree_XrhoP(speciesData.size() + 2, 4, TEvfcfun_XrhoP, "TEvfctree_XrhoP", ISATDict_),
       THvfctree_XrhoP(speciesData.size() + 2, 4, THvfcfun_XrhoP, "THvfctree_XrhoP", ISATDict_),
-      TPvfctree_XErho(speciesData.size() + 2, 4, TPvfcfun_XErho, "TPvfctree_XErho", ISATDict_)
+      TPvfctree_XErho(speciesData.size() + 2, 4, TPvfcfun_XErho, "TPvfctree_XErho", ISATDict_),
+      Trhovfctree_XEP(speciesData.size() + 2, 4, Trhovfcfun_XEP, "Trhovfctree_XEP", ISATDict_)
 {
 }
 
@@ -1222,6 +1224,53 @@ Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::TEvfc_XrhoP(const scalar
     //psivftree.call(in, out);
     return std::make_tuple(out[0], out[1], out[2], out[3]);
 }
+
+template <class ThermoMixture, template <class> class Type>
+inline std::tuple<Foam::scalar, Foam::scalar, Foam::scalar, Foam::scalar>
+Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::Trhovfc_XEP(const scalar E, const scalar P, const scalar T0) const
+{
+    static scalarList in(this->X().size() + 2), out(4);
+    for (int i = 0; i < this->X().size(); i++)
+    {
+        in[i] = this->X_[i];
+    }
+    in[this->X().size()] = E;
+    in[this->X().size() + 1] = P;
+
+    //Info << "psi_HP" << endl;
+    //autoPtr<typename ISATRhoMultithermo<ThermoMixture, Type>::solution> sol(nullptr);
+    static typename ISATRhoMultithermo<ThermoMixture, Type>::VLE_D1_data sol_NIO(this->X().size());
+    Trhovfctree_XEP.call(in, out, T0, sol_NIO);
+    //psivftree.call(in, out);
+    return std::make_tuple(out[0], out[1], out[2], out[3]);
+}
+
+template <class ThermoMixture, template <class> class Type>
+inline void
+Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::TEvfc_XrhoP(const scalar rho, const scalar P, const scalar T0, scalar &T, scalar &E, scalar &vf, scalar c) const
+{
+    static scalarList in(this->X().size() + 2), out(4);
+    for (int i = 0; i < this->X().size(); i++)
+    {
+        in[i] = this->X_[i];
+    }
+    in[this->X().size()] = rho;
+    in[this->X().size() + 1] = P;
+
+    //Info << "psi_HP" << endl;
+    //autoPtr<typename ISATRhoMultithermo<ThermoMixture, Type>::solution> sol(nullptr);
+    static typename ISATRhoMultithermo<ThermoMixture, Type>::VLE_D1_data sol_NIO(this->X().size());
+    if (TEvfctree_XrhoP.call(in, out, T0, sol_NIO))
+    {
+        T = out[0];
+        E = out[1];
+        vf = out[2];
+        c = out[3];
+    }
+    //psivftree.call(in, out);
+    //return std::make_tuple(out[0], out[1], out[2], out[3]);
+    return;
+}
 template <class ThermoMixture, template <class> class Type>
 inline std::tuple<Foam::scalar, Foam::scalar, Foam::scalar, Foam::scalar, Foam::scalar>
 Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::THvfc_G_rhoY_XrhoP(const scalar rho, const scalar P, const scalar T0, scalarList &Y) const
@@ -1280,6 +1329,29 @@ Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::TPvfc_XErho(const scalar
     static typename ISATRhoMultithermo<ThermoMixture, Type>::VLE_D1_data sol_NIO(this->X().size());
     TPvfctree_XErho.call(in, out, T0, P0, sol_NIO);
     return std::make_tuple(out[0], out[1], out[2], out[3]);
+}
+
+template <class ThermoMixture, template <class> class Type>
+inline void Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::TPvfc_XErho(const scalar E, const scalar rho, const scalar T0, const scalar P0, scalar &T, scalar &P, scalar &vf, scalar &c) const
+{
+    static scalarList in(this->X().size() + 2), out(4);
+    for (int i = 0; i < this->X().size(); i++)
+    {
+        in[i] = this->X_[i];
+    }
+    in[this->X().size()] = E;
+    in[this->X().size() + 1] = rho;
+
+    static typename ISATRhoMultithermo<ThermoMixture, Type>::VLE_D1_data sol_NIO(this->X().size());
+
+    if (TPvfctree_XErho.call(in, out, T0, P0, sol_NIO))
+    {
+        T = out[0];
+        P = out[1];
+        vf = out[2];
+        c = out[3];
+    }
+    return; //return std::make_tuple(out[0], out[1], out[2], out[3]);
 }
 /*
 template <class ThermoMixture, template <class> class Type>

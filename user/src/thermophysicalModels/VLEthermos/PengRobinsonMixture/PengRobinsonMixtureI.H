@@ -2354,6 +2354,7 @@ inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::dHadP // internal 
     //scalar dadt_b=this->dadt(p, T, Xinp);
     //scalar z_b=Z(p, T, Xinp, pf);
     //Info<<"!!!dH1="<<Z(p, T, Xinp, pf) <<"!!!\n";
+
     if (xxx > 0)
     {
         ddT_dH = dZdP(p, T, z, Xinp, pf) * RR * 1e-3 * T;
@@ -2363,8 +2364,10 @@ inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::dHadP // internal 
     {
         ddT_dH = dZdP(p, T, z, Xinp, pf) * RR * 1e-3 * T;
     }
+
     //Info << "haha=" << setw(20) << setprecision(20) << this->dHadT(p, T, &flag, &(sol().X_gas())) << endl;
     ddT_dH = ddT_dH / this->W(Xinp); // J/kg
+
     // Based on Eq.12, Internal energy is estimated based on ideal(close to absolute 0 T) + departure
     //Info<<"!!!dH="<<dH<<"!!!Hi="<<this->Hideal(p, T, Xinp)<<"!!!\n";
     return ddT_dH;
@@ -2475,7 +2478,12 @@ inline Foam::scalar Foam::PengRobinsonMixture<ThermoMixture>::dHadxi // internal
         dH = (z - 1) * RR * 1e-3 * T;
     }
     scalar w = this->W(Xinp);
+
     ddxi_dH = ddxi_dH / w - dH / (w * w) * This[di].W() * 1e-3;
+    /*if (pf == 1)
+    {
+        Info << " 1 HS=" << di << " , " << ddxi_dH << endl;
+    }*/
     //dH = dH / this->W(Xinp); // J/kg
     // Based on Eq.12, Internal energy is estimated based on ideal(close to absolute 0 T) + departure
     //Info<<"!!!dH="<<dH<<"!!!Hi="<<this->Hideal(p, T, Xinp)<<"!!!\n";

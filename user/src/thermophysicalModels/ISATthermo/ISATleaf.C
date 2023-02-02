@@ -67,7 +67,7 @@ Foam::ISATleaf::ISATleaf(int n_in, int n_out, const scalarList& v, ISATNode* nod
 }
 bool Foam::ISATleaf::inEOA(const scalarList& point, const scalarRectangularMatrix& scaleIn)
 {
-    scalarRectangularMatrix dx(value_.size(), 1);
+    static scalarRectangularMatrix dx(value_.size(), 1);
     forAll(value_, i)
     {
         dx[i][0] = (point[i] - value_[i]) / scaleIn[i][i];
@@ -80,7 +80,7 @@ bool Foam::ISATleaf::inEOA(const scalarList& point, const scalarRectangularMatri
 
 void Foam::ISATleaf::eval(const scalarList& value, scalarList& ret)
 {
-    scalarRectangularMatrix dx(1, value_.size()), retm;
+    static scalarRectangularMatrix dx(1, value_.size()), retm;
     ret = data_;
     for (int i = 0;i < value_.size();i++)
         dx[0][i] = value[i] - value_[i];
@@ -91,7 +91,7 @@ void Foam::ISATleaf::eval(const scalarList& value, scalarList& ret)
 
 void Foam::ISATleaf::grow(const scalarList& point, const scalarRectangularMatrix& scaleIn)
 {
-    scalarRectangularMatrix dx(value_.size(), 1);
+    static scalarRectangularMatrix dx(value_.size(), 1);
     double pbp;
     for (int i = 0;i < value_.size();i++)
         dx[i][0] = (point[i] - value_[i]) / scaleIn[i][i];

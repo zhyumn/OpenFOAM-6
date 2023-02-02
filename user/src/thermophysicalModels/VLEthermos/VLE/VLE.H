@@ -284,21 +284,21 @@ namespace Foam
         inline scalar dvfdXi(scalar p, scalar T, label di, solution &sol) const;
         inline autoPtr<scalarList> dXdT_gas(scalar p, scalar T, solution &sol) const;
         inline autoPtr<scalarList> dXdT_gas(scalar p, scalar T, solution &sol, autoPtr<scalarList> &dvidt) const;
-        inline autoPtr<scalarList> dXdT_gas_NIO(scalar p, scalar T, VLE_D1_data &sol, autoPtr<scalarList> &dvidt) const;
+        inline autoPtr<scalarList> dXdT_gas_NIO(scalar p, scalar T, VLE_D1_data &sol, scalarList &dvidt) const;
         inline autoPtr<scalarList> dXdP_gas(scalar p, scalar T, solution &sol) const;
         inline autoPtr<scalarList> dXdP_gas(scalar p, scalar T, solution &sol, autoPtr<scalarList> &dvidp) const;
-        inline autoPtr<scalarList> dXdP_gas_NIO(scalar p, scalar T, VLE_D1_data &sol, autoPtr<scalarList> &dvidp) const;
+        inline autoPtr<scalarList> dXdP_gas_NIO(scalar p, scalar T, VLE_D1_data &sol, scalarList &dvidp) const;
         inline autoPtr<scalarList> dXdT_liq(scalar p, scalar T, solution &sol) const;
         inline autoPtr<scalarList> dXdT_liq(scalar p, scalar T, solution &sol, autoPtr<scalarList> &dvidt) const;
-        inline autoPtr<scalarList> dXdT_liq_NIO(scalar p, scalar T, VLE_D1_data &sol, autoPtr<scalarList> &dvidt) const;
+        inline autoPtr<scalarList> dXdT_liq_NIO(scalar p, scalar T, VLE_D1_data &sol, scalarList &dvidt) const;
         inline autoPtr<scalarList> dXdP_liq(scalar p, scalar T, solution &sol) const;
         inline autoPtr<scalarList> dXdP_liq(scalar p, scalar T, solution &sol, autoPtr<scalarList> &dvidp) const;
-        inline autoPtr<scalarList> dXdP_liq_NIO(scalar p, scalar T, VLE_D1_data &sol, autoPtr<scalarList> &dvidp) const;
+        inline autoPtr<scalarList> dXdP_liq_NIO(scalar p, scalar T, VLE_D1_data &sol, scalarList &dvidp) const;
         inline scalar dWdT_gas(scalar p, scalar T, solution &sol) const;
         inline scalar dWdT_gas(scalar p, scalar T, solution &sol, autoPtr<scalarList> &dvidt) const;
-        inline scalar dWdT_gas_NIO(scalar p, scalar T, VLE_D1_data &sol, autoPtr<scalarList> &dvidt) const;
+        inline scalar dWdT_gas_NIO(scalar p, scalar T, VLE_D1_data &sol, scalarList &dvidt) const;
         inline scalar dWdP_gas(scalar p, scalar T, solution &sol) const;
-        inline scalar dWdP_gas_NIO(scalar p, scalar T, VLE_D1_data &sol, autoPtr<scalarList> &dvidt) const;
+        inline scalar dWdP_gas_NIO(scalar p, scalar T, VLE_D1_data &sol, scalarList &dvidt) const;
         inline scalar dWdXi_gas(scalar p, scalar T, label di, solution &sol) const;
         inline scalar dWdT_liq(scalar p, scalar T, solution &sol) const;
         inline scalar dWdXi_liq(scalar p, scalar T, label di, solution &sol) const;
@@ -342,6 +342,7 @@ namespace Foam
         inline tuple<Foam::scalar, Foam::scalar> UVn_flash_NIO(scalar e, scalar rho, scalar p0, scalar T0, VLE_D1_data &retSol);
 
         inline scalar PV_nflash_NIO(scalar rho, scalar p, scalar T0, VLE_D1_data &sol) const;
+        inline scalar EP_nflash_NIO(scalar E, scalar p, scalar T0, VLE_D1_data &sol) const;
 
         //HPX system
         inline scalar dPdP() const { return 1.0; }
@@ -388,16 +389,17 @@ namespace Foam
         inline autoPtr<scalarRectangularMatrix> dTPvfdXErho_simp(scalar p, scalar T, solution &sol) const;
         inline autoPtr<scalarRectangularMatrix> dTPvfc_G_rhoY_dXErho(scalar p, scalar T, solution &sol) const;
         inline autoPtr<scalarRectangularMatrix> dTPvfcdXErho(scalar p, scalar T, solution &sol) const;
-        inline autoPtr<scalarRectangularMatrix> dTPvfcdXErho_NIO(scalar p, scalar T, VLE_D1_data &sol) const;
+        inline void dTPvfcdXErho_NIO(scalar p, scalar T, VLE_D1_data &sol, scalarRectangularMatrix &out) const;
         inline autoPtr<scalarRectangularMatrix> dTHvfcdXrhoP(scalar p, scalar T, solution &sol) const;
         inline autoPtr<scalarRectangularMatrix> dTHvfcdXrhoP_NIO(scalar p, scalar T, VLE_D1_data &sol) const;
-        inline autoPtr<scalarRectangularMatrix> dTEvfcdXrhoP_NIO(scalar p, scalar T, VLE_D1_data &sol) const;
+        inline void dTEvfcdXrhoP_NIO(scalar p, scalar T, VLE_D1_data &sol, scalarRectangularMatrix &out) const;
+        inline autoPtr<scalarRectangularMatrix> dTrhovfcdXEP_NIO(scalar p, scalar T, VLE_D1_data &sol) const;
         inline autoPtr<scalarRectangularMatrix> dTHvfc_G_rhoY_dXrhoP(scalar p, scalar T, solution &sol) const;
         inline autoPtr<scalarRectangularMatrix> dTHvf_G_rhoY_dXrhoP(scalar p, scalar T, solution &sol) const;
 
         inline autoPtr<scalarRectangularMatrix> dErhovfcdXTP_simp(scalar p, scalar T, solution &sol) const;
         inline autoPtr<scalarRectangularMatrix> dErhovfcdXTP(scalar p, scalar T, solution &sol) const;
-        inline autoPtr<scalarRectangularMatrix> dErhovfcdXTP_NIO(scalar p, scalar T, VLE_D1_data &sol) const;
+        inline void dErhovfcdXTP_NIO(scalar p, scalar T, VLE_D1_data &sol,scalarRectangularMatrix &out) const;
         inline autoPtr<scalarRectangularMatrix> dErhovfc_G_rhoY_dXTP(scalar p, scalar T, solution &sol) const;
         inline autoPtr<scalarRectangularMatrix> dErhovf_G_rhoY_dXTP(scalar p, scalar T, solution &sol) const;
 

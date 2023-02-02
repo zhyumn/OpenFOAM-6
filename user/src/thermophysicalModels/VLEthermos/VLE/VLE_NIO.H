@@ -64,8 +64,10 @@ inline void Foam::VLE<ThermoMixture>::TPn_flash_Matheis_NIO(
     K = K_init;
     scalar &vf = ret_solution.vaporFraction;
 
-    autoPtr<scalarList> Ln_fugcoef_liq(new scalarList(this->N_));
-    autoPtr<scalarList> Ln_fugcoef_gas(new scalarList(this->N_));
+    //autoPtr<scalarList> Ln_fugcoef_liq(new scalarList(this->N_));
+    //autoPtr<scalarList> Ln_fugcoef_gas(new scalarList(this->N_));
+    scalarList Ln_fugcoef_liq(this->N_);
+    scalarList Ln_fugcoef_gas(this->N_);
     scalarList F(this->N_);
     scalarList F_old(this->N_);
     scalarList B_(this->N_);
@@ -222,9 +224,9 @@ inline void Foam::VLE<ThermoMixture>::TPn_flash_Matheis_NIO(
             break;
         }
 
-        this->Ln_fugacityCoefficient_opt(p, T, ret_solution.Liq.X, Ln_fugcoef_liq(), B_, Tsqrt_AbyP_, Z_l, dgl, 0);
+        this->Ln_fugacityCoefficient_opt(p, T, ret_solution.Liq.X, Ln_fugcoef_liq, B_, Tsqrt_AbyP_, Z_l, dgl, 0);
 
-        this->Ln_fugacityCoefficient_opt(p, T, ret_solution.Gas.X, Ln_fugcoef_gas(), B_, Tsqrt_AbyP_, Z_g, dgv, 1);
+        this->Ln_fugacityCoefficient_opt(p, T, ret_solution.Gas.X, Ln_fugcoef_gas, B_, Tsqrt_AbyP_, Z_g, dgv, 1);
         dg = dgl * (1 - vf) + dgv * vf;
 
         eps_outer = 0;
@@ -234,7 +236,7 @@ inline void Foam::VLE<ThermoMixture>::TPn_flash_Matheis_NIO(
         {
             //scalar logK=log(K[i]);
             //F_old[i] = F[i];
-            F[i] = Ln_fugcoef_liq()[i] - Ln_fugcoef_gas()[i] - lnK[i]; //log(K[i]);
+            F[i] = Ln_fugcoef_liq[i] - Ln_fugcoef_gas[i] - lnK[i]; //log(K[i]);
             if (relax < 1)
                 R_[i] = exp(F[i] * relax * 2);
             else
@@ -243,7 +245,7 @@ inline void Foam::VLE<ThermoMixture>::TPn_flash_Matheis_NIO(
             eps_outer += F[i] * F[i];
         }
         eps_outer = sqrt(eps_outer);
-        if (relax < 1 || (iter_outer>300&& relax<4) ||(iter_outer>600&& relax<16)||(iter_outer>1000&& relax<32))
+        if (relax < 1 || (iter_outer > 300 && relax < 4) || (iter_outer > 600 && relax < 16) || (iter_outer > 1000 && relax < 32))
             relax *= 4;
         else
             relax *= 2;
@@ -375,17 +377,16 @@ inline void Foam::VLE<ThermoMixture>::TPn_flash_New_TPD_Tudisco_NIO // TPn flash
             K_init[i] *= max((*this)[i].Pc_ / p, 1);
         }
         //Info << endl;
-        scalar rat,mid;
-        if(maxK>1e4)
+        scalar rat, mid;
+        if (maxK > 1e4)
         {
             rat = sqrt(maxK / minK);
             mid = sqrt(sqrt(maxK * minK));
         }
         else
         {
-            rat = sqrt(maxK / minK)*10;
+            rat = sqrt(maxK / minK) * 10;
             mid = sqrt(sqrt(maxK * minK));
-
         }
         //scalar rat = sqrt(maxK / minK), mid = sqrt(sqrt(maxK * minK));
         //scalar rat = maxK / minK, mid = sqrt(maxK * minK);
@@ -408,7 +409,6 @@ inline void Foam::VLE<ThermoMixture>::TPn_flash_New_TPD_Tudisco_NIO // TPn flash
     scalar ggas1, gliq1, g1 = -1e10; //, Zliq1, Zgas1;
     TPn_flash_Matheis_NIO(p, T, Xinp, K_init, success, ret_solution, g1);
     //autoPtr<solution> sol = TPn_flash_Matheis(p, T, Xinp, stable, isVapor, K_init, success, Zliq1, Zgas1, g1);
-
     if (success)
     {
         ggas1 = this->Gideal_Mole(p, T, ret_solution.Gas.X);
@@ -812,7 +812,7 @@ inline tuple<scalar, scalar, scalar, scalar> Foam::VLE<ThermoMixture>::dTPdErho_
 
     const VLE<ThermoMixture> &This = *this;
 
-    scalar vf = ret_solution.vaporFraction;
+    scalar &vf = ret_solution.vaporFraction;
     scalarList &X_gas = ret_solution.Gas.X;
     scalarList &X_liq = ret_solution.Liq.X;
 
@@ -1083,7 +1083,7 @@ inline std::tuple<Foam::scalar, Foam::scalar> Foam::VLE<ThermoMixture>::UVn_flas
 
         if (iter++ > 5 * maxIter_)
         {
-            WarningInFunction << setprecision(50)
+           /* WarningInFunction << setprecision(50)
                               << "Maximum number of iterations exceeded: " << iter - 1
                               << " error:" << sqrt(minf) //mag(y2[1] - e) + mag(y2[0] - rho)
                               << " e: " << e
@@ -1095,11 +1095,12 @@ inline std::tuple<Foam::scalar, Foam::scalar> Foam::VLE<ThermoMixture>::UVn_flas
                               << " X: " << this->X_
                               << setprecision(6)
                               << endl;
+                              */
             //<< abort(FatalError);
             //continue;
             break;
         }
-    } while ((mag(e11 - e) > 1e-1 || mag(rho11 - rho) > 1e-4));
+    } while ((mag(e11 - e) > 1e-2 || mag(rho11 - rho) > 1e-4));
 
     return std::make_tuple(p1, T1);
 }
@@ -1343,10 +1344,10 @@ Foam::VLE<ThermoMixture>::dvidXi_NIO(scalar p, scalar T, label di, VLE_D1_data &
 }
 
 template <class ThermoMixture>
-inline Foam::autoPtr<scalarRectangularMatrix> Foam::VLE<ThermoMixture>::dTPvfcdXErho_NIO(scalar p, scalar T, VLE_D1_data &sol) const
+inline void Foam::VLE<ThermoMixture>::dTPvfcdXErho_NIO(scalar p, scalar T, VLE_D1_data &sol,scalarRectangularMatrix &out) const
 {
     int nsp = this->X_.size();
-    scalarRectangularMatrix &grad = *(new scalarRectangularMatrix(nsp + 2, 4));
+    scalarRectangularMatrix &grad = out;//*(new scalarRectangularMatrix(nsp + 2, 4));
 
     const VLE<ThermoMixture> &This = *this;
     scalar vf = sol.vaporFraction;
@@ -1467,6 +1468,8 @@ inline Foam::autoPtr<scalarRectangularMatrix> Foam::VLE<ThermoMixture>::dTPvfcdX
 
     scalar Hs_gas = this->ThermoMixture::Hs(p, T, X_gas, 1);
     scalar Hs_liq = this->ThermoMixture::Hs(p, T, X_liq, 0);
+    scalar Cp_Hs_value = sol.dHsdT;
+    scalar dHsdP_value = sol.dHsdP;
     scalarList dHsdXi_value(nsp);
     for (int i = 0; i < nsp; i++)
     {
@@ -1495,6 +1498,8 @@ inline Foam::autoPtr<scalarRectangularMatrix> Foam::VLE<ThermoMixture>::dTPvfcdX
         }
     }
 
+    scalar dZMixturedT = sol.dZdT;
+    scalar dZMixturedP = sol.dZdP;
     scalarList dZMixturedXi(nsp);
 
     for (int i = 0; i < nsp; i++)
@@ -1561,13 +1566,14 @@ inline Foam::autoPtr<scalarRectangularMatrix> Foam::VLE<ThermoMixture>::dTPvfcdX
     grad[nsp + 1][2] = dvfdrho_EX_value;
     grad[nsp + 1][3] = 0;
 
-    return autoPtr<scalarRectangularMatrix>(&grad);
+    //return autoPtr<scalarRectangularMatrix>(&grad);
 }
 
 template <class ThermoMixture>
 inline Foam::scalar
 Foam::VLE<ThermoMixture>::c_full_NIO(scalar p, scalar T, scalar rho_, VLE_D1_data &sol) const
 {
+    const scalar Tstd = 298.15;
     const scalar sqrt2 = sqrt(2.0);
     const scalar cc0 = 2 * sqrt(2.0);
     const scalar cc1 = 1.0 + sqrt(2.0);
@@ -1575,8 +1581,8 @@ Foam::VLE<ThermoMixture>::c_full_NIO(scalar p, scalar T, scalar rho_, VLE_D1_dat
 
     const scalar small8 = 1.e-08; //PY: need to be noticed
 
-    scalarList X_gas = sol.Gas.X;
-    scalarList X_liq = sol.Liq.X;
+    scalarList &X_gas = sol.Gas.X;
+    scalarList &X_liq = sol.Liq.X;
 
     scalar W_ = this->W();
     scalar vf_ = sol.vaporFraction;
@@ -1764,7 +1770,8 @@ Foam::VLE<ThermoMixture>::c_full_NIO(scalar p, scalar T, scalar rho_, VLE_D1_dat
     labelList pivotIndices(A.m());
     LUDecompose(A, pivotIndices);
 
-    autoPtr<scalarList> dvidp(new scalarList(this->X_.size()));
+    //autoPtr<scalarList> dvidp(new scalarList(this->X_.size()));
+    scalarList dvidp(this->X_.size());
 
     int n_sp = 0;
     for (int i = 0; i < this->X_.size(); i++)
@@ -1775,7 +1782,7 @@ Foam::VLE<ThermoMixture>::c_full_NIO(scalar p, scalar T, scalar rho_, VLE_D1_dat
     if (n_sp == 1)
     {
         for (int i = 0; i < this->X_.size(); i++)
-            dvidp()[i] = 0;
+            dvidp[i] = 0;
     }
     else
     {
@@ -1827,14 +1834,14 @@ Foam::VLE<ThermoMixture>::c_full_NIO(scalar p, scalar T, scalar rho_, VLE_D1_dat
         }
 
         for (int i = 0; i < this->X_.size(); i++)
-            dvidp()[i] = (1 - vf_) * vf_ * (ddP_Ln_fugcoef_G_()[i] - ddP_Ln_fugcoef_L_()[i]);
+            dvidp[i] = (1 - vf_) * vf_ * (ddP_Ln_fugcoef_G_()[i] - ddP_Ln_fugcoef_L_()[i]);
 
-        LUBacksubstitute(A, pivotIndices, dvidp());
+        LUBacksubstitute(A, pivotIndices, dvidp);
     }
 
     autoPtr<scalarList> dXdP_G_(this->dXdP_gas_NIO(p, T, sol, dvidp));
     autoPtr<scalarList> dXdP_L_(this->dXdP_liq_NIO(p, T, sol, dvidp));
-    scalar dvfdP_ = this->dvfdP_NIO(p, T, sol, dvidp());
+    scalar dvfdP_ = this->dvfdP_NIO(p, T, sol, dvidp);
 
     scalar dZdP_G_ = dZdP_G_0; //this->ThermoMixture::dZdP(p, T, X_gas, 1);
     scalar dZdP_L_ = dZdP_L_0; //this->ThermoMixture::dZdP(p, T, X_liq, 0);
@@ -1850,12 +1857,13 @@ Foam::VLE<ThermoMixture>::c_full_NIO(scalar p, scalar T, scalar rho_, VLE_D1_dat
     scalar drhodP_ = W_ / (Z_M_ * RR * 1.0e-03 * T) - p * W_ / (Z_M_ * Z_M_ * RR * 1.0e-03 * T) * dZdP_M_;
     scalar kappaT_ = drhodP_ / rho_;
 
-    autoPtr<scalarList> dvidt(new scalarList(this->X_.size()));
+    //autoPtr<scalarList> dvidt(new scalarList(this->X_.size()));
+    scalarList dvidt(this->X_.size());
 
     if (n_sp == 1 || vf_ == 0 || vf_ == 1)
     {
         for (int i = 0; i < this->X_.size(); i++)
-            dvidt()[i] = 0;
+            dvidt[i] = 0;
     }
     else
     {
@@ -1907,14 +1915,14 @@ Foam::VLE<ThermoMixture>::c_full_NIO(scalar p, scalar T, scalar rho_, VLE_D1_dat
         }
 
         for (int i = 0; i < this->X_.size(); i++)
-            dvidt()[i] = (1 - vf_) * vf_ * (ddT_Ln_fugcoef_G_()[i] - ddT_Ln_fugcoef_L_()[i]);
+            dvidt[i] = (1 - vf_) * vf_ * (ddT_Ln_fugcoef_G_()[i] - ddT_Ln_fugcoef_L_()[i]);
 
-        LUBacksubstitute(A, pivotIndices, dvidt());
+        LUBacksubstitute(A, pivotIndices, dvidt);
     }
 
     autoPtr<scalarList> dXdT_G_(this->dXdT_gas_NIO(p, T, sol, dvidt));
     autoPtr<scalarList> dXdT_L_(this->dXdT_liq_NIO(p, T, sol, dvidt));
-    scalar dvfdT_ = this->dvfdT_NIO(p, T, sol, dvidt());
+    scalar dvfdT_ = this->dvfdT_NIO(p, T, sol, dvidt);
 
     scalar dZdT_G_ = dZdT_G_0;
     scalar dZdT_L_ = dZdT_L_0;
@@ -1954,7 +1962,7 @@ Foam::VLE<ThermoMixture>::c_full_NIO(scalar p, scalar T, scalar rho_, VLE_D1_dat
             ddxi_dH_G_ += RR * 1e-3 * T * ((T * dAdT_G_ + A_G_) / (cc0 * B_G_)) * ((dzdxi_G_[i] + cc1 * dBmixdxi) / (Z_G_ + cc1 * B_G_) - (dzdxi_G_[i] + cc2 * dBmixdxi) / (Z_G_ + cc2 * B_G_));
             ddxi_dH_G_ = ddxi_dH_G_ / W_G_ - dH_G_ / (W_G_ * W_G_) * (*this)[i].W() * 1e-3;
 
-            dHadxi_G_[i] = ddxi_dH_G_ + this->dHidealdxi(p, T, i, X_gas);
+            dHadxi_G_[i] = ddxi_dH_G_ + this->dHidealdxi(p, T, i, X_gas) - this->dHidealdxi(1, Tstd, i, X_gas);
         }
         else
         {
@@ -1962,7 +1970,7 @@ Foam::VLE<ThermoMixture>::c_full_NIO(scalar p, scalar T, scalar rho_, VLE_D1_dat
             dH_G_ = (Z_G_ - 1) * RR * 1e-3 * T;
             ddxi_dH_G_ = ddxi_dH_G_ / W_G_ - dH_G_ / (W_G_ * W_G_) * (*this)[i].W() * 1e-3;
 
-            dHadxi_G_[i] = ddxi_dH_G_ + this->dHidealdxi(p, T, i, X_gas);
+            dHadxi_G_[i] = ddxi_dH_G_ + this->dHidealdxi(p, T, i, X_gas) - this->dHidealdxi(1, Tstd, i, X_gas);
         }
         if (xxx_L_ > 0)
         {
@@ -1975,7 +1983,7 @@ Foam::VLE<ThermoMixture>::c_full_NIO(scalar p, scalar T, scalar rho_, VLE_D1_dat
             ddxi_dH_L_ += RR * 1e-3 * T * ((T * dAdT_L_ + A_L_) / (cc0 * B_L_)) * ((dzdxi_L_[i] + cc1 * dBmixdxi) / (Z_L_ + cc1 * B_L_) - (dzdxi_L_[i] + cc2 * dBmixdxi) / (Z_L_ + cc2 * B_L_));
             ddxi_dH_L_ = ddxi_dH_L_ / W_L_ - dH_L_ / (W_L_ * W_L_) * (*this)[i].W() * 1e-3;
 
-            dHadxi_L_[i] = ddxi_dH_L_ + this->dHidealdxi(p, T, i, X_liq);
+            dHadxi_L_[i] = ddxi_dH_L_ + this->dHidealdxi(p, T, i, X_liq) - this->dHidealdxi(1, Tstd, i, X_liq);
         }
         else
         {
@@ -1983,7 +1991,7 @@ Foam::VLE<ThermoMixture>::c_full_NIO(scalar p, scalar T, scalar rho_, VLE_D1_dat
             dH_L_ = (Z_L_ - 1) * RR * 1e-3 * T;
             ddxi_dH_L_ = ddxi_dH_L_ / W_L_ - dH_L_ / (W_L_ * W_L_) * (*this)[i].W() * 1e-3;
 
-            dHadxi_L_[i] = ddxi_dH_L_ + this->dHidealdxi(p, T, i, X_liq);
+            dHadxi_L_[i] = ddxi_dH_L_ + this->dHidealdxi(p, T, i, X_liq) - this->dHidealdxi(1, Tstd, i, X_liq);
         }
     }
 
@@ -1994,7 +2002,6 @@ Foam::VLE<ThermoMixture>::c_full_NIO(scalar p, scalar T, scalar rho_, VLE_D1_dat
     scalar bmix_G_ = this->b(p, T, X_gas);
 
     scalar ddT_dH_G_, ddP_dH_G_;
-
     if (xxx_G_ > 0)
     {
         ddT_dH_G_ = dZdT_G_0 * RR * 1e-3 * T + (Z_G_ - 1) * RR * 1e-3;
@@ -2002,7 +2009,7 @@ Foam::VLE<ThermoMixture>::c_full_NIO(scalar p, scalar T, scalar rho_, VLE_D1_dat
         ddT_dH_G_ += ((T * this->dadt(p, T, X_gas) - this->a(p, T, X_gas)) / (cc0 * bmix_G_)) * ((dZdT_G_0 - cc1 * B_G_ / T) / (Z_G_ + cc1 * B_G_) - (dZdT_G_0 - cc2 * B_G_ / T) / (Z_G_ + cc2 * B_G_));
 
         ddP_dH_G_ = dZdP_G_0 * RR * 1e-3 * T;
-        ddP_dH_G_ += ((T * this->dadt(p, T, X_gas) - this->a(p, T, X_gas)) / (cc0 * bmix_G_)) * (dZdP_G_0 / (Z_G_ + cc1 * B_G_) - dZdP_G_0 / (Z_G_ + cc2 * B_G_));
+        ddP_dH_G_ += ((T * this->dadt(p, T, X_gas) - this->a(p, T, X_gas)) / (cc0 * bmix_G_)) * ((dZdP_G_0 + cc1 * B_G_ / p) / (Z_G_ + cc1 * B_G_) - (dZdP_G_0 + cc2 * B_G_ / p) / (Z_G_ + cc2 * B_G_));
     }
     else
     {
@@ -2011,8 +2018,10 @@ Foam::VLE<ThermoMixture>::c_full_NIO(scalar p, scalar T, scalar rho_, VLE_D1_dat
     }
 
     ddT_dH_G_ = ddT_dH_G_ / W_G_; // J/kg
-                                  // Based on Eq.12, Internal energy is estimated based on ideal(close to absolute 0 T) + departure
+    // Based on Eq.12, Internal energy is estimated based on ideal(close to absolute 0 T) + departure
+
     ddP_dH_G_ = ddP_dH_G_ / W_G_;
+
     scalar bmix_L_ = this->b(p, T, X_liq);
 
     scalar ddT_dH_L_, ddP_dH_L_;
@@ -2024,7 +2033,7 @@ Foam::VLE<ThermoMixture>::c_full_NIO(scalar p, scalar T, scalar rho_, VLE_D1_dat
         ddT_dH_L_ += ((T * this->dadt(p, T, X_liq) - this->a(p, T, X_liq)) / (cc0 * bmix_L_)) * ((dZdT_L_0 - cc1 * B_L_ / T) / (Z_L_ + cc1 * B_L_) - (dZdT_L_0 - cc2 * B_L_ / T) / (Z_L_ + cc2 * B_L_));
 
         ddP_dH_L_ = dZdP_L_0 * RR * 1e-3 * T;
-        ddP_dH_L_ += ((T * this->dadt(p, T, X_liq) - this->a(p, T, X_liq)) / (cc0 * bmix_L_)) * (dZdP_L_0 / (Z_L_ + cc1 * B_L_) - dZdP_L_0 / (Z_L_ + cc2 * B_L_));
+        ddP_dH_L_ += ((T * this->dadt(p, T, X_liq) - this->a(p, T, X_liq)) / (cc0 * bmix_L_)) * ((dZdP_L_0 + cc1 * B_L_ / p) / (Z_L_ + cc1 * B_L_) - (dZdP_L_0 + cc2 * B_L_ / p) / (Z_L_ + cc2 * B_L_));
     }
     else
     {
@@ -2033,6 +2042,8 @@ Foam::VLE<ThermoMixture>::c_full_NIO(scalar p, scalar T, scalar rho_, VLE_D1_dat
     }
 
     ddT_dH_L_ = ddT_dH_L_ / W_L_; // J/kg
+
+    ddP_dH_L_ = ddP_dH_L_ / W_L_;
 
     scalar dHadT_gas = ddT_dH_G_ + this->dHidealdT(p, T, X_gas);
     scalar dHadP_gas = ddP_dH_G_;
@@ -2043,19 +2054,22 @@ Foam::VLE<ThermoMixture>::c_full_NIO(scalar p, scalar T, scalar rho_, VLE_D1_dat
     for (int i = 0; i < this->X_.size(); i++)
     {
         dHadT_gas += dHadxi_G_[i] * dXdT_G_()[i];
+        dHadP_gas += dHadxi_G_[i] * dXdP_G_()[i];
     }
 
     for (int i = 0; i < this->X_.size(); i++)
     {
         dHadT_liq += dHadxi_L_[i] * dXdT_L_()[i];
+        dHadP_liq += dHadxi_L_[i] * dXdP_L_()[i];
     }
-    scalar Ha_G_ = dH_G_ / W_G_ + this->Hideal(p, T, X_gas), Ha_L_ = dH_L_ / W_L_ + this->Hideal(p, T, X_liq);
+    //const scalar Tstd = 298.15;
+    scalar Ha_G_ = dH_G_ / W_G_ + this->Hideal(p, T, X_gas) - this->Hideal(1, Tstd, X_gas), Ha_L_ = dH_L_ / W_L_ + this->Hideal(p, T, X_liq) - this->Hideal(1, Tstd, X_liq);
 
     scalar Cp_ = Ha_G_ * dygasdT + dHadT_gas * ygas - Ha_L_ * dygasdT + dHadT_liq * (1.0 - ygas);
     scalar dHsdP_ = Ha_G_ * dygasdP + dHadP_gas * ygas - Ha_L_ * dygasdP + dHadP_liq * (1.0 - ygas);
 
     //scalar Cp_ = this->ThermoMixture::Ha(p, T, X_gas, 1) * dygasdT + dHadT_gas * ygas - this->ThermoMixture::Ha(p, T, X_liq, 0) * dygasdT + dHadT_liq * (1.0 - ygas);
-
+    //Info << "2 Ha_G_= " << dHsdP_ << endl;
     scalar drhodT_ = -p * W_ / (Z_M_ * Z_M_ * RR * 1.0e-03 * T * T) * (dZdT_M_ * T + Z_M_);
     scalar alphaP_ = -drhodT_ / rho_;
     scalar kappaS_ = kappaT_ - T * alphaP_ * alphaP_ / (rho_ * Cp_);
@@ -2074,7 +2088,7 @@ Foam::VLE<ThermoMixture>::c_full_NIO(scalar p, scalar T, scalar rho_, VLE_D1_dat
 }
 
 template <class ThermoMixture>
-inline Foam::autoPtr<Foam::scalarList> Foam::VLE<ThermoMixture>::dXdP_gas_NIO(scalar p, scalar T, VLE_D1_data &sol, autoPtr<scalarList> &dvidt) const
+inline Foam::autoPtr<Foam::scalarList> Foam::VLE<ThermoMixture>::dXdP_gas_NIO(scalar p, scalar T, VLE_D1_data &sol, scalarList &dvidt) const
 {
     scalarList &dXdT = *(new scalarList(this->X_.size()));
     //autoPtr<scalarList> dvidt;
@@ -2096,9 +2110,9 @@ inline Foam::autoPtr<Foam::scalarList> Foam::VLE<ThermoMixture>::dXdP_gas_NIO(sc
             for (int j = 0; j < this->X_.size(); j++)
             {
                 if (i == j)
-                    dXdT[i] -= rvf * (sol.Gas.X[i] - 1) * dvidt()[j];
+                    dXdT[i] -= rvf * (sol.Gas.X[i] - 1) * dvidt[j];
                 else
-                    dXdT[i] -= rvf * sol.Gas.X[i] * dvidt()[j];
+                    dXdT[i] -= rvf * sol.Gas.X[i] * dvidt[j];
             }
         }
     }
@@ -2106,7 +2120,7 @@ inline Foam::autoPtr<Foam::scalarList> Foam::VLE<ThermoMixture>::dXdP_gas_NIO(sc
 }
 
 template <class ThermoMixture>
-inline Foam::autoPtr<Foam::scalarList> Foam::VLE<ThermoMixture>::dXdP_liq_NIO(scalar p, scalar T, VLE_D1_data &sol, autoPtr<scalarList> &dvidt) const
+inline Foam::autoPtr<Foam::scalarList> Foam::VLE<ThermoMixture>::dXdP_liq_NIO(scalar p, scalar T, VLE_D1_data &sol, scalarList &dvidt) const
 {
     scalarList &dXdT = *(new scalarList(this->X_.size()));
     scalar vf = sol.vaporFraction;
@@ -2127,9 +2141,9 @@ inline Foam::autoPtr<Foam::scalarList> Foam::VLE<ThermoMixture>::dXdP_liq_NIO(sc
         for (int j = 0; j < this->X_.size(); j++)
         {
             if (i == j)
-                dXdT[i] += 1.0 / (1 - vf) * (sol.Liq.X[i] - 1) * dvidt()[j];
+                dXdT[i] += 1.0 / (1 - vf) * (sol.Liq.X[i] - 1) * dvidt[j];
             else
-                dXdT[i] += 1.0 / (1 - vf) * sol.Liq.X[i] * dvidt()[j];
+                dXdT[i] += 1.0 / (1 - vf) * sol.Liq.X[i] * dvidt[j];
         }
     }
     return autoPtr<scalarList>(&dXdT);
@@ -2150,7 +2164,7 @@ Foam::VLE<ThermoMixture>::dvfdP_NIO(scalar p, scalar T, VLE_D1_data &sol, scalar
 }
 
 template <class ThermoMixture>
-inline Foam::autoPtr<Foam::scalarList> Foam::VLE<ThermoMixture>::dXdT_gas_NIO(scalar p, scalar T, VLE_D1_data &sol, autoPtr<scalarList> &dvidt) const
+inline Foam::autoPtr<Foam::scalarList> Foam::VLE<ThermoMixture>::dXdT_gas_NIO(scalar p, scalar T, VLE_D1_data &sol, scalarList &dvidt) const
 {
     scalarList &dXdT = *(new scalarList(this->X_.size()));
     //autoPtr<scalarList> dvidt;
@@ -2172,9 +2186,9 @@ inline Foam::autoPtr<Foam::scalarList> Foam::VLE<ThermoMixture>::dXdT_gas_NIO(sc
             for (int j = 0; j < this->X_.size(); j++)
             {
                 if (i == j)
-                    dXdT[i] -= rvf * (sol.Gas.X[i] - 1) * dvidt()[j];
+                    dXdT[i] -= rvf * (sol.Gas.X[i] - 1) * dvidt[j];
                 else
-                    dXdT[i] -= rvf * sol.Gas.X[i] * dvidt()[j];
+                    dXdT[i] -= rvf * sol.Gas.X[i] * dvidt[j];
             }
         }
     }
@@ -2182,7 +2196,7 @@ inline Foam::autoPtr<Foam::scalarList> Foam::VLE<ThermoMixture>::dXdT_gas_NIO(sc
 }
 
 template <class ThermoMixture>
-inline Foam::autoPtr<Foam::scalarList> Foam::VLE<ThermoMixture>::dXdT_liq_NIO(scalar p, scalar T, VLE_D1_data &sol, autoPtr<scalarList> &dvidt) const
+inline Foam::autoPtr<Foam::scalarList> Foam::VLE<ThermoMixture>::dXdT_liq_NIO(scalar p, scalar T, VLE_D1_data &sol, scalarList &dvidt) const
 {
     scalarList &dXdT = *(new scalarList(this->X_.size()));
     //autoPtr<scalarList> dvidt;
@@ -2204,9 +2218,9 @@ inline Foam::autoPtr<Foam::scalarList> Foam::VLE<ThermoMixture>::dXdT_liq_NIO(sc
             for (int j = 0; j < this->X_.size(); j++)
             {
                 if (i == j)
-                    dXdT[i] += 1.0 / (1 - vf) * (sol.Liq.X[i] - 1) * dvidt()[j];
+                    dXdT[i] += 1.0 / (1 - vf) * (sol.Liq.X[i] - 1) * dvidt[j];
                 else
-                    dXdT[i] += 1.0 / (1 - vf) * sol.Liq.X[i] * dvidt()[j];
+                    dXdT[i] += 1.0 / (1 - vf) * sol.Liq.X[i] * dvidt[j];
             }
         }
     }
@@ -2227,7 +2241,7 @@ Foam::VLE<ThermoMixture>::dvfdT_NIO(scalar p, scalar T, VLE_D1_data &sol, scalar
 }
 
 template <class ThermoMixture>
-inline Foam::scalar Foam::VLE<ThermoMixture>::dWdT_gas_NIO(scalar p, scalar T, VLE_D1_data &sol, autoPtr<scalarList> &dvidt) const
+inline Foam::scalar Foam::VLE<ThermoMixture>::dWdT_gas_NIO(scalar p, scalar T, VLE_D1_data &sol, scalarList &dvidt) const
 {
     scalar dWdT = 0;
     const VLE<ThermoMixture> &This = *this;
@@ -2242,7 +2256,7 @@ inline Foam::scalar Foam::VLE<ThermoMixture>::dWdT_gas_NIO(scalar p, scalar T, V
 }
 
 template <class ThermoMixture>
-inline Foam::scalar Foam::VLE<ThermoMixture>::dWdP_gas_NIO(scalar p, scalar T, VLE_D1_data &sol, autoPtr<scalarList> &dvidt) const
+inline Foam::scalar Foam::VLE<ThermoMixture>::dWdP_gas_NIO(scalar p, scalar T, VLE_D1_data &sol, scalarList &dvidt) const
 {
     scalar dWdT = 0;
     const VLE<ThermoMixture> &This = *this;
@@ -2257,11 +2271,11 @@ inline Foam::scalar Foam::VLE<ThermoMixture>::dWdP_gas_NIO(scalar p, scalar T, V
 }
 
 template <class ThermoMixture>
-inline Foam::autoPtr<scalarRectangularMatrix> Foam::VLE<ThermoMixture>::dErhovfcdXTP_NIO(scalar p, scalar T, VLE_D1_data &sol) const
+inline Foam::autoPtr<scalarRectangularMatrix> Foam::VLE<ThermoMixture>::dErhovfcdXTP_NIO(scalar p, scalar T, VLE_D1_data &sol,scalarRectangularMatrix &out) const
 {
     int nsp = this->X_.size();
     //scalar temp;
-    scalarRectangularMatrix &grad = *(new scalarRectangularMatrix(nsp + 2, 4));
+    scalarRectangularMatrix &grad = out;//*(new scalarRectangularMatrix(nsp + 2, 4));
 
     const VLE<ThermoMixture> &This = *this;
     scalar vf = sol.vaporFraction;
@@ -2443,7 +2457,7 @@ inline Foam::autoPtr<scalarRectangularMatrix> Foam::VLE<ThermoMixture>::dErhovfc
     grad[nsp + 1][1] = drhodP_value;
     grad[nsp + 1][2] = dvfdP_value;
     grad[nsp + 1][3] = 0;
-    return autoPtr<scalarRectangularMatrix>(&grad);
+    //return autoPtr<scalarRectangularMatrix>(&grad);
 }
 
 template <class ThermoMixture>
@@ -2542,6 +2556,137 @@ inline Foam::scalar Foam::VLE<ThermoMixture>::PV_nflash_NIO(
                                          << " X: " << this->X_
                                          << abort(FatalError);
                 }
+            } while (mag(T2 - T1) > Ttol && mag(rho - 1/Fm) > 1e-4);
+            T2 = Tm;
+            F2 = Fm;
+        }
+        //Tnew =
+        //   (this->*limit)(Test - ((this->*F)(p, Test) - f) / (this->*dFdT)(p, Test));
+
+        if (T2 == 0)
+        {
+            FatalErrorInFunction << setprecision(50)
+                                 << "T2 == 0: " << maxIter_
+                                 << " f: " << f
+                                 << " p: " << p
+                                 << " T0: " << T0
+                                 << "  Tg: " << T2
+                                 << " X: " << this->X_
+                                 << abort(FatalError);
+        }
+        if (iter++ >   maxIter_)
+        {
+            FatalErrorInFunction << setprecision(50)
+                                 << "Maximum number of iterations exceeded: " << maxIter_
+                                 << " f: " << f
+                                 << " p: " << p
+                                 << " T0: " << T0
+                                 << "  Tg: " << T2
+                                 << " X: " << this->X_
+                                 << abort(FatalError);
+
+        }
+
+    } while (mag(T2 - T1) > Ttol && mag(1/F2 - rho) > 1e-4 );
+    return T2r;
+}
+
+template <class ThermoMixture>
+inline Foam::scalar Foam::VLE<ThermoMixture>::EP_nflash_NIO(
+    scalar E,
+    scalar p,
+    scalar T0,
+    VLE_D1_data &sol) const
+{
+
+    if (T0 < 0)
+    {
+        FatalErrorInFunction
+            << "Negative initial temperature T0: " << T0
+            << abort(FatalError);
+    }
+    const label maxIter_ = 100;
+    scalar T1 = T0;
+    this->TPn_flash_New_TPD_Tudisco_NIO(p, T1, this->X_, sol);
+    scalar f = E;
+
+    //sol.reset(this->TPN(p, T1).ptr());
+    scalar F1 = Es_NIO(p, T1, sol), F2 = F1;
+    scalar T2 = T0 + 1;
+    scalar T2r = T2;
+    const scalar tol_ = 1.0e-4;
+    scalar Ttol = T0 * tol_;
+    scalar dF = 0, dfdt = 0, dFold = 1e100;
+    int iter = 0;
+    scalar relax = 1;
+    bool inSection = false;
+    bool bisec = false;
+    double Tm, Fm;
+    do
+    {
+        F1 = F2;
+        this->TPn_flash_New_TPD_Tudisco_NIO(p, T2, this->X_, sol);
+        T2r = T2;
+        //sol.reset(this->TPN(p, T2).ptr());
+        F2 = Es_NIO(p, T2, sol);
+        dF = (F2 - f);
+
+        if (fabs(dF) > fabs(dFold))
+            relax *= 0.85;
+
+        dFold = dF;
+        inSection = ((F2 - f) * (F1 - f) < 0);
+
+        dfdt = (F2 - F1) / (T2 - T1); //(this->*dFdT)(p, Test);
+
+        if (!inSection)
+        {
+            T1 = T2;
+            if (mag(relax * dF / dfdt) > 30)
+                T2 = T1 - sign(relax * dF / dfdt) * 30;
+            else
+                T2 = T1 - relax * dF / dfdt;
+        }
+        else
+        {
+            do
+            {
+                dfdt = (F2 - F1) / (T2 - T1);
+                if (bisec)
+                {
+                    Tm = (T2 + T1) / 2;
+                }
+                else
+                {
+                    Tm = T2 - (F2 - f) / dfdt;
+                }
+                //sol.reset(this->TPN(p, Tm).ptr());
+                this->TPn_flash_New_TPD_Tudisco_NIO(p, Tm, this->X_, sol);
+                T2r = Tm;
+                Fm = Es_NIO(p, Tm, sol);
+                if ((Fm - f) * (F1 - f) < 0)
+                {
+                    bisec = ((T2 - Tm) / (T2 - T1) < 0.1);
+                    T2 = Tm;
+                    F2 = Fm;
+                }
+                else
+                {
+                    bisec = ((T1 - Tm) / (T1 - T2) < 0.1);
+                    T1 = Tm;
+                    F1 = Fm;
+                }
+                if (iter++ > maxIter_)
+                {
+                    FatalErrorInFunction << setprecision(50)
+                                         << "Maximum number of iterations exceeded: " << maxIter_
+                                         << " f: " << f
+                                         << " p: " << p
+                                         << " T0: " << T0
+                                         << "  Tg: " << T2
+                                         << " X: " << this->X_
+                                         << abort(FatalError);
+                }
             } while (mag(T2 - T1) > Ttol && mag(f - Fm) > 1e-8 * f);
             T2 = Tm;
         }
@@ -2571,7 +2716,7 @@ inline Foam::scalar Foam::VLE<ThermoMixture>::PV_nflash_NIO(
                                  << abort(FatalError);
         }
 
-    } while (mag(T2 - T1) > Ttol && mag(f - F2) > 1e-8 * f);
+    } while (mag(T2 - T1) > Ttol && mag(f - F2) > 1e-6 * f);
     return T2r;
 }
 
@@ -2777,10 +2922,10 @@ inline Foam::autoPtr<scalarRectangularMatrix> Foam::VLE<ThermoMixture>::dTHvfcdX
 }
 
 template <class ThermoMixture>
-inline Foam::autoPtr<scalarRectangularMatrix> Foam::VLE<ThermoMixture>::dTEvfcdXrhoP_NIO(scalar p, scalar T, VLE_D1_data &sol) const
+inline void Foam::VLE<ThermoMixture>::dTEvfcdXrhoP_NIO(scalar p, scalar T, VLE_D1_data &sol, scalarRectangularMatrix &out) const
 {
     int nsp = this->X_.size();
-    scalarRectangularMatrix &grad = *(new scalarRectangularMatrix(nsp + 2, 4));
+    scalarRectangularMatrix &grad = out;
 
     const VLE<ThermoMixture> &This = *this;
     scalar vf = sol.vaporFraction;
@@ -2959,9 +3104,214 @@ inline Foam::autoPtr<scalarRectangularMatrix> Foam::VLE<ThermoMixture>::dTEvfcdX
     grad[nsp][2] = dvfdT_value / drhodT_value;
     grad[nsp][3] = 0;
 
+    //Info << "drhodT=" << drhodT_value << endl;
+    //Info << "drhodP=" << drhodP_value << endl;
+
     grad[nsp + 1][0] = -drhodP_value / drhodT_value;
     grad[nsp + 1][1] = -Cp_Hs_value * drhodP_value / drhodT_value + dHsdP_value - 1 / rho_value;
     grad[nsp + 1][2] = -dvfdT_value * drhodP_value / drhodT_value + dvfdP_value;
+    grad[nsp + 1][3] = 0;
+
+    //return autoPtr<scalarRectangularMatrix>(&grad);
+}
+
+template <class ThermoMixture>
+inline Foam::autoPtr<scalarRectangularMatrix> Foam::VLE<ThermoMixture>::dTrhovfcdXEP_NIO(scalar p, scalar T, VLE_D1_data &sol) const
+{
+    int nsp = this->X_.size();
+    scalarRectangularMatrix &grad = *(new scalarRectangularMatrix(nsp + 2, 4));
+
+    const VLE<ThermoMixture> &This = *this;
+    scalar vf = sol.vaporFraction;
+    scalarList &X_gas = sol.Gas.X;
+    scalarList &X_liq = sol.Liq.X;
+    scalar rho_value = rho_NIO(p, T, sol);
+
+    List<autoPtr<scalarList>> dvidXi_value(nsp);
+    for (int i = 0; i < nsp; i++)
+    {
+        dvidXi_value[i] = this->dvidXi_NIO(p, T, i, sol);
+    }
+    scalar dvfdP_value = sol.dvfdP, dvfdT_value = sol.dvfdT;
+    scalarList dvfdXi_value(nsp);
+    scalarList dHsdxi_gas_value(nsp), dHsdxi_liq_value(nsp);
+    for (int i = 0; i < nsp; i++)
+    {
+        dvfdXi_value[i] = -vf;
+        for (int j = 0; j < nsp; j++)
+        {
+            dvfdXi_value[i] += dvidXi_value[i]()[j];
+        }
+        dHsdxi_gas_value[i] = this->dHsdxi(p, T, i, X_gas, 1);
+        dHsdxi_liq_value[i] = this->dHsdxi(p, T, i, X_liq, 0);
+    }
+
+    scalarList dHsdXi_gas(nsp);
+    scalarList dHsdXi_liq(nsp);
+
+    List<scalarList> dXdXi_gas_value(nsp);
+    List<scalarList> dXdXi_liq_value(nsp);
+
+    if (vf <= 1e-6)
+    {
+        for (int i = 0; i < nsp; i++)
+        {
+            dXdXi_gas_value[i].resize(nsp);
+            dXdXi_liq_value[i].resize(nsp);
+            for (int j = 0; j < nsp; j++)
+            {
+                dXdXi_gas_value[i][j] = 0;
+                if (i == j)
+                {
+                    dXdXi_liq_value[i][j] = 1 / (1 - vf) * (1 - dvidXi_value[i]()[j]) - X_liq[j] / (1 - vf) * (1 - dvfdXi_value[i] - vf);
+                }
+                else
+                {
+                    dXdXi_liq_value[i][j] = 1 / (1 - vf) * (-dvidXi_value[i]()[j]) - X_liq[j] / (1 - vf) * (1 - dvfdXi_value[i] - vf);
+                }
+            }
+        }
+    }
+    else if (vf >= 1 - 1e-6)
+    {
+        for (int i = 0; i < nsp; i++)
+        {
+            dXdXi_gas_value[i].resize(nsp);
+            dXdXi_liq_value[i].resize(nsp);
+            for (int j = 0; j < nsp; j++)
+            {
+                dXdXi_gas_value[i][j] = (dvidXi_value[i]()[j] - X_gas[j] * (dvfdXi_value[i] + vf)) / vf;
+                dXdXi_liq_value[i][j] = 0;
+            }
+        }
+    }
+    else
+    {
+        for (int i = 0; i < nsp; i++)
+        {
+            dXdXi_gas_value[i].resize(nsp);
+            dXdXi_liq_value[i].resize(nsp);
+            for (int j = 0; j < nsp; j++)
+            {
+                dXdXi_gas_value[i][j] = (dvidXi_value[i]()[j] - X_gas[j] * (dvfdXi_value[i] + vf)) / vf;
+                if (i == j)
+                {
+                    dXdXi_liq_value[i][j] = 1 / (1 - vf) * (1 - dvidXi_value[i]()[j]) - X_liq[j] / (1 - vf) * (1 - dvfdXi_value[i] - vf);
+                }
+                else
+                {
+                    dXdXi_liq_value[i][j] = 1 / (1 - vf) * (-dvidXi_value[i]()[j]) - X_liq[j] / (1 - vf) * (1 - dvfdXi_value[i] - vf);
+                }
+            }
+        }
+    }
+
+    for (int i = 0; i < nsp; i++)
+    {
+        dHsdXi_gas[i] = 0;
+        dHsdXi_liq[i] = 0;
+        for (int j = 0; j < nsp; j++)
+        {
+            dHsdXi_gas[i] += dHsdxi_gas_value[j] * dXdXi_gas_value[i][j];
+            dHsdXi_liq[i] += dHsdxi_liq_value[j] * dXdXi_liq_value[i][j];
+        }
+    }
+
+    scalar mw_gas = this->W(X_gas); //kg/mol
+    scalar mw_mixture = this->W();
+    scalar ygas = vf * mw_gas / mw_mixture;
+
+    scalarList dmw_gasdXi(nsp);
+    for (int i = 0; i < nsp; i++)
+    {
+        dmw_gasdXi[i] = 0;
+        for (int j = 0; j < nsp; j++)
+        {
+            dmw_gasdXi[i] += dXdXi_gas_value[i][j] * This[j].W() * 1.0e-03;
+        }
+    }
+    scalarList dygasdXi(nsp);
+    for (int i = 0; i < nsp; i++)
+    {
+        dygasdXi[i] = ((dvfdXi_value[i] + vf) * mw_gas + vf * dmw_gasdXi[i]) / mw_mixture - ygas / mw_mixture * This[i].W() * 1.0e-03;
+    }
+
+    scalar Hs_gas = this->ThermoMixture::Hs(p, T, X_gas, 1);
+    scalar Hs_liq = this->ThermoMixture::Hs(p, T, X_liq, 0);
+    scalar Cp_Hs_value = sol.dHsdT;
+    scalar dHsdP_value = sol.dHsdP;
+    scalarList dHsdXi_value(nsp);
+    for (int i = 0; i < nsp; i++)
+    {
+        dHsdXi_value[i] = Hs_gas * dygasdXi[i] + dHsdXi_gas[i] * ygas - Hs_liq * dygasdXi[i] + dHsdXi_liq[i] * (1.0 - ygas);
+    }
+
+    scalar ZMixture = Z_NIO(p, T, sol);
+    scalar ZGas = this->ThermoMixture::Z(p, T, X_gas, 1);
+    scalar ZLiq = this->ThermoMixture::Z(p, T, X_liq, 0);
+
+    scalarList dZgasdXi(nsp), dZliqdXi(nsp);
+    scalarList dZdxi_gas_value(nsp), dZdxi_liq_value(nsp);
+    for (int i = 0; i < nsp; i++)
+    {
+        dZdxi_gas_value[i] = this->ThermoMixture::dZdxi(p, T, i, X_gas, 1);
+        dZdxi_liq_value[i] = this->ThermoMixture::dZdxi(p, T, i, X_liq, 0);
+    }
+    for (int i = 0; i < nsp; i++)
+    {
+        dZgasdXi[i] = 0;
+        dZliqdXi[i] = 0;
+        for (int j = 0; j < nsp; j++)
+        {
+            dZgasdXi[i] += dZdxi_gas_value[j] * dXdXi_gas_value[i][j];
+            dZliqdXi[i] += dZdxi_liq_value[j] * dXdXi_liq_value[i][j];
+        }
+    }
+
+    scalar dZMixturedT = sol.dZdT;
+    scalar dZMixturedP = sol.dZdP;
+    scalarList dZMixturedXi(nsp);
+
+    for (int i = 0; i < nsp; i++)
+    {
+
+        dZMixturedXi[i] = dvfdXi_value[i] * (ZGas - ZLiq) + vf * dZgasdXi[i] + (1 - vf) * dZliqdXi[i];
+    }
+
+    scalar drhodT_value = -p * mw_mixture / (ZMixture * ZMixture * RR * 1.0e-03 * T * T) * (dZMixturedT * T + ZMixture);
+    scalar drhodP_value = mw_mixture / (ZMixture * RR * 1.0e-03 * T) - p * mw_mixture / (ZMixture * ZMixture * RR * 1.0e-03 * T) * dZMixturedP;
+    scalarList drhodXi_value(nsp);
+
+    for (int i = 0; i < nsp; i++)
+    {
+        drhodXi_value[i] = p * (This[i].W() * 1.0e-03 - mw_mixture) / (ZMixture * RR * 1.0e-03 * T) - p * mw_mixture / (ZMixture * ZMixture * RR * 1.0e-03 * T) * dZMixturedXi[i];
+    }
+    scalarList dEsdXi_value(nsp);
+    for (int i = 0; i < nsp; i++)
+    {
+        dEsdXi_value[i] = dHsdXi_value[i] + p / sqr(rho_value) * drhodXi_value[i];
+    }
+
+    scalar dEsdT = Cp_Hs_value + p / sqr(rho_value) * drhodT_value;
+    scalar dEsdP = dHsdP_value - 1 / rho_value + p / sqr(rho_value) * drhodP_value;
+    for (int i = 0; i < nsp; i++)
+    {
+        grad[i][0] = -dEsdXi_value[i] / dEsdT;
+        grad[i][1] = -drhodT_value * dEsdXi_value[i] / dEsdT + drhodXi_value[i];
+        grad[i][2] = -dvfdT_value * dEsdXi_value[i] / dEsdT + dvfdXi_value[i];
+        grad[i][3] = 0;
+    }
+    grad[nsp][0] = 1 / dEsdT;
+    grad[nsp][1] = drhodT_value / dEsdT;
+    grad[nsp][2] = dvfdT_value / dEsdT;
+    grad[nsp][3] = 0;
+
+    //Info << "drhodT=" << drhodT_value << endl;
+    //Info << "drhodP=" << drhodP_value << endl;
+
+    grad[nsp + 1][0] = -dEsdP / dEsdT;
+    grad[nsp + 1][1] = -drhodT_value * dEsdP / dEsdT + dHsdP_value;
+    grad[nsp + 1][2] = -dvfdT_value * dEsdP / dEsdT + dvfdP_value;
     grad[nsp + 1][3] = 0;
 
     return autoPtr<scalarRectangularMatrix>(&grad);

@@ -444,6 +444,15 @@ double solver_new::Ha()
     return thermo->Ha(P_, T_);
 }
 
+double solver_new::dTEvfcdXrhoP_NIO(int i, int j)
+{
+    Mtype::VLE_D1_data sol_NIO(thermo->X_.size());
+    thermo->TPn_flash_New_TPD_Tudisco_NIO(P_, T_, thermo->X_, sol_NIO);
+    thermo->c_full_NIO(P_, T_, thermo->rho_NIO(P_, T_, sol_NIO), sol_NIO);
+    autoPtr<scalarRectangularMatrix> grad(thermo->dTEvfcdXrhoP_NIO(P_, T_, sol_NIO));
+    return grad()(i,j);
+}
+
 double solver_new::Es()
 {
     return Hs() - P_ / rho();
@@ -490,6 +499,12 @@ double solver_new::Cp()
 {
     TPn_flash_update();
     return thermo->Cp(P_, T_, sol);
+}
+
+double solver_new::dHsdP()
+{
+    TPn_flash_update();
+    return thermo->dHsdP(P_, T_, sol);
 }
 
 double solver_new::c()
@@ -1151,7 +1166,6 @@ double solver_new::d2rhodT2()
     return thermo->d2rhodT2(P_, T_, sol);
 }
 
-
 double solver_new::S()
 {
     return thermo->S(P_, T_);
@@ -1187,6 +1201,25 @@ std::vector<double> solver_new::Ln_fugacityCoefficient(std::vector<double> Xout,
     return ret;
 }
 
+double solver_new::a(std::vector<double> Xout)
+{
+    Foam::scalarList comp_of(Xout.size(), Foam::Zero);
+    for (unsigned int i = 0; i < Xout.size(); i++)
+    {
+        comp_of[i] = Xout[i];
+    }
+    return ((PengRobinsonMixture<multispecie<Stype>> *)thermo)->a(P_, T_, comp_of);
+}
+
+double solver_new::b(std::vector<double> Xout)
+{
+    Foam::scalarList comp_of(Xout.size(), Foam::Zero);
+    for (unsigned int i = 0; i < Xout.size(); i++)
+    {
+        comp_of[i] = Xout[i];
+    }
+    return ((PengRobinsonMixture<multispecie<Stype>> *)thermo)->b(P_, T_, comp_of);
+}
 std::vector<double> solver_new::ddT_Ln_fugacityCoefficient(std::vector<double> Xout, int flag)
 {
     autoPtr<scalarList> fugcoef;

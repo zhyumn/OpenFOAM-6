@@ -68,8 +68,8 @@ namespace Foam
         scalarRectangularMatrix scaleFactor_;
 
         scalarRectangularMatrix scaleIn_;
-        scalarRectangularMatrix toleranceOut_;
-        scalarRectangularMatrix initToleranceIn_;
+        scalarRectangularMatrix toleranceOut2_;
+        scalarRectangularMatrix initToleranceIn2_;
 
         scalarRectangularMatrix init_elp_;
 
@@ -82,10 +82,15 @@ namespace Foam
         scalar maxDepthFactor_;
 
         scalarList maxLeafsize_;
-        label nRetrieved_;
-        label nGrowth_;
-        label nAdd_;
-        label nCall_;
+        mutable label nRetrieved_;
+        mutable label nGrowth_;
+        mutable label nAdd_;
+        mutable label nCall_;
+        mutable label nRRetrieved_;
+        mutable label nRGrowth_;
+        mutable label nRAdd_;
+        mutable label nRCall_;
+
         word treename_;
         bool muted_;
 
@@ -222,7 +227,7 @@ namespace Foam
             return tableTree_;
         }
         template <class... Args>
-        void add(const scalarList &value, scalarList &out, Args... arg);
+        void add(const scalarList &value, scalarList &out, Args&... arg);
         inline void mute()
         {
             muted_ = true;
@@ -251,7 +256,7 @@ namespace Foam
         {
             return relepsilon_;
         }
-
+/*
         inline scalarRectangularMatrix &toleranceOut()
         {
             return toleranceOut_;
@@ -260,20 +265,21 @@ namespace Foam
         inline const scalarRectangularMatrix &toleranceOut() const
         {
             return toleranceOut_;
-        }
+        }*/
+        /*
         inline scalarRectangularMatrix &initToleranceIn()
         {
-            return initToleranceIn_;
+            return initToleranceIn2_;
         }
 
         inline const scalarRectangularMatrix &initToleranceIn() const
         {
-            return initToleranceIn_;
-        }
+            return initToleranceIn2_;
+        }*/
 
         ISATleaf *search(const scalarList &value);
         template <class... Args>
-        void call(const Foam::scalarList &value, scalarList &out, Args... arg);
+        bool call(const Foam::scalarList &value, scalarList &out, Args&... arg);
 
         void tablevalue(const Foam::scalarList &value, scalarList &out);
 
@@ -290,7 +296,7 @@ namespace Foam
         bool newLoop()
         {
             nloop_++;
-            if (nloop_ == 3)
+            if (nloop_ == 1)
                 return false;
             bool ret = modified_;
             modified_ = false;
@@ -302,9 +308,10 @@ namespace Foam
             nloop_ = 0;
             modified_ = false;
             timeSteps_++;
+            tableTree_.updateMaxNLeaf();
             if (timeSteps_ % checkInterval_ == 0)
             {
-                tableTree_.updateMaxNLeaf();
+
                 showPerformance();
             }
             tableTree_.timeTagList().newTimeStep();

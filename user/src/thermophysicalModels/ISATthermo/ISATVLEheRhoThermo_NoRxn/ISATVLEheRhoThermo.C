@@ -245,6 +245,7 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
     scalarField &vaporfracCells = this->vaporfrac_.primitiveFieldRef();
     scalarField &soundspeedCells = this->soundspeed_.primitiveFieldRef();
     scalarField &rhoCells = this->rho_.primitiveFieldRef();
+    scalarField &rhodCells = this->rho_d.primitiveFieldRef();
     scalarField &kappaCells = this->kappa_.primitiveFieldRef();
     //scalarField &rho_G_Cells = this->rho_G_.primitiveFieldRef();
     //scalarField &ZCells = this->Z_.primitiveFieldRef();
@@ -270,6 +271,22 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
 
                     //hCells[celli] -= pCells[celli] / rhoCells[celli];
                     std::tie(TCells[celli], hCells[celli], vaporfracCells[celli], soundspeedCells[celli]) = mixture_.TEvfc_XrhoP(rhoCells[celli], pCells[celli], TCells[celli]);
+                    psiCells[celli] = rhoCells[celli] / pCells[celli];
+                }
+            } while (this->newLoop());
+        }
+        else if (scheme_ == "doubleFlux++")
+        {
+            do
+            {
+                forAll(TCells, celli)
+                {
+                    const typename MixtureType::thermoType &mixture_ = this->cellMixture(celli);
+
+                    //std::tie(TCells[celli], hCells[celli], vaporfracCells[celli], soundspeedCells[celli]) = mixture_.THvfc_XrhoP(rhoCells[celli], pCells[celli], TCells[celli]);
+
+                    //hCells[celli] -= pCells[celli] / rhoCells[celli];
+                    std::tie(TCells[celli], rhodCells[celli], vaporfracCells[celli], soundspeedCells[celli]) = mixture_.Trhovfc_XEP(hCells[celli], pCells[celli], TCells[celli]);
                     psiCells[celli] = rhoCells[celli] / pCells[celli];
                 }
             } while (this->newLoop());
@@ -513,6 +530,16 @@ Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::ISATVLEheRhoThermo(
               IOobject::NO_WRITE),
           mesh,
           dimEnergy / (dimTime * dimLength * dimTemperature)),
+
+                rho_d(
+          IOobject(
+              "rho_d",
+              mesh.time().timeName(),
+              mesh,
+              IOobject::NO_READ,
+              IOobject::NO_WRITE),
+          mesh,
+          dimDensity),
       /*       rho_G_(
           IOobject(
               "thermo:rho_G",

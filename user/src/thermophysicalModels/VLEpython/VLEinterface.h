@@ -124,8 +124,9 @@ public:
     double S();
     double dcdT();
     double d2rhodT2();
-    
-    
+
+    double dHsdP();
+
     std::vector<double> Y_G();
 
     std::vector<double> eps(std::vector<double>);
@@ -136,6 +137,8 @@ public:
     std::vector<double> X_liq();
     std::vector<double> Ln_fugacityCoefficient(std::vector<double> Xout, int flag);
     std::vector<double> ddT_Ln_fugacityCoefficient(std::vector<double> Xout, int flag);
+    double b(std::vector<double> Xout);
+    double a(std::vector<double> Xout);
 
     double drhodP();
     double drhodT();
@@ -147,6 +150,8 @@ public:
     const std::vector<std::string> &specie();
     std::vector<std::vector<double>> dTHvfc_G_rhoY_dXrhoP();
     std::vector<std::vector<double>> dErhovfc_G_rhoY_dXTP();
+
+    double dTEvfcdXrhoP_NIO(int,int);
 
 private:
     //void solve(bool flag);
@@ -201,7 +206,6 @@ private:
     double B();
     double dBdT();
     double Ha();
-    
 
     double Ha_singlePhase(int, std::vector<double> &);
     double dHadT_singlePhase(int, std::vector<double> &);

@@ -36,8 +36,8 @@ Foam::ISATmanager<FuncType>::ISATmanager(label in_n, label out_n, FuncType &func
       relepsilon_(0.0),
       scaleFactor_(out_n, out_n),
       scaleIn_(in_n, in_n),
-      toleranceOut_(out_n, out_n),
-      initToleranceIn_(in_n, in_n),
+      toleranceOut2_(out_n, out_n),
+      initToleranceIn2_(in_n, in_n),
       init_elp_(in_n, in_n),
       modified_(false),
       timeSteps_(0),
@@ -49,6 +49,10 @@ Foam::ISATmanager<FuncType>::ISATmanager(label in_n, label out_n, FuncType &func
       nGrowth_(0),
       nAdd_(0),
       nCall_(0),
+      nRRetrieved_(0),
+      nRGrowth_(0),
+      nRAdd_(0),
+      nRCall_(0),
       treename_(name_in),
       muted_(ISATDict_.lookupOrDefault<bool>("muted", false))
 {
@@ -56,14 +60,14 @@ Foam::ISATmanager<FuncType>::ISATmanager(label in_n, label out_n, FuncType &func
         for (int j = 0; j < out_n; j++)
         {
             scaleFactor_[i][j] = 0;
-            toleranceOut_[i][j] = 0;
+            toleranceOut2_[i][j] = 0;
         }
     for (int i = 0; i < in_n; i++)
         for (int j = 0; j < in_n; j++)
         {
             init_elp_[i][j] = 0;
             scaleIn_[i][j] = 0;
-            initToleranceIn_[i][j] = 0;
+            initToleranceIn2_[i][j] = 0;
         }
     for (int i = 0; i < out_n; i++)
     {
@@ -80,11 +84,11 @@ Foam::ISATmanager<FuncType>::ISATmanager(label in_n, label out_n, FuncType &func
     FuncType::read(ISATDict_, maxLeafsize_, toleranceOut_temp, initToleranceIn_temp, scaleIn_temp);
     for (int i = 0; i < out_n; i++)
     {
-        toleranceOut_[i][i] = 1.0 / toleranceOut_temp[i];
+        toleranceOut2_[i][i] = 1.0 / sqr(toleranceOut_temp[i]);
     }
     for (int i = 0; i < in_n; i++)
     {
-        initToleranceIn_[i][i] = 1.0 / initToleranceIn_temp[i];
+        initToleranceIn2_[i][i] = 1.0 / sqr(initToleranceIn_temp[i]);
         scaleIn_[i][i] = scaleIn_temp[i];
     }
     /*
@@ -131,7 +135,7 @@ Foam::ISATmanager<FuncType>::~ISATmanager()
 }
 template <class FuncType>
 template <class... Args>
-void Foam::ISATmanager<FuncType>::add(const scalarList &value, scalarList &out, Args... arg)
+void Foam::ISATmanager<FuncType>::add(const scalarList &value, scalarList &out, Args &... arg)
 {
     //word Tname = "vaporfratree";
 
@@ -142,7 +146,7 @@ void Foam::ISATmanager<FuncType>::add(const scalarList &value, scalarList &out, 
         //        Info<<"Deleting"<<endl;
         T.deleteLeaf(T.timeTagList().pop());
     }
-    scalarList R(tableTree_.n_out());
+    //scalarList R(tableTree_.n_out());
     //pfunc->value(value, R, arg...);
     pleaf = T.insertNewLeaf(value, out);
     pfunc->derive(value, out, pleaf->A(), arg...);
@@ -157,7 +161,7 @@ void Foam::ISATmanager<FuncType>::add(const scalarList &value, scalarList &out, 
     //pleaf->EOA() = ((pleaf->A()) * scaleFactor_ * scaleFactor_ * (pleaf->A().T()) + init_elp_ * init_elp_) / (epsilon_ * epsilon_);//+ init_elp_
     //auto debu= scaleIn_ *(pleaf->A()) * toleranceOut_ ;
     //Info<<treename_<<","<<T.n_in()<<","<<T.n_out()<<"  "<< (pleaf->A())<<endl;
-    pleaf->EOA() = scaleIn_ * initToleranceIn_ * initToleranceIn_ * scaleIn_ + scaleIn_ * (pleaf->A()) * toleranceOut_ * toleranceOut_ * (pleaf->A().T()) * scaleIn_;
+    pleaf->EOA() = scaleIn_ * (initToleranceIn2_ + (pleaf->A()) * toleranceOut2_ * (pleaf->A().T())) * scaleIn_;
     modified_ = true;
     /*
     if (Tname == treename_)
@@ -172,7 +176,7 @@ void Foam::ISATmanager<FuncType>::add(const scalarList &value, scalarList &out, 
     */
     // pleaf->EOA() = pleaf->EOA() + init_elp_ / (epsilon_ * epsilon_);
     //Info<<pleaf->EOA()<<endl;
-    nAdd_++;
+    nRAdd_++;
 }
 template <class FuncType>
 Foam::ISATleaf *Foam::ISATmanager<FuncType>::search(const scalarList &value)
@@ -183,19 +187,23 @@ Foam::ISATleaf *Foam::ISATmanager<FuncType>::search(const scalarList &value)
 }
 template <class FuncType>
 template <class... Args>
-void Foam::ISATmanager<FuncType>::call(
-    const Foam::scalarList &value, scalarList &out, Args... arg)
+bool Foam::ISATmanager<FuncType>::call(
+    const Foam::scalarList &value, scalarList &out, Args &... arg)
 {
     ISATleaf *pleaf;
     if (noISAT_)
     {
         pfunc->value(value, out, arg...);
-        return;
+        return true;
     }
     //word Tname = "psitree";
     //int aaa;
     //if (Tname == treename_)
     //    aaa = 5;
+    if (nloop_ > 0)
+    {
+        return retrieve(value, out);
+    }
     if (!retrieve(value, out))
     {
         pleaf = search(value);
@@ -209,7 +217,7 @@ void Foam::ISATmanager<FuncType>::call(
         {
 
             //pfunc->value(leafvalue - dvalue, out2, arg...);
-            scalarList dvalue(value.size(), Zero);
+            static scalarList dvalue(value.size(), Zero);
             for (int i = 0; i < tableTree_.n_in_; i++)
             {
                 dvalue[i] = value[i] - pleaf->value()[i];
@@ -222,7 +230,7 @@ void Foam::ISATmanager<FuncType>::call(
             }
             pfunc->value(value, out, arg...);
 
-            if (!flag||!grow2(pleaf, dvalue, out))
+            if (!flag || !grow2(pleaf, dvalue, out))
                 add(value, out, arg...);
 
             //if (Tname == treename_ && pleaf->value()[1] < 1.4982e+07 && pleaf->value()[1]>1.4980e+07 && pleaf->value()[2] < 550.48 && pleaf->value()[2]>550.478)
@@ -281,7 +289,8 @@ void Foam::ISATmanager<FuncType>::call(
             Info << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! I'm " << treename_ << ". The error is " << out[0] - out2[0] << endl;
         }
     }*/
-    nCall_++;
+    nRCall_++;
+    return true;
     /*if (nCall_ % 1000 == 0)
     {
         showPerformance();
@@ -369,7 +378,7 @@ bool Foam::ISATmanager<FuncType>::retrieve(
         calcNewC(phi0, phiq, Rphiq);
         nRetrieved_++;
         */
-        nRetrieved_++;
+        nRRetrieved_++;
         tableTree_.eval(value, out);
         plf->increaseNumRetrieve();
         tableTree_.timeTagList().renew(plf->pTimeTagList());
@@ -434,7 +443,7 @@ bool Foam::ISATmanager<FuncType>::grow(
         data1 = ret1;
         plf->grow(plf->value() + dvalue_m * (1 + 1e-3), scaleIn_);
         tableTree_.timeTagList().renew(plf->pTimeTagList());
-        nGrowth_++;
+        nRGrowth_++;
         modified_ = true;
         return true;
     }
@@ -460,8 +469,8 @@ bool Foam::ISATmanager<FuncType>::grow2(
     // If the solution RphiQ is still within the tolerance we try to grow it
     // in some cases this might result in a failure and the grow function of
     // the chemPoint returns false
-    scalarList ret1(data1.size()); //, ret2(data.size());
-    scalarList dvalue_m(plf->value().size());
+    static scalarList ret1(data1.size()); //, ret2(data.size());
+    static scalarList dvalue_m(plf->value().size());
     for (int i = 0; i < dvalue_m.size(); i++)
     {
         dvalue_m[i] = dvalue[i];
@@ -475,7 +484,7 @@ bool Foam::ISATmanager<FuncType>::grow2(
         data1 = ret1;
         plf->grow(plf->value() + dvalue_m * (1 + 1e-3), scaleIn_);
         tableTree_.timeTagList().renew(plf->pTimeTagList());
-        nGrowth_++;
+        nRGrowth_++;
         modified_ = true;
         return true;
     }
@@ -498,7 +507,7 @@ double Foam::ISATmanager<FuncType>::normalized_distance(const scalarList &l, con
 {
     double sum = 0;
     for (int i = 0; i < l.size(); i++)
-        sum += sqr((l[i] - r[i]) * toleranceOut_[i][i]);
+        sum += sqr((l[i] - r[i])) * toleranceOut2_[i][i];
     return sqrt(sum);
 }
 template <class FuncType>
@@ -514,7 +523,19 @@ void Foam::ISATmanager<FuncType>::showPerformance() const
 {
     if (muted_)
         return;
+    nCall_ += nRCall_;
+
+    nRetrieved_ += nRRetrieved_;
+    nGrowth_ += nRGrowth_;
+    nAdd_ += nRAdd_;
+
     std::cout << treename_ << ", ISAT performance: nCall = " << nCall_ << ", notCall = " << notCall << ", nRetrieved = " << nRetrieved_ << ", nGrowth = " << nGrowth_ << ", nAdd = " << nAdd_ << std::endl;
+    std::cout << treename_ << ", recent info: nCall = " << nRCall_ << ", nRetrieved = " << nRRetrieved_ << ", nGrowth = " << nRGrowth_ << ", nAdd = " << nRAdd_ << std::endl;
+    nRCall_ = 0;
+    nRRetrieved_ = 0;
+    nRGrowth_ = 0;
+    nRAdd_ = 0;
+
     //Info <<"tree size = "<< tableTree_.size()<< endl;
     std::cout << "NtimeSteps: " << timeSteps_ << ", Treedepth: " << tableTree_.depth() << ", Mindepth: " << ceil(log2(tableTree_.size() + 1)) << std::endl;
     std::cout << "maxNLeafs: " << tableTree_.maxNLeafs() << std::endl;

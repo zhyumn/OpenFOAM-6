@@ -3635,6 +3635,7 @@ inline Foam::scalar Foam::VLE<ThermoMixture>::dHsdP(scalar p, scalar T, solution
     scalar dygasdT = (dvfdT * mw_gas + sol.vaporfra * dmw_gasdT) / mw_mixture;
 
     scalar dHadT_gas = this->ThermoMixture::dHsdP(p, T, sol.X_gas(), 1);
+
     autoPtr<scalarList> dXdt_gas(this->dXdP_gas(p, T, sol));
     for (int i = 0; i < this->X_.size(); i++)
     {
@@ -3643,11 +3644,13 @@ inline Foam::scalar Foam::VLE<ThermoMixture>::dHsdP(scalar p, scalar T, solution
 
     scalar dHadT_liq = this->ThermoMixture::dHsdP(p, T, sol.X_liq(), 0);
     autoPtr<scalarList> dXdt_liq(this->dXdP_liq(p, T, sol));
+       
     for (int i = 0; i < this->X_.size(); i++)
     {
         dHadT_liq += this->dHsdxi(p, T, i, sol.X_liq(), 0) * dXdt_liq()[i];
     }
 
+ //Info<<" 1 HS="<<this->ThermoMixture::Hs(p, T, sol.X_gas(), 1) * dygasdT + dHadT_gas * ygas - this->ThermoMixture::Hs(p, T, sol.X_liq(), 0) * dygasdT + dHadT_liq * (1.0 - ygas) <<endl;
     return this->ThermoMixture::Hs(p, T, sol.X_gas(), 1) * dygasdT + dHadT_gas * ygas - this->ThermoMixture::Hs(p, T, sol.X_liq(), 0) * dygasdT + dHadT_liq * (1.0 - ygas);
 }
 

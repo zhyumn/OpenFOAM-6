@@ -34,6 +34,15 @@ volScalarField &e = thermo.he();
 
 e.writeOpt() = IOobject::AUTO_WRITE;
 
+volScalarField e_tmp(
+    IOobject(
+        "e_tmp",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::AUTO_WRITE),
+    e);
+
 const word inertSpecie(thermo.lookup("inertSpecie"));
 
 // correction terms for diffusion velocity
@@ -106,6 +115,7 @@ forAll(Dimix, i)
 }*/
 
 volScalarField &kappa = mesh.objectRegistry::lookupObjectRef<volScalarField>("thermo:kappa");
+volScalarField &rho_d = mesh.objectRegistry::lookupObjectRef<volScalarField>("rho_d");
 //- Create Thermal Conductivity field"kappa" [W/mK]
 /*
 Info << "\nCreating field thermal conductivity - kappa" << endl;
@@ -198,6 +208,15 @@ volScalarField rhoE(
         IOobject::NO_READ,
         IOobject::NO_WRITE),
     rho *(e + 0.5 * magSqr(U)));
+
+volScalarField rhoE_tmp(
+    IOobject(
+        "rhoE_tmp",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::NO_WRITE),
+    rho *(e_tmp + 0.5 * magSqr(U)));
 /* volScalarField rhoe(
     IOobject(
         "rhoe",

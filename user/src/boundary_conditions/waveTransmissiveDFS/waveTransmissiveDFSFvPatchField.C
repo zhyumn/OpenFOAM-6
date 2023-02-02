@@ -1,0 +1,167 @@
+/*---------------------------------------------------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Copyright (C) 2011-2018 OpenFOAM Foundation
+     \\/     M anipulation  |
+-------------------------------------------------------------------------------
+License
+    This file is part of OpenFOAM.
+
+    OpenFOAM is free software: you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    OpenFOAM is distributed in the hope that it will be useful, but WITHOUT
+    ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+    FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+    for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
+
+\*---------------------------------------------------------------------------*/
+
+#include "waveTransmissiveDFSFvPatchField.H"
+#include "addToRunTimeSelectionTable.H"
+#include "fvPatchFieldMapper.H"
+#include "volFields.H"
+#include "EulerDdtScheme.H"
+#include "CrankNicolsonDdtScheme.H"
+#include "backwardDdtScheme.H"
+
+// * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
+
+template<class Type>
+Foam::waveTransmissiveDFSFvPatchField<Type>::waveTransmissiveDFSFvPatchField
+(
+    const fvPatch& p,
+    const DimensionedField<Type, volMesh>& iF
+)
+:
+    advectiveDFFvPatchField<Type>(p, iF),
+    psiName_("thermo:psi")
+    //gamma_(0.0)
+{}
+
+
+template<class Type>
+Foam::waveTransmissiveDFSFvPatchField<Type>::waveTransmissiveDFSFvPatchField
+(
+    const waveTransmissiveDFSFvPatchField& ptf,
+    const fvPatch& p,
+    const DimensionedField<Type, volMesh>& iF,
+    const fvPatchFieldMapper& mapper
+)
+:
+    advectiveDFFvPatchField<Type>(ptf, p, iF, mapper),
+    psiName_(ptf.psiName_)
+    //gamma_(ptf.gamma_)
+{}
+
+
+template<class Type>
+Foam::waveTransmissiveDFSFvPatchField<Type>::waveTransmissiveDFSFvPatchField
+(
+    const fvPatch& p,
+    const DimensionedField<Type, volMesh>& iF,
+    const dictionary& dict
+)
+:
+    advectiveDFFvPatchField<Type>(p, iF, dict),
+    psiName_(dict.lookupOrDefault<word>("psi", "thermo:psi"))
+    //gamma_(readScalar(dict.lookup("gamma")))
+{}
+
+
+template<class Type>
+Foam::waveTransmissiveDFSFvPatchField<Type>::waveTransmissiveDFSFvPatchField
+(
+    const waveTransmissiveDFSFvPatchField& ptpsf
+)
+:
+    advectiveDFFvPatchField<Type>(ptpsf),
+    psiName_(ptpsf.psiName_)
+    //gamma_(ptpsf.gamma_)
+{}
+
+
+template<class Type>
+Foam::waveTransmissiveDFSFvPatchField<Type>::waveTransmissiveDFSFvPatchField
+(
+    const waveTransmissiveDFSFvPatchField& ptpsf,
+    const DimensionedField<Type, volMesh>& iF
+)
+:
+    advectiveDFFvPatchField<Type>(ptpsf, iF),
+    psiName_(ptpsf.psiName_)
+    //gamma_(ptpsf.gamma_)
+{}
+
+
+// * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
+
+template<class Type>
+Foam::tmp<Foam::scalarField>
+Foam::waveTransmissiveDFSFvPatchField<Type>::advectionSpeed() const
+{
+    // Lookup the velocity and compressibility of the patch
+    const fvPatchField<scalar>& psip =
+        this->patch().template
+            lookupPatchField<volScalarField, scalar>(psiName_);
+
+    const surfaceScalarField& phi =
+        this->db().template lookupObject<surfaceScalarField>(this->phiName_);
+
+    fvsPatchField<scalar> phip =
+        this->patch().template
+            lookupPatchField<surfaceScalarField, scalar>(this->phiName_);
+
+    if (phi.dimensions() == dimDensity*dimVelocity*dimArea)
+    {
+        const fvPatchScalarField& rhop =
+            this->patch().template
+                lookupPatchField<volScalarField, scalar>(this->rhoName_);
+
+        phip /= rhop;
+    }
+    const fvPatchField<scalar>& gamma =
+            this->patch().template
+            lookupPatchField<volScalarField, scalar>("gammaStar");
+        //this->db().template lookupObject<surfaceScalarField>("gammaStar");
+
+    // Calculate the speed of the field wave w
+    // by summing the component of the velocity normal to the boundary
+    // and the speed of sound (sqrt(gamma_/psi)).
+    return phip/this->patch().magSf() + sqrt(gamma/psip);
+}
+
+
+template<class Type>
+void Foam::waveTransmissiveDFSFvPatchField<Type>::write(Ostream& os) const
+{
+    fvPatchField<Type>::write(os);
+
+    this->template
+        writeEntryIfDifferent<word>(os, "phi", "phi", this->phiName_);
+    this->template
+        writeEntryIfDifferent<word>(os, "rho", "rho", this->rhoName_);
+    this->template
+        writeEntryIfDifferent<word>(os, "psi", "thermo:psi", psiName_);
+
+    //os.writeKeyword("gamma") << gamma_ << token::END_STATEMENT << nl;
+
+    if (this->lInf_ > small)
+    {
+        os.writeKeyword("fieldInf") << this->fieldInf_
+            << token::END_STATEMENT << nl;
+        os.writeKeyword("lInf") << this->lInf_
+            << token::END_STATEMENT << nl;
+    }
+
+    this->writeEntry("value", os);
+}
+
+
+// ************************************************************************* //

@@ -1,3 +1,5 @@
+advectiveDF/advectiveDFFvPatchFields.C
+waveTransmissiveDFS/waveTransmissiveDFSFvPatchFields.C
 waveTransmissiveDF/waveTransmissiveDFFvPatchFields.C
 
 LIB = $(FOAM_USER_LIBBIN)/libboundaryConditions

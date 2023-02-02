@@ -116,6 +116,7 @@ int main(int argc, char *argv[])
         cputime = 0;
         clockTime_.timeIncrement();
         // --- Directed interpolation of primitive fields onto faces
+        //volScalarField rho_d("rho_d", rho);
 
         surfaceScalarField rho_pos(interpolate(rho, pos));
         surfaceScalarField rho_neg(interpolate(rho, neg));
@@ -251,6 +252,7 @@ int main(int argc, char *argv[])
         // --- Solve energy
 
         fvScalarMatrix rhoEEqn(fvm::ddt(rhoE));
+        fvScalarMatrix rhoEEqn_tmp(fvm::ddt(rhoE_tmp));
         //fvScalarMatrix rhoeEqn(fvm::ddt(rhoe));
 
         /*         surfaceScalarField rhoEstar_pos((ap * rho_neg * (e_pos_neg + 0.5 * magSqr(U_neg)) - am * rho_pos * (e_pos_pos + 0.5 * magSqr(U_pos)) - ((U_neg & mesh.Sf()) * (rho_neg * (e_pos_neg + 0.5 * magSqr(U_neg)) + p_neg) - (U_pos & mesh.Sf()) * (rho_pos * (e_pos_pos + 0.5 * magSqr(U_pos)) + p_pos))) / (ap - am));
@@ -286,6 +288,24 @@ int main(int argc, char *argv[])
 
             rhoEEqn += fvc::div_doubleflux(phiEp_pos, phiEp_neg);
             //rhoeEqn += fvc::div_doubleflux(phiep_pos, phiep_neg);
+        }
+        else if (scheme == "doubleFlux++")
+        {
+            surfaceScalarField phiEp_pos(
+                "phiEp_pos",
+                aphiv_pos * (rho_pos * (e_pos_pos + 0.5 * magSqr(U_pos)) + p_pos) + aphiv_neg * (rho_neg * (e_pos_neg + 0.5 * magSqr(U_neg)) + p_neg) + aSf * p_pos - aSf * p_neg); //- 0 * rhoEQ_pos)
+
+            surfaceScalarField phiEp_neg(
+                "phiEp_pos",
+                aphiv_pos * (rho_pos * (e_neg_pos + 0.5 * magSqr(U_pos)) + p_pos) + aphiv_neg * (rho_neg * (e_neg_neg + 0.5 * magSqr(U_neg)) + p_neg) + aSf * p_pos - aSf * p_neg); //- 0 * rhoEQ_neg)
+
+            rhoEEqn_tmp += fvc::div_doubleflux(phiEp_pos, phiEp_neg);
+
+            surfaceScalarField phiEp(
+                "phiEp",
+                aphiv_pos * (rho_pos * (e_pos + 0.5 * magSqr(U_pos)) + p_pos) + aphiv_neg * (rho_neg * (e_neg + 0.5 * magSqr(U_neg)) + p_neg) + aSf * p_pos - aSf * p_neg);
+
+            rhoEEqn += fvc::div(phiEp);
         }
         else if (scheme == "conservativeFlux")
         {
@@ -332,6 +352,7 @@ int main(int argc, char *argv[])
                     fvc::interpolate(muEff) * mesh.magSf() * fvc::snGrad(U) + fvc::dotInterpolate(mesh.Sf(), tauMC)) &
                     (a_pos * U_pos + a_neg * U_neg));
             rhoEEqn -= fvc::div(sigmaDotU);
+            rhoEEqn_tmp -= fvc::div(sigmaDotU);
         }
 
         solve(rhoEEqn);
@@ -340,6 +361,13 @@ int main(int argc, char *argv[])
         e = rhoE / rho - 0.5 * magSqr(U);
         //e = rhoe / rho;
         e.correctBoundaryConditions();
+
+        if (scheme == "doubleFlux++")
+        {
+            solve(rhoEEqn_tmp);
+            e_tmp = rhoE_tmp / rho - 0.5 * magSqr(U);
+            e_tmp.correctBoundaryConditions();
+        }
 
         if (!inviscid)
         {
@@ -364,6 +392,14 @@ int main(int argc, char *argv[])
             EEqn.solve();
             // fvOptions.correct(e);
             // thermo.correct();
+
+            if (scheme == "doubleFlux++")
+            {
+                fvScalarMatrix EEqn_tmp(
+                    fvm::ddt(rho, e) - fvc::ddt(rho, e) - fvc::laplacian(kappa, T));
+                EEqn_tmp.relax();
+                EEqn_tmp.solve();
+            }
         }
 
         if (scheme == "doubleFlux" || scheme == "mix")
@@ -372,13 +408,28 @@ int main(int argc, char *argv[])
             p.max(1e3);
             //p.min(1e7);
         }
+        if (scheme == "doubleFlux++")
+        {
+            p.ref() = (e_tmp() - eStar()) * rho() * (gammaStar() - 1);
+        }
+
+        //if (scheme == "doubleFlux++")
+        //{
+        //    rho_d = rho;
+        //}
 
         thermo.correct();
         p.correctBoundaryConditions();
         T.correctBoundaryConditions();
         thermo.correct();
 
+        if (scheme == "doubleFlux++")
+        {
+            rho_d -= rho;
+        }
+
         rho.boundaryFieldRef() == psi.boundaryField() * p.boundaryField();
+        U.correctBoundaryConditions();
         rho.correctBoundaryConditions();
         rhoU.boundaryFieldRef() == rho.boundaryField() * U.boundaryField();
 
@@ -447,8 +498,6 @@ int main(int argc, char *argv[])
             }
         }
 
-        runTime.write();
-
         if (logflag == true)
         {
             cputime += clockTime_.timeIncrement();
@@ -456,6 +505,9 @@ int main(int argc, char *argv[])
                 << runTime.timeOutputValue()
                 << ",    " << cputime << endl;
         }
+
+        runTime.write();
+        //rho_d.write();
 
         Info << "ExecutionTime = " << runTime.elapsedCpuTime() << " s"
              << "  ClockTime = " << runTime.elapsedClockTime() << " s"

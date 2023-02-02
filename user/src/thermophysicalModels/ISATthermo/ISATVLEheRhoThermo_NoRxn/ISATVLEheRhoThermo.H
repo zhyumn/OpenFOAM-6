@@ -56,6 +56,7 @@ namespace Foam
         volScalarField vaporfrac_;
         volScalarField soundspeed_;
         volScalarField kappa_;
+        volScalarField rho_d;
         //volScalarField rho_G_;
         //volScalarField Z_;
 
