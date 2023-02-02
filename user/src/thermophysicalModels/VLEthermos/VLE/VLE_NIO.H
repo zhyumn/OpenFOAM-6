@@ -2271,7 +2271,7 @@ inline Foam::scalar Foam::VLE<ThermoMixture>::dWdP_gas_NIO(scalar p, scalar T, V
 }
 
 template <class ThermoMixture>
-inline Foam::autoPtr<scalarRectangularMatrix> Foam::VLE<ThermoMixture>::dErhovfcdXTP_NIO(scalar p, scalar T, VLE_D1_data &sol,scalarRectangularMatrix &out) const
+inline void Foam::VLE<ThermoMixture>::dErhovfcdXTP_NIO(scalar p, scalar T, VLE_D1_data &sol,scalarRectangularMatrix &out) const
 {
     int nsp = this->X_.size();
     //scalar temp;
