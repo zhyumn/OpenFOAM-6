@@ -74,7 +74,7 @@ namespace Foam
         List<scalar> Y_;
 
         //- mole fraction
-        List<scalar> X_;
+        mutable List<scalar> X_;
 
         //mutable label changed;
         //- thermo lib

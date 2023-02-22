@@ -245,8 +245,8 @@ inline void Foam::VLE<ThermoMixture>::TPn_flash_Matheis_NIO(
             eps_outer += F[i] * F[i];
         }
         eps_outer = sqrt(eps_outer);
-        //if (relax < 1 || (iter_outer > 600 && relax < 2) || (iter_outer > 800 && relax < 2) || (iter_outer > 1000 && relax < 2))
-        //    relax *= 3;
+        //if (relax < 1 || (iter_outer > 300 && relax < 4) || (iter_outer > 600 && relax < 4) || (iter_outer > 1000 && relax < 4))
+        //    relax *= 4;
         //else
             relax *= 2;
         if (eps_outer < tol_outer)
