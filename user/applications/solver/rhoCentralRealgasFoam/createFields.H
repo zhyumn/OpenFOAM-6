@@ -178,18 +178,32 @@ volVectorField U(
 volScalarField &rho = mesh.objectRegistry::lookupObjectRef<volScalarField>("thermo:rho");
 rho.rename("rho");
 rho.writeOpt() = IOobject::AUTO_WRITE;
-/*volScalarField rho_write
+volScalarField vol
 (
     IOobject
     (
-        "rho",
+        "vol",
         runTime.timeName(),
         mesh,
         IOobject::NO_READ,
         IOobject::AUTO_WRITE
     ),
-    rho
-);*/
+    mesh,
+    dimensionedScalar("vol", dimVolume/dimMoles, 0.0)
+);
+volScalarField e_mol
+(
+    IOobject
+    (
+        "e_mol",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::AUTO_WRITE
+    ),
+    mesh,
+    dimensionedScalar("e_mol", dimEnergy/dimMoles, 0.0)
+);
 //rho=thermo.rho();
 volVectorField rhoU(
     IOobject(
@@ -294,7 +308,7 @@ volScalarField Wmix(
         mesh,
         IOobject::NO_READ, //IOobject::MUST_READ,
         //IOobject::AUTO_WRITE
-        IOobject::NO_WRITE),
+        IOobject::AUTO_WRITE),
     thermo.W());
 
 dimensionedScalar unitW("unit1", dimMass / dimMoles, 1);

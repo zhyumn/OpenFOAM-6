@@ -463,6 +463,8 @@ int main(int argc, char *argv[])
         gammaStar = rho * c * c / p;
         eStar = e - p / (rho * (gammaStar - 1));
         Wmix = thermo.W();
+	vol = Wmix/rho;
+	e_mol = e*Wmix;
         //forAll(Dimix, i)
         //{
         //Dimix[i] = Dimix_t[i];
