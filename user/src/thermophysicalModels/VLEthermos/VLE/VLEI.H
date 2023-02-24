@@ -1272,6 +1272,44 @@ inline Foam::autoPtr<typename Foam::VLE<ThermoMixture>::solution> Foam::VLE<Ther
         Tsqrt_AbyP_[i] = (*this)[i].Tsqrt_AbyP(sqrtT);
     }
 
+    scalar sum1 = 0, sum2 = 0;
+
+    for (int i = 0; i < this->N_; i++)
+    {
+        sum1 += Xinp[i] * K[i];
+        sum2 += Xinp[i] / K[i];
+    }
+
+    if (sum1 <= 1 || sum2 <= 1)
+    {
+        int min_i = 0;
+        double min_K = K[0];
+        for (int i = 1; i < this->N_; i++)
+        {
+            if (K[i] < min_K)
+            {
+                min_i = i;
+                min_K = K[i];
+            }
+        }
+        for (int i = 0; i < this->N_; i++)
+        {
+            if (K[i] < 1 || i == min_i)
+            {
+                K[i] = Xinp[i];
+            }
+            else
+            {
+                K[i] = 1 / Xinp[i];
+            }
+        }
+    }
+    /*while (sum1 <= 1 || sum2 <= 1)
+    {
+        if()
+
+    }*/
+
     int iter_outer = 0;
     double eps_outer = 0;
     while (iter_outer <= itermax_outer)
@@ -3644,13 +3682,13 @@ inline Foam::scalar Foam::VLE<ThermoMixture>::dHsdP(scalar p, scalar T, solution
 
     scalar dHadT_liq = this->ThermoMixture::dHsdP(p, T, sol.X_liq(), 0);
     autoPtr<scalarList> dXdt_liq(this->dXdP_liq(p, T, sol));
-       
+
     for (int i = 0; i < this->X_.size(); i++)
     {
         dHadT_liq += this->dHsdxi(p, T, i, sol.X_liq(), 0) * dXdt_liq()[i];
     }
 
- //Info<<" 1 HS="<<this->ThermoMixture::Hs(p, T, sol.X_gas(), 1) * dygasdT + dHadT_gas * ygas - this->ThermoMixture::Hs(p, T, sol.X_liq(), 0) * dygasdT + dHadT_liq * (1.0 - ygas) <<endl;
+    //Info<<" 1 HS="<<this->ThermoMixture::Hs(p, T, sol.X_gas(), 1) * dygasdT + dHadT_gas * ygas - this->ThermoMixture::Hs(p, T, sol.X_liq(), 0) * dygasdT + dHadT_liq * (1.0 - ygas) <<endl;
     return this->ThermoMixture::Hs(p, T, sol.X_gas(), 1) * dygasdT + dHadT_gas * ygas - this->ThermoMixture::Hs(p, T, sol.X_liq(), 0) * dygasdT + dHadT_liq * (1.0 - ygas);
 }
 

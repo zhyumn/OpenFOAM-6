@@ -12,7 +12,7 @@ volScalarField FCcell(
         runTime.timeName(),
         mesh,
         IOobject::NO_READ,
-        IOobject::AUTO_WRITE),
+        IOobject::NO_WRITE),
     mesh, dimensionedScalar("zero", dimless, 0));
 
 autoPtr<rhoReactionThermo> pThermo(rhoReactionThermo::New(mesh));
@@ -40,7 +40,7 @@ volScalarField e_tmp(
         runTime.timeName(),
         mesh,
         IOobject::NO_READ,
-        IOobject::AUTO_WRITE),
+        IOobject::NO_WRITE),
     e);
 
 const word inertSpecie(thermo.lookup("inertSpecie"));
@@ -355,7 +355,7 @@ volScalarField gammaStar(
         runTime.timeName(),
         mesh,
         IOobject::NO_READ,
-        IOobject::AUTO_WRITE),
+        IOobject::NO_WRITE),
     rho *c *c / p);
 
 volScalarField eStar(
@@ -447,7 +447,7 @@ volScalarField Drho(
         runTime.timeName(),
         mesh,
         IOobject::NO_READ,
-        IOobject::AUTO_WRITE),
+        IOobject::NO_WRITE),
     mesh, dimensionedScalar("zero", dimless, 0));
 
 scalar drho;

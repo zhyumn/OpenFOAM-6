@@ -245,9 +245,9 @@ inline void Foam::VLE<ThermoMixture>::TPn_flash_Matheis_NIO(
             eps_outer += F[i] * F[i];
         }
         eps_outer = sqrt(eps_outer);
-        if (relax < 1 || (iter_outer > 300 && relax < 4) || (iter_outer > 600 && relax < 16) || (iter_outer > 1000 && relax < 32))
-            relax *= 4;
-        else
+        //if (relax < 1 || (iter_outer > 300 && relax < 4) || (iter_outer > 600 && relax < 4) || (iter_outer > 1000 && relax < 4))
+        //    relax *= 4;
+        //else
             relax *= 2;
         if (eps_outer < tol_outer)
         {
@@ -306,10 +306,11 @@ inline void Foam::VLE<ThermoMixture>::TPn_flash_New_TPD_Tudisco_NIO // TPn flash
 {
 #ifdef HY_DEBUG
     Info << setprecision(50) << "p=" << p << ",T=" << T << ",X=" << Xinp << endl;
-    p = 32922618.4166;
-    T = 602.504786692;
-    this->X_[0] = 0.215957373972;
-    this->X_[1] = 0.784042626028;
+    p = 47510858.779683121;
+    T = 567.0820033742425;
+    this->X_[0] = 0.15081333856095205;
+    this->X_[1] = 0.024826764817530642;
+    this->X_[2] = 0.82435989662151732;
 #endif
     if (noVLE) //TODO: update all values
     {
@@ -1026,6 +1027,10 @@ inline std::tuple<Foam::scalar, Foam::scalar> Foam::VLE<ThermoMixture>::UVn_flas
     int iter = 0;
     scalar maxratio = 0.3;
     scalar dTdE, dPdE, dTdrho, dPdrho;
+    if(p0<0)
+    {
+        p0 =1e5;
+    }
 
     scalar t_f;
     this->TPn_flash_New_TPD_Tudisco_NIO(p1, T1, this->X_, retSol);
@@ -1083,7 +1088,7 @@ inline std::tuple<Foam::scalar, Foam::scalar> Foam::VLE<ThermoMixture>::UVn_flas
 
         if (iter++ > 5 * maxIter_)
         {
-           /* WarningInFunction << setprecision(50)
+            /* WarningInFunction << setprecision(50)
                               << "Maximum number of iterations exceeded: " << iter - 1
                               << " error:" << sqrt(minf) //mag(y2[1] - e) + mag(y2[0] - rho)
                               << " e: " << e
@@ -1344,10 +1349,10 @@ Foam::VLE<ThermoMixture>::dvidXi_NIO(scalar p, scalar T, label di, VLE_D1_data &
 }
 
 template <class ThermoMixture>
-inline void Foam::VLE<ThermoMixture>::dTPvfcdXErho_NIO(scalar p, scalar T, VLE_D1_data &sol,scalarRectangularMatrix &out) const
+inline void Foam::VLE<ThermoMixture>::dTPvfcdXErho_NIO(scalar p, scalar T, VLE_D1_data &sol, scalarRectangularMatrix &out) const
 {
     int nsp = this->X_.size();
-    scalarRectangularMatrix &grad = out;//*(new scalarRectangularMatrix(nsp + 2, 4));
+    scalarRectangularMatrix &grad = out; //*(new scalarRectangularMatrix(nsp + 2, 4));
 
     const VLE<ThermoMixture> &This = *this;
     scalar vf = sol.vaporFraction;
@@ -1643,7 +1648,22 @@ Foam::VLE<ThermoMixture>::c_full_NIO(scalar p, scalar T, scalar rho_, VLE_D1_dat
 
     List<autoPtr<scalarList>> ddxi_Ln_fugcoef_G_(this->X_.size()),
         ddxi_Ln_fugcoef_L_(this->X_.size());
+    /*static scalarList *ddxi_Ln_fugcoef_G_ = NULL;
 
+    static scalarList *ddxi_Ln_fugcoef_L_ = NULL;
+
+    if (ddxi_Ln_fugcoef_G_ == NULL)
+    {
+        ddxi_Ln_fugcoef_G_ = new scalarList[this->X_.size()];
+        ddxi_Ln_fugcoef_L_ = new scalarList[this->X_.size()];
+
+        for(int i =0;i<this->X_.size();i++)
+        {
+            ddxi_Ln_fugcoef_G_[i].resize(this->X_.size());
+            ddxi_Ln_fugcoef_L_[i].resize(this->X_.size());
+        }
+    }
+*/
     scalarList Bi(this->N_);
     scalarList dBidP(this->N_);
     scalarList dBidT(this->N_);
@@ -1694,6 +1714,8 @@ Foam::VLE<ThermoMixture>::c_full_NIO(scalar p, scalar T, scalar rho_, VLE_D1_dat
     {
         scalarList &ddxi_Ln_fugcoef = *(new scalarList(this->N_));
         ddxi_Ln_fugcoef_G_[i].reset(&ddxi_Ln_fugcoef);
+        //scalarList &ddxi_Ln_fugcoef = ddxi_Ln_fugcoef_G_[i];
+
         scalar dAmixzdxi = dAdxi_G_[i];
         scalar dBmixzdxi = dBdxi_G_[i];
 
@@ -1722,6 +1744,8 @@ Foam::VLE<ThermoMixture>::c_full_NIO(scalar p, scalar T, scalar rho_, VLE_D1_dat
     {
         scalarList &ddxi_Ln_fugcoef = *(new scalarList(this->N_));
         ddxi_Ln_fugcoef_L_[i].reset(&ddxi_Ln_fugcoef);
+        //scalarList &ddxi_Ln_fugcoef = ddxi_Ln_fugcoef_L_[i];
+
         scalar dAmixzdxi = dAdxi_L_[i];
         scalar dBmixzdxi = dBdxi_L_[i];
 
@@ -2271,11 +2295,11 @@ inline Foam::scalar Foam::VLE<ThermoMixture>::dWdP_gas_NIO(scalar p, scalar T, V
 }
 
 template <class ThermoMixture>
-inline void Foam::VLE<ThermoMixture>::dErhovfcdXTP_NIO(scalar p, scalar T, VLE_D1_data &sol,scalarRectangularMatrix &out) const
+inline void Foam::VLE<ThermoMixture>::dErhovfcdXTP_NIO(scalar p, scalar T, VLE_D1_data &sol, scalarRectangularMatrix &out) const
 {
     int nsp = this->X_.size();
     //scalar temp;
-    scalarRectangularMatrix &grad = out;//*(new scalarRectangularMatrix(nsp + 2, 4));
+    scalarRectangularMatrix &grad = out; //*(new scalarRectangularMatrix(nsp + 2, 4));
 
     const VLE<ThermoMixture> &This = *this;
     scalar vf = sol.vaporFraction;
@@ -2556,7 +2580,7 @@ inline Foam::scalar Foam::VLE<ThermoMixture>::PV_nflash_NIO(
                                          << " X: " << this->X_
                                          << abort(FatalError);
                 }
-            } while (mag(T2 - T1) > Ttol && mag(rho - 1/Fm) > 1e-4);
+            } while (mag(T2 - T1) > Ttol && mag(rho - 1 / Fm) > 1e-4);
             T2 = Tm;
             F2 = Fm;
         }
@@ -2574,7 +2598,7 @@ inline Foam::scalar Foam::VLE<ThermoMixture>::PV_nflash_NIO(
                                  << " X: " << this->X_
                                  << abort(FatalError);
         }
-        if (iter++ >   maxIter_)
+        if (iter++ > maxIter_)
         {
             FatalErrorInFunction << setprecision(50)
                                  << "Maximum number of iterations exceeded: " << maxIter_
@@ -2584,10 +2608,9 @@ inline Foam::scalar Foam::VLE<ThermoMixture>::PV_nflash_NIO(
                                  << "  Tg: " << T2
                                  << " X: " << this->X_
                                  << abort(FatalError);
-
         }
 
-    } while (mag(T2 - T1) > Ttol && mag(1/F2 - rho) > 1e-4 );
+    } while (mag(T2 - T1) > Ttol && mag(1 / F2 - rho) > 1e-4);
     return T2r;
 }
 

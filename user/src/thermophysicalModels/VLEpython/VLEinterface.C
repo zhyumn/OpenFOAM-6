@@ -243,6 +243,8 @@ void solver_new::setX(std::vector<double> Xout)
     thermo->setX(comp_X_of);
     updated = false;
 }
+
+
 void solver_new::setY(std::vector<double> Yout)
 {
     Foam::scalarList comp_Y_of(n_species, Foam::Zero);
@@ -449,8 +451,10 @@ double solver_new::dTEvfcdXrhoP_NIO(int i, int j)
     Mtype::VLE_D1_data sol_NIO(thermo->X_.size());
     thermo->TPn_flash_New_TPD_Tudisco_NIO(P_, T_, thermo->X_, sol_NIO);
     thermo->c_full_NIO(P_, T_, thermo->rho_NIO(P_, T_, sol_NIO), sol_NIO);
-    autoPtr<scalarRectangularMatrix> grad(thermo->dTEvfcdXrhoP_NIO(P_, T_, sol_NIO));
-    return grad()(i,j);
+    scalarRectangularMatrix grad(2+thermo->X_.size(),4);
+    thermo->dTEvfcdXrhoP_NIO(P_, T_, sol_NIO,grad);
+    //autoPtr<scalarRectangularMatrix> grad(thermo->dTEvfcdXrhoP_NIO(P_, T_, sol_NIO));
+    return grad(i,j);
 }
 
 double solver_new::Es()
@@ -476,14 +480,17 @@ double solver_new::dHadT_singlePhase(int flag, std::vector<double> &in)
     return thermo->PengRobinsonMixture<multispecie<Stype>>::dHadT(P_, T_, comp_of, flag);
 }
 
-double solver_new::Hideal(std::vector<double> &in)
+
+
+double solver_new::Hideal()
 {
-    Foam::scalarList comp_of(comp.size(), Foam::Zero);
+    return thermo->PengRobinsonMixture<multispecie<Stype>>::Hideal(P_, T_,thermo->X_);
+/*     Foam::scalarList comp_of(comp.size(), Foam::Zero);
     for (unsigned int i = 0; i < comp.size(); i++)
     {
         comp_of[i] = in[i];
     }
-    return thermo->PengRobinsonMixture<multispecie<Stype>>::Hideal(P_, T_, comp_of);
+    return thermo->PengRobinsonMixture<multispecie<Stype>>::Hideal(P_, T_, comp_of); */
 }
 double solver_new::dHidealdT(std::vector<double> &in)
 {

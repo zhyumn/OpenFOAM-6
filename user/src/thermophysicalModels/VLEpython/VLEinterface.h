@@ -151,7 +151,10 @@ public:
     std::vector<std::vector<double>> dTHvfc_G_rhoY_dXrhoP();
     std::vector<std::vector<double>> dErhovfc_G_rhoY_dXTP();
 
-    double dTEvfcdXrhoP_NIO(int,int);
+    double dTEvfcdXrhoP_NIO(int, int);
+
+    //double Hideal(std::vector<double>);
+    double Hideal();
 
 private:
     //void solve(bool flag);
@@ -209,7 +212,7 @@ private:
 
     double Ha_singlePhase(int, std::vector<double> &);
     double dHadT_singlePhase(int, std::vector<double> &);
-    double Hideal(std::vector<double> &);
+
     double dHidealdT(std::vector<double> &);
 
     double dHadP();

@@ -299,7 +299,7 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
                 {
                     const typename MixtureType::thermoType &mixture_ = this->cellMixture(celli);
 
-                    std::tie(TCells[celli], pCells[celli], vaporfracCells[celli], soundspeedCells[celli]) = mixture_.TPvfc_XErho(hCells[celli], rhoCells[celli], TCells[celli], pCells[celli]);
+                            std::tie(TCells[celli], pCells[celli], vaporfracCells[celli], soundspeedCells[celli]) = mixture_.TPvfc_XErho(hCells[celli], rhoCells[celli], TCells[celli], pCells[celli]);
 
                     psiCells[celli] = rhoCells[celli] / pCells[celli];
                 }
@@ -531,7 +531,7 @@ Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::ISATVLEheRhoThermo(
           mesh,
           dimEnergy / (dimTime * dimLength * dimTemperature)),
 
-                rho_d(
+      rho_d(
           IOobject(
               "rho_d",
               mesh.time().timeName(),
