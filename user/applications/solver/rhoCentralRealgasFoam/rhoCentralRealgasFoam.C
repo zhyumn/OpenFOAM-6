@@ -236,6 +236,9 @@ int main(int argc, char *argv[])
                 fvm::ddt(rho, U) - fvc::ddt(rho, U) - fvm::laplacian(muEff, U) - fvc::div(tauMC));
             rhoU = rho * U;
         }
+
+#include "YEqn.H"
+
         if (!inviscid)
         {
             sumHeatDiffusion *= 0.;
@@ -247,7 +250,6 @@ int main(int argc, char *argv[])
                 sumHeatDiffusion2 += fvc::div(hei[k] * rho * YVi[k]);
             }
         }
-#include "YEqn.H"
 
         // --- Solve energy
 
@@ -377,8 +379,8 @@ int main(int argc, char *argv[])
                 //- fvm::laplacian(turbulence->alphaEff(), e)
                 //- fvm::laplacian(kappa / Cp, he) //Todo kappa Cp
                 //- fvm::laplacian(alpha, he) ==
-                - fvc::laplacian(kappa, T) //==
-                //-sumHeatDiffusion - sumHeatDiffusion2
+                - fvc::laplacian(kappa, T) ==
+                -sumHeatDiffusion - sumHeatDiffusion2
                 //== fvOptions(rho, e)
             );
             /*forAll(Y, k)

@@ -1,0 +1,93 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  6
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volScalarField;
+    location    "0";
+    object      T;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+dimensions      [0 0 0 1 0 0 0];
+
+internalField   #codeStream
+{
+    
+        codeInclude
+        #{
+            #include "fvCFD.H"
+        #};
+        codeOptions
+        #{
+            -I$(LIB_SRC)/finiteVolume/lnInclude \
+            -I$(LIB_SRC)/meshTools/lnInclude
+        #};  
+        codeLibs
+        #{
+            -lmeshTools \
+            -lfiniteVolume
+        #};
+        code
+        #{
+            const IOdictionary & d = static_cast<const IOdictionary&>(dict);
+            const fvMesh& mesh = refCast<const fvMesh>(d.db());
+            const scalar PI = 3.1415926535897932384626;
+
+            double dx=1.3973521396304276e-05;
+            double thickness =dx/14.58;//5.901;
+            double Ttop=600;
+            double Tbottom=293.0;
+
+            scalarField T(mesh.nCells());
+            forAll(T, i)
+            {
+                const scalar z = mesh.C()[i][2];
+ 
+                
+                    T[i] =0.5*(Ttop+Tbottom)+0.5*(Ttop-Tbottom)*erf(sqrt(PI)*z/thickness);
+                
+            }
+            T.writeEntry( "", os);
+        #};
+    
+};
+
+boundaryField
+{
+    top
+    {
+        //type            zeroGradient;
+                type            waveTransmissiveDF;
+    }
+    bottom
+    {
+        //type            zeroGradient;
+                type            waveTransmissiveDF;
+    }
+    front
+    {
+        type            empty;
+    }
+    back
+    {
+        type            empty;
+    }
+    left
+    {
+        type            cyclic;
+    }
+    right
+    {
+        type            cyclic;
+    }
+}
+
+
+// ************************************************************************* //
