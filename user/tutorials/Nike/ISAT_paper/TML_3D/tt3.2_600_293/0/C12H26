@@ -40,8 +40,8 @@ internalField   #codeStream
             const fvMesh& mesh = refCast<const fvMesh>(d.db());
             const scalar PI = 3.1415926535897932384626;
 
-            double dx=1.3973521396304276e-05;
-            double thickness =dx/14.58;//5.901;
+            double dx=2.7947042792608553e-05;
+            double thickness =dx/29.16;//5.901;
             double Ctop=0.999;//0.0001;
             double Cbottom=0.001;//0.9998;
 
@@ -78,11 +78,11 @@ boundaryField
     }
     front
     {
-        type            cyclic;
+        type             cyclic;//empty;//cyclic;
     }
     back
     {
-        type            cyclic;
+        type             cyclic;//empty;//cyclic;
     }
     left
     {

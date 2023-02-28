@@ -40,9 +40,9 @@ internalField   #codeStream
             const fvMesh &mesh = refCast<const fvMesh>(d.db());
             const scalar PI = 3.1415926535897932384626;
 
-            double dx=1.3973521396304276e-05;
-            double lambda1 =dx/2.0;//delta *7.29;
-            double delta = dx/14.58;//lambda1;///7.29;
+            double dx=2.7947042792608553e-05;
+            double lambda1 =dx/4.0;//delta *7.29;
+            double delta = dx/29.16;//lambda1;///7.29;
             double lambda3 = 0.6*lambda1;
 
             double Utop = 77.94512213892726;
@@ -52,8 +52,8 @@ internalField   #codeStream
             double Gamma3 = lambda1*dU;
             
             
-            double A[4] = {0.5, 1, 0, 0.0};
-            double B[4] = {0.05, 1, 0.0, 0.0};
+            double A[4] = {0.25, 0.5, 1, 0.0};
+            double B[4] = {0.05, 0, 1.0, 0.0};
             
             double alpha = 2 * PI / lambda1;
             double alphaS = alpha * delta;
@@ -83,8 +83,10 @@ internalField   #codeStream
                     zS = z / delta;
                     a1 =  0.25 * exp(sqr(alphaS) * 0.25 / PI) * (erf(zS * sqrt(PI) + alphaS * 0.5 / sqrtPI) - 1);
                     a2 = -0.25 * exp(sqr(alphaS) * 0.25 / PI) * (erf(zS * sqrt(PI) - alphaS * 0.5 / sqrtPI) + 1);
-                    U[j][0] += F2D * lambda1 * dU / Gamma3 * A[i] * sin(alpha * x) * (a2 * exp(-z * alpha) - a1 * exp(z * alpha));//* delta
-                    U[j][2] += F2D * lambda1 * dU / Gamma3 * A[i]  * cos(alpha * x) * (a2 * exp(-z * alpha) + a1 * exp(z * alpha));//* delta
+                    //U[j][0] += F2D * lambda1 * dU / Gamma3 * A[i] * sin(alpha * x) * (a2 * exp(-z * alpha) - a1 * exp(z * alpha));//* delta
+                    //U[j][2] += F2D * lambda1 * dU / Gamma3 * A[i]  * cos(alpha * x) * (a2 * exp(-z * alpha) + a1 * exp(z * alpha));//* delta
+                    U[j][0] += F2D *dU * A[i] * sin(alpha * x) * (a2 * exp(-z * alpha) - a1 * exp(z * alpha));//* delta
+                    U[j][2] += F2D *dU * A[i]  * cos(alpha * x) * (a2 * exp(-z * alpha) + a1 * exp(z * alpha));//* delta
                 }
                 alpha *= 0.5;
                 alphaS *= 0.5;
@@ -104,11 +106,13 @@ internalField   #codeStream
                     zS = z / delta;
                     a1 =  0.25 * exp(sqr(alpha2S) * 0.25 / PI) * (erf(zS * sqrt(PI) + alpha2S * 0.5 / sqrtPI) - 1);
                     a2 = -0.25 * exp(sqr(alpha2S) * 0.25 / PI) * (erf(zS * sqrt(PI) - alpha2S * 0.5 / sqrtPI) + 1);
-                    U[j][0] += F3D * lambda3 * dU / Gamma1 * B[i]  * sin(alpha2 * y) * (a2 * exp(-z * alpha2) - a1 * exp(z * alpha2)); //* delta
-                    U[j][1] += F3D * lambda3 * dU / Gamma1 * B[i]  * cos(alpha2 * y) * (a2 * exp(-z * alpha2) + a1 * exp(z * alpha2)); // * delta
+                   // U[j][0] += F3D * lambda3 * dU / Gamma1 * B[i]  * sin(alpha2 * y) * (a2 * exp(-z * alpha2) - a1 * exp(z * alpha2)); //* delta
+                    //U[j][1] += F3D * lambda3 * dU / Gamma1 * B[i]  * cos(alpha2 * y) * (a2 * exp(-z * alpha2) + a1 * exp(z * alpha2)); // * delta
+                    U[j][0] += F3D *dU * B[i]  * sin(alpha2 * y) * (a2 * exp(-z * alpha2) - a1 * exp(z * alpha2)); //* delta
+                    U[j][1] += F3D *dU * B[i]  * cos(alpha2 * y) * (a2 * exp(-z * alpha2) + a1 * exp(z * alpha2)); // * delta
                 }
                 alpha2 *= 0.5;
-                alphaS2 *= 0.5;
+                alpha2S *= 0.5;
             }
             
 
@@ -131,11 +135,11 @@ boundaryField
     }
     front
     {
-        type            cyclic;
+        type            cyclic;//empty;//cyclic;
     }
     back
     {
-        type            cyclic;
+        type            cyclic;//empty;//cyclic;
     }
     left
     {
