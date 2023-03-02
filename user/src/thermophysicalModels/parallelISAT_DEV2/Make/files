@@ -1,0 +1,3 @@
+makeParallelISAT.C
+
+LIB = $(FOAM_USER_LIBBIN)/libParallelISATchemDEV2
