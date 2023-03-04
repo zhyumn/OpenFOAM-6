@@ -43,6 +43,7 @@ namespace Foam
     int slab_chain::is_valid()
     {
         assert(POWEROF2(pagesize));
+        //std::cout<<"this->slabsize="<<this->slabsize<<std::endl;
         assert(POWEROF2(this->slabsize));
         assert(POWEROF2(this->pages_per_alloc));
 
@@ -141,12 +142,13 @@ namespace Foam
         this->partial = sptr_NULL;
         this->empty = sptr_NULL;
         this->full = sptr_NULL;
-
+        //std::cout<<"here!!!!!!!!!!!!!init"<<std::endl;
         assert(is_valid());
     }
 
     SHAREDPOINTER slab_chain::alloc(MemPool& mempool)
     {
+        //std::cout<<"here!!!!!!!!!!!!!alloc start"<<std::endl;
         assert(is_valid());
 
         if (LIKELY(this->partial != sptr_NULL)) {
@@ -166,9 +168,11 @@ namespace Foam
                     this->full->prev = tmp;
 
                 this->full = tmp;
+                //std::cout<<"here!!!!!!!!!!!!!alloc end"<<std::endl;
                 return (SHAREDPOINTER)(this->full->data + slot * this->itemsize - MemStart<0>::start);
             }
             else {
+                //std::cout<<"here!!!!!!!!!!!!!alloc end"<<std::endl;
                 return (SHAREDPOINTER)(this->partial->data + slot * this->itemsize - MemStart<0>::start);
             }
         }
@@ -184,6 +188,7 @@ namespace Foam
                 this->partial->refcount++ : this->partial->page->refcount++;
 
             this->partial->slots = this->initial_slotmask;
+            //std::cout<<"here!!!!!!!!!!!!!alloc end"<<std::endl;
             return (SHAREDPOINTER)(this->partial->data - MemStart<0>::start);
         }
         else {
@@ -193,7 +198,9 @@ namespace Foam
             this->partial = mempool.get_page(this->pages_per_alloc);
 
             if (UNLIKELY(this->partial == sptr_NULL))
-                return perror("get_page failed"), this->partial = sptr_NULL;
+               {
+                //std::cout<<"here!!!!!!!!!!!!!alloc end"<<std::endl;
+                 return perror("get_page failed"), this->partial = sptr_NULL;}
 
             SharedPointer_SLAB prev;
 
@@ -233,7 +240,7 @@ namespace Foam
 
                 prev->next = sptr_NULL;
             }
-
+            //std::cout<<"here!!!!!!!!!!!!!alloc end"<<std::endl;
             return (SHAREDPOINTER)(this->partial->data - MemStart<0>::start);
         }
 
@@ -242,6 +249,7 @@ namespace Foam
 
     void slab_chain::free(SHAREDPOINTER addr,MemPool& mempool)
     {
+        //std::cout<<"here!!!!!!!!!!!!!free"<<std::endl;
         assert(is_valid());
         assert(addr != sptr_NULL);
 
@@ -343,6 +351,7 @@ namespace Foam
 
     void slab_chain::traverse(void (*fn)(const void*))
     {
+        //std::cout<<"here!!!!!!!!!!!!!traverse"<<std::endl;
         assert(fn != NULL);
         assert(is_valid());
 
@@ -374,6 +383,7 @@ namespace Foam
 
     void slab_chain::destroy(MemPool& mempool)
     {
+        //std::cout<<"here!!!!!!!!!!!!!destroy"<<std::endl;
         assert(is_valid());
 
         SharedPointer_SLAB heads[] = { this->partial, this->empty, this->full };
@@ -417,6 +427,7 @@ namespace Foam
 
     void slab_chain::dump(FILE* const out)
     {
+                //std::cout<<"here!!!!!!!!!!!!!dump"<<std::endl;
         assert(out != NULL);
         assert(is_valid());
 
@@ -455,6 +466,7 @@ namespace Foam
 
     void slab_chain::stats(FILE* const out)
     {
+                        //std::cout<<"here!!!!!!!!!!!!!stats"<<std::endl;
         assert(out != NULL);
         assert(is_valid());
 
@@ -502,8 +514,115 @@ namespace Foam
             total_nr_slabs, total_used_slots, total_free_slots, occupancy);
     }
 
+    void slab_chain::report()
+    {
+                        //std::cout<<"here!!!!!!!!!!!!!stats"<<std::endl;
+        assert(is_valid());
+
+        long long unsigned
+            total_nr_slabs = 0,
+            total_used_slots = 0,
+            total_free_slots = 0;
+
+        float occupancy;
+
+        SharedPointer_SLAB heads[] =
+        { this->partial, this->empty, this->full };
+
+        const char* labels[] = { "Partial", "Empty", "Full" };
+        std::cout<< "itemsize:" << this->itemsize<<std::endl;
+        std::cout<< "Slabs Used Free Occupancy" <<std::endl;
+        //fprintf(out, "%8s %17s %17s %17s %17s\n", "",
+        //    "Slabs", "Used", "Free", "Occupancy");
+
+        for (size_t i = 0; i < 3; ++i) {
+            long long unsigned nr_slabs = 0, used_slots = 0, free_slots = 0;
+            SharedPointer_SLAB slab;
+
+            for (slab = heads[i]; slab != sptr_NULL; slab = slab->next) {
+                nr_slabs++;
+                used_slots += this->itemcount - FREE_SLOTS(slab->slots);
+                free_slots += FREE_SLOTS(slab->slots);
+            }
+
+            occupancy = used_slots + free_slots ?
+                100 * (float)used_slots / (used_slots + free_slots) : 0.0;
+
+            std::cout<< labels[i]<< " " << nr_slabs<< " " << used_slots<< " " << free_slots<< " " << occupancy <<std::endl;
+            //fprintf(out, "%8s %17llu %17llu %17llu %16.2f%%\n",
+            //    labels[i], nr_slabs, used_slots, free_slots, occupancy);
+
+            total_nr_slabs += nr_slabs;
+            total_used_slots += used_slots;
+            total_free_slots += free_slots;
+        }
+
+        occupancy = total_used_slots + total_free_slots ?
+            100 * (float)total_used_slots / (total_used_slots + total_free_slots) :
+            0.0;
+        std::cout<<  "Total"<< " " << total_nr_slabs<< " " <<  total_used_slots<< " " << total_free_slots<< " " << occupancy <<std::endl;
+        std::cout<< std::endl;
+        //fprintf(out, "%8s %17llu %17llu %17llu %16.2f%%\n", "Total",
+        //    total_nr_slabs, total_used_slots, total_free_slots, occupancy);
+    }
+
+    void slab_chain::report(int &total, int &used,int &free_)
+    {
+                        //std::cout<<"here!!!!!!!!!!!!!stats"<<std::endl;
+        assert(is_valid());
+
+        long long unsigned
+            total_nr_slabs = 0,
+            total_used_slots = 0,
+            total_free_slots = 0;
+
+        float occupancy;
+
+        SharedPointer_SLAB heads[] =
+        { this->partial, this->empty, this->full };
+
+        const char* labels[] = { "Partial", "Empty", "Full" };
+        //std::cout<< "itemsize:" << this->itemsize<<std::endl;
+        //std::cout<< "Slabs Used Free Occupancy" <<std::endl;
+        //fprintf(out, "%8s %17s %17s %17s %17s\n", "",
+        //    "Slabs", "Used", "Free", "Occupancy");
+
+        for (size_t i = 0; i < 3; ++i) {
+            long long unsigned nr_slabs = 0, used_slots = 0, free_slots = 0;
+            SharedPointer_SLAB slab;
+
+            for (slab = heads[i]; slab != sptr_NULL; slab = slab->next) {
+                nr_slabs++;
+                used_slots += this->itemcount - FREE_SLOTS(slab->slots);
+                free_slots += FREE_SLOTS(slab->slots);
+            }
+
+            occupancy = used_slots + free_slots ?
+                100 * (float)used_slots / (used_slots + free_slots) : 0.0;
+
+            //std::cout<< labels[i]<< " " << nr_slabs<< " " << used_slots<< " " << free_slots<< " " << occupancy <<std::endl;
+            //fprintf(out, "%8s %17llu %17llu %17llu %16.2f%%\n",
+            //    labels[i], nr_slabs, used_slots, free_slots, occupancy);
+
+            total_nr_slabs += nr_slabs;
+            total_used_slots += used_slots;
+            total_free_slots += free_slots;
+        }
+        total += total_nr_slabs* this->pages_per_alloc;
+        used += total_used_slots * this->itemsize;
+        free_ += total_free_slots *  this->itemsize;
+        occupancy = total_used_slots + total_free_slots ?
+            100 * (float)total_used_slots / (total_used_slots + total_free_slots) :
+            0.0;
+        //std::cout<<  "Total"<< " " << total_nr_slabs<< " " <<  total_used_slots<< " " << total_free_slots<< " " << occupancy <<std::endl;
+        //std::cout<< std::endl;
+        //fprintf(out, "%8s %17llu %17llu %17llu %16.2f%%\n", "Total",
+        //    total_nr_slabs, total_used_slots, total_free_slots, occupancy);
+    }
+
     void slab_chain::props(FILE* const out)
     {
+                        //std::cout<<"here!!!!!!!!!!!!!props"<<std::endl;
         assert(out != NULL);
         assert(is_valid());
 

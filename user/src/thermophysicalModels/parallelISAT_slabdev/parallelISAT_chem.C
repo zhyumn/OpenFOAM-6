@@ -38,16 +38,16 @@ namespace Foam
 
         //template<>
         //label ISAT_chem<psiReactionThermo, gasHThermoPhysics>::out = 0;
-        template<>
-        parallelISAT_chem<psiReactionThermo, gasHThermoPhysics>* ISAT_chem<psiReactionThermo, gasHThermoPhysics>::pISAT = nullptr;
-        template<class CompType, class ThermoType>
-        std::ostream& operator<<(std::ostream& out, typename ISAT_chem<CompType, ThermoType>::leafData& A)
+        template <>
+        parallelISAT_chem<psiReactionThermo, gasHThermoPhysics> *ISAT_chem<psiReactionThermo, gasHThermoPhysics>::pISAT = nullptr;
+        template <class CompType, class ThermoType>
+        std::ostream &operator<<(std::ostream &out, typename ISAT_chem<CompType, ThermoType>::leafData &A)
         {
             out << A.v << ", " << A.Rv;
             return out;
         }
-        template<class CompType, class ThermoType>
-        std::ostream& operator<<(std::ostream& out, typename ISAT_chem<CompType, ThermoType>::nodeData& A)
+        template <class CompType, class ThermoType>
+        std::ostream &operator<<(std::ostream &out, typename ISAT_chem<CompType, ThermoType>::nodeData &A)
         {
             out << A.v;
             return out;
@@ -59,64 +59,41 @@ namespace Foam
 
 //const dataType Foam::parallelISAT_chem::staticData();
 
-
 // * * * * * * * * * * * * * Static Member Functions * * * * * * * * * * * * //
-
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
-
 // * * * * * * * * * * * * Protected Member Functions  * * * * * * * * * * * //
-
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-
-
-template<class CompType, class ThermoType>
+template <class CompType, class ThermoType>
 Foam::chemistryTabulationMethods::parallelISAT_chem<CompType, ThermoType>::parallelISAT_chem(
-    const dictionary& dict,
-    TDACChemistryModel<CompType, ThermoType>& chemistry
-)
-    :
-    chemistryTabulationMethod<CompType, ThermoType>
-    (
-        dict,
-        chemistry
-        ),
-    parallelISAT<ISAT_chem<CompType, ThermoType>, emptyClass >
-    (
-        SUPstream::node_manager,
-        label(readLabel(this->coeffsDict_.lookup("maxNLeafs")) * 1.2),
-        readLabel(this->coeffsDict_.lookup("maxNLeafs")),
-        SUPstream::Sync
-        ),
-    runTime_(chemistry.time()),
-    completeSpaceSize_(chemistry.nEqns() + ((this->variableTimeStep()) ? 1 : 0)),
-    scaleFactor_(completeSpaceSize_, 1),
-    maxNumNewDim_(this->coeffsDict_.lookupOrDefault("maxNumNewDim", 0)),
-    chPMaxLifeTime_
-    (
-        this->coeffsDict_.lookupOrDefault("chPMaxLifeTime", INT_MAX)
-    ),
-    maxGrowth_(this->coeffsDict_.lookupOrDefault("maxGrowth", INT_MAX)),
+    const dictionary &dict,
+    TDACChemistryModel<CompType, ThermoType> &chemistry)
+    : chemistryTabulationMethod<CompType, ThermoType>(
+          dict,
+          chemistry),
+      parallelISAT<ISAT_chem<CompType, ThermoType>, emptyClass>(
+          SUPstream::node_manager,
+          label(readLabel(this->coeffsDict_.lookup("maxNLeafs")) * 1.2),
+          readLabel(this->coeffsDict_.lookup("maxNLeafs")),
+          SUPstream::Sync),
+      runTime_(chemistry.time()),
+      completeSpaceSize_(chemistry.nEqns() + ((this->variableTimeStep()) ? 1 : 0)),
+      scaleFactor_(completeSpaceSize_, 1),
+      maxNumNewDim_(this->coeffsDict_.lookupOrDefault("maxNumNewDim", 0)),
+      chPMaxLifeTime_(
+          this->coeffsDict_.lookupOrDefault("chPMaxLifeTime", INT_MAX)),
+      maxGrowth_(this->coeffsDict_.lookupOrDefault("maxGrowth", INT_MAX)),
 
-    minBalanceThreshold_
-    (
-        this->coeffsDict_.lookupOrDefault
-        (
-            "minBalanceThreshold", 0.1 * this->maxNLeafs_
-        )
-    ),
-    maxDepthFactor_
-    (
-        this->coeffsDict_.lookupOrDefault
-        (
-            "maxDepthFactor",
-            (this->maxNLeafs_ - 1)
-            / (log(scalar(this->maxNLeafs_)) / log(2.0))
-        )
-    )
+      minBalanceThreshold_(
+          this->coeffsDict_.lookupOrDefault(
+              "minBalanceThreshold", 0.1 * this->maxNLeafs_)),
+      maxDepthFactor_(
+          this->coeffsDict_.lookupOrDefault(
+              "maxDepthFactor",
+              (this->maxNLeafs_ - 1) / (log(scalar(this->maxNLeafs_)) / log(2.0))))
 {
     //this->maxNLeafs_ = readLabel(this->coeffsDict_.lookup("maxNLeafs"));
 
@@ -137,10 +114,8 @@ Foam::chemistryTabulationMethods::parallelISAT_chem<CompType, ThermoType>::paral
             else
             {
                 scaleFactor_[i] =
-                    readScalar
-                    (
-                        scaleDict.lookup(this->chemistry_.Y()[i].member())
-                    );
+                    readScalar(
+                        scaleDict.lookup(this->chemistry_.Y()[i].member()));
             }
         }
         scaleFactor_[Ysize] = readScalar(scaleDict.lookup("Temperature"));
@@ -177,32 +152,23 @@ Foam::chemistryTabulationMethods::parallelISAT_chem<CompType, ThermoType>::paral
     }
 }
 
-
-
-
-
-
-
 // * * * * * * * * * * * * * * * * Selectors * * * * * * * * * * * * * * * * //
 
-
-
-
 // * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-template<class CompType, class ThermoType>
+template <class CompType, class ThermoType>
 Foam::chemistryTabulationMethods::parallelISAT_chem<CompType, ThermoType>::~parallelISAT_chem()
-{}
-
+{
+}
 
 // * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
-template<class CompType, class ThermoType>
-typename Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::outputType Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData::func(const inputType& x)
+template <class CompType, class ThermoType>
+typename Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::outputType Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData::func(const inputType &x)
 {
     return x;
 }
 
-template<class CompType, class ThermoType>
-typename Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::gradientType Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData::gradFunc(const inputType& x)
+template <class CompType, class ThermoType>
+typename Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::gradientType Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData::gradFunc(const inputType &x)
 {
     return 1;
 }
@@ -213,8 +179,8 @@ void Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData
     phi_ = x; Rphi_ = func(x); computeA(phi_, Rphi_, A_); //EOA = Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::pISAT->tolerance() / max(fabs(A), 1);
 }
 */
-template<class CompType, class ThermoType>
-void Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData::set(const inputType& x, const outputType& y, const scalar rhoi, const scalar dt)
+template <class CompType, class ThermoType>
+void Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData::set(const inputType_old &x, const outputType_old &y, const scalar rhoi, const scalar dt)
 {
     scalarSquareMatrix A(0); //TODO
     phi_ = x;
@@ -233,23 +199,21 @@ void Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData
     A = gradFunc(x);
 }*/
 
-template<class CompType, class ThermoType>
-void Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData::computeA
-(
-    const inputType& phiq,
-    const outputType& Rphiq,
-    gradientType& A_out,
-    scalarSquareMatrix& A,
+template <class CompType, class ThermoType>
+void Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData::computeA(
+    const inputType_old &phiq,
+    const outputType_old &Rphiq,
+    gradientType &A_out,
+    scalarSquareMatrix &A,
     const scalar rhoi,
-    const scalar dt
-)
+    const scalar dt)
 {
 
     bool mechRedActive = pISAT->chemistry_.mechRed()->active();
     label speciesNumber = pISAT->chemistry_.nSpecie();
 
-    const label& nAdditionalEqns_ = pISAT->nAdditionalEqns_;
-    const Time& runTime_ = pISAT->runTime_;
+    const label &nAdditionalEqns_ = pISAT->nAdditionalEqns_;
+    const Time &runTime_ = pISAT->runTime_;
 
     label Asize = pISAT->chemistry_.nEqns() + nAdditionalEqns_ - 2;
     A.setSize(Asize);
@@ -302,8 +266,7 @@ void Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData
                 sj = pISAT->chemistry_.simplifiedToCompleteIndex()[j];
             }
             A(i, j) *=
-                -dt * pISAT->chemistry_.specieThermo()[si].W()
-                / pISAT->chemistry_.specieThermo()[sj].W();
+                -dt * pISAT->chemistry_.specieThermo()[si].W() / pISAT->chemistry_.specieThermo()[sj].W();
         }
 
         A(i, i) += 1;
@@ -357,27 +320,24 @@ void Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData
         A(speciesNumber + 1, i) = 0;
     }
 
-    for (label i = 0;i < Asize;i++)
-        for (label j = 0;j < Asize;j++)
+    for (label i = 0; i < Asize; i++)
+        for (label j = 0; j < Asize; j++)
         {
             A_out(i, j) = A(i, j);
         }
 }
 
-
-template<class CompType, class ThermoType>
-void Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData::computeLT
-(
-    scalarSquareMatrix& A
-)
+template <class CompType, class ThermoType>
+void Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData::computeLT(
+    scalarSquareMatrix &A)
 {
-    const scalar& tolerance_ = pISAT->tolerance();
-    const label& nAdditionalEqns_ = pISAT->nAdditionalEqns_;
-    const label& completeSpaceSize = pISAT->completeSpaceSize_;
-    const label& iddeltaT_ = pISAT->iddeltaT_;
-    TDACChemistryModel<CompType, ThermoType>& chemistry = pISAT->chemistry_;
+    const scalar &tolerance_ = pISAT->tolerance();
+    const label &nAdditionalEqns_ = pISAT->nAdditionalEqns_;
+    const label &completeSpaceSize = pISAT->completeSpaceSize_;
+    const label &iddeltaT_ = pISAT->iddeltaT_;
+    TDACChemistryModel<CompType, ThermoType> &chemistry = pISAT->chemistry_;
 
-    for (label i = 0;i < completeSpaceSize;i++)
+    for (label i = 0; i < completeSpaceSize; i++)
     {
         scaleFactor_[i] = pISAT->scaleFactor_[i];
     }
@@ -413,7 +373,7 @@ void Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData
     SVD svdA(A);
 
     scalarDiagonalMatrix D(reduOrCompDim);
-    const scalarDiagonalMatrix& S = svdA.S();
+    const scalarDiagonalMatrix &S = svdA.S();
 
     // Replace the value of vector D by max(D, 1/2), first ISAT paper
     for (label i = 0; i < reduOrCompDim; i++)
@@ -462,12 +422,10 @@ void Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData
     }
 }
 
-template<class CompType, class ThermoType>
-void Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData::qrDecompose
-(
+template <class CompType, class ThermoType>
+void Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData::qrDecompose(
     const label nCols,
-    scalarSquareMatrix& R
-)
+    scalarSquareMatrix &R)
 {
     scalarField c(nCols);
     scalarField d(nCols);
@@ -528,17 +486,13 @@ void Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData
     }
 }
 
-
-
-template<class CompType, class ThermoType>
+template <class CompType, class ThermoType>
 Foam::label Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData::
-simplifiedToCompleteIndex
-(
-    const label i
-)
+    simplifiedToCompleteIndex(
+        const label i)
 {
-    const label& nAdditionalEqns_ = pISAT->nAdditionalEqns_;
-    const label& completeSpaceSize_ = pISAT->completeSpaceSize_;
+    const label &nAdditionalEqns_ = pISAT->nAdditionalEqns_;
+    const label &completeSpaceSize_ = pISAT->completeSpaceSize_;
 
     if (i < nActiveSpecies_)
     {
@@ -562,23 +516,22 @@ simplifiedToCompleteIndex
     }
 }
 
-
-template<class CompType, class ThermoType>
-bool Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData::inEOA(const inputType& phiq)
+template <class CompType, class ThermoType>
+bool Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData::inEOA(const inputType &phiq)
 {
     //static label out0 = 0;
     //out0++;
     //scalar epsTemp0 = 0, epsTemp1 = 0, epsTemp2 = 0, epsTemp3 = 0;
-    const label& completeSpaceSize = pISAT->completeSpaceSize_;
-    const label& nAdditionalEqns_ = pISAT->nAdditionalEqns_;
-    const scalar& tolerance_ = pISAT->tolerance();
-    const label& idT_ = pISAT->idT_;
-    const label& idp_ = pISAT->idp_;
-    const label& iddeltaT_ = pISAT->iddeltaT_;
+    const label &completeSpaceSize = pISAT->completeSpaceSize_;
+    const label &nAdditionalEqns_ = pISAT->nAdditionalEqns_;
+    const scalar &tolerance_ = pISAT->tolerance();
+    const label &idT_ = pISAT->idT_;
+    const label &idp_ = pISAT->idp_;
+    const label &iddeltaT_ = pISAT->iddeltaT_;
     const bool printProportion_ = pISAT->printProportion_;
 
     scalarField dphi(completeSpaceSize);
-    for (label i = 0;i < completeSpaceSize;i++)
+    for (label i = 0; i < completeSpaceSize; i++)
     {
         dphi[i] = phiq[i] - phi_[i];
     }
@@ -604,15 +557,12 @@ bool Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData
         // When mechanism reduction is inactive OR on active species multiply L
         // by dphi to get the distance in the active species direction else (for
         // inactive species), just multiply the diagonal element and dphi
-        if
-            (
-                !(isMechRedActive)
-                || (isMechRedActive && completeToSimplifiedIndex_[i] != -1)
-                )
+        if (
+            !(isMechRedActive) || (isMechRedActive && completeToSimplifiedIndex_[i] != -1))
         {
             label si = (isMechRedActive) ? completeToSimplifiedIndex_[i] : i;
 
-            for (label j = si; j < dim; j++)// LT is upper triangular
+            for (label j = si; j < dim; j++) // LT is upper triangular
             {
                 label sj = (isMechRedActive) ? simplifiedToCompleteIndex_[j] : j;
                 temp += LT_(si, j) * dphi[sj];
@@ -648,21 +598,14 @@ bool Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData
         //        + LT_(dim, dim + 2) * dphi[iddeltaT_]
         //    );
         epsTemp +=
-            sqr
-            (
-                LT_(dim, dim) * dphi[idT_]
-                + LT_(dim, dim + 1) * dphi[idp_]
-                + LT_(dim, dim + 2) * dphi[iddeltaT_]
-            );
+            sqr(
+                LT_(dim, dim) * dphi[idT_] + LT_(dim, dim + 1) * dphi[idp_] + LT_(dim, dim + 2) * dphi[iddeltaT_]);
     }
     else
     {
         epsTemp +=
-            sqr
-            (
-                LT_(dim, dim) * dphi[idT_]
-                + LT_(dim, dim + 1) * dphi[idp_]
-            );
+            sqr(
+                LT_(dim, dim) * dphi[idT_] + LT_(dim, dim + 1) * dphi[idp_]);
     }
 
     // Pressure
@@ -670,11 +613,8 @@ bool Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData
     {
         //epsTemp2 += dphi[idp_];
         epsTemp +=
-            sqr
-            (
-                LT_(dim + 1, dim + 1) * dphi[idp_]
-                + LT_(dim + 1, dim + 2) * dphi[iddeltaT_]
-            );
+            sqr(
+                LT_(dim + 1, dim + 1) * dphi[idp_] + LT_(dim + 1, dim + 2) * dphi[iddeltaT_]);
     }
     else
     {
@@ -689,11 +629,8 @@ bool Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData
 
     if (printProportion_)
     {
-        propEps[idT_] = sqr
-        (
-            LT_(dim, dim) * dphi[idT_]
-            + LT_(dim, dim + 1) * dphi[idp_]
-        );
+        propEps[idT_] = sqr(
+            LT_(dim, dim) * dphi[idT_] + LT_(dim, dim + 1) * dphi[idp_]);
 
         propEps[idp_] =
             sqr(LT_(dim + 1, dim + 1) * dphi[idp_]);
@@ -703,10 +640,8 @@ bool Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData
             propEps[iddeltaT_] =
                 sqr(LT_(dim + 2, dim + 2) * dphi[iddeltaT_]);
         }
-
     }
     //bool zz = sqrt(epsTemp) > 1 + tolerance_;
-
 
     if (sqrt(epsTemp) > 1 + tolerance_)
     {
@@ -757,14 +692,14 @@ bool Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData
                 propName = pISAT->chemistry_.Y()[maxIndex].member();
             }
             Info << "Direction maximum impact to error in ellipsoid: "
-                << propName << endl;
+                 << propName << endl;
             Info << "Proportion to the total error on the retrieve: "
-                << max / (epsTemp + small) << endl;
+                 << max / (epsTemp + small) << endl;
         }
         return false;
     }
     else
-    {   /*
+    { /*
         if (out0 == 1500)
         {
             FatalErrorInFunction
@@ -783,22 +718,223 @@ bool Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData
     }
 }
 
-
-template<class CompType, class ThermoType>
-bool Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData::grow(const inputType& phiq)
+template <class CompType, class ThermoType>
+bool Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData::inEOA(const inputType_old &phiq)
 {
-
-    const label& completeSpaceSize = pISAT->completeSpaceSize_;
-    const label& nAdditionalEqns_ = pISAT->nAdditionalEqns_;
-    TDACChemistryModel<CompType, ThermoType>& chemistry_ = pISAT->chemistry_;
-
-    const label& idT_ = pISAT->idT_;
-    const label& idp_ = pISAT->idp_;
-    const label& iddeltaT_ = pISAT->iddeltaT_;
-    const scalar& tolerance_ = pISAT->tolerance();
+    //static label out0 = 0;
+    //out0++;
+    //scalar epsTemp0 = 0, epsTemp1 = 0, epsTemp2 = 0, epsTemp3 = 0;
+    const label &completeSpaceSize = pISAT->completeSpaceSize_;
+    const label &nAdditionalEqns_ = pISAT->nAdditionalEqns_;
+    const scalar &tolerance_ = pISAT->tolerance();
+    const label &idT_ = pISAT->idT_;
+    const label &idp_ = pISAT->idp_;
+    const label &iddeltaT_ = pISAT->iddeltaT_;
+    const bool printProportion_ = pISAT->printProportion_;
 
     scalarField dphi(completeSpaceSize);
-    for (label i = 0;i < completeSpaceSize;i++)
+    for (label i = 0; i < completeSpaceSize; i++)
+    {
+        dphi[i] = phiq[i] - phi_[i];
+    }
+    //scalarField dphi(phiq-phi());
+    bool isMechRedActive = pISAT->chemistry_.mechRed()->active();
+    label dim(0);
+    if (isMechRedActive)
+    {
+        dim = nActiveSpecies_;
+    }
+    else
+    {
+        dim = completeSpaceSize - nAdditionalEqns_;
+    }
+
+    scalar epsTemp = 0;
+    List<scalar> propEps(completeSpaceSize, scalar(0));
+
+    for (label i = 0; i < completeSpaceSize - nAdditionalEqns_; i++)
+    {
+        scalar temp = 0;
+
+        // When mechanism reduction is inactive OR on active species multiply L
+        // by dphi to get the distance in the active species direction else (for
+        // inactive species), just multiply the diagonal element and dphi
+        if (
+            !(isMechRedActive) || (isMechRedActive && completeToSimplifiedIndex_[i] != -1))
+        {
+            label si = (isMechRedActive) ? completeToSimplifiedIndex_[i] : i;
+
+            for (label j = si; j < dim; j++) // LT is upper triangular
+            {
+                label sj = (isMechRedActive) ? simplifiedToCompleteIndex_[j] : j;
+                temp += LT_(si, j) * dphi[sj];
+            }
+
+            temp += LT_(si, dim) * dphi[idT_];
+            temp += LT_(si, dim + 1) * dphi[idp_];
+            if (pISAT->variableTimeStep())
+            {
+                temp += LT_(si, dim + 2) * dphi[iddeltaT_];
+            }
+        }
+        else
+        {
+            temp = dphi[i] / (tolerance_ * scaleFactor_[i]);
+        }
+        //epsTemp0 += sqr(temp);
+        epsTemp += sqr(temp);
+
+        if (printProportion_)
+        {
+            propEps[i] = temp;
+        }
+    }
+
+    // Temperature
+    if (pISAT->variableTimeStep())
+    {
+        //epsTemp1 +=
+        //    sqr(
+        //        LT_(dim, dim) * dphi[idT_]
+        //        + LT_(dim, dim + 1) * dphi[idp_]
+        //        + LT_(dim, dim + 2) * dphi[iddeltaT_]
+        //    );
+        epsTemp +=
+            sqr(
+                LT_(dim, dim) * dphi[idT_] + LT_(dim, dim + 1) * dphi[idp_] + LT_(dim, dim + 2) * dphi[iddeltaT_]);
+    }
+    else
+    {
+        epsTemp +=
+            sqr(
+                LT_(dim, dim) * dphi[idT_] + LT_(dim, dim + 1) * dphi[idp_]);
+    }
+
+    // Pressure
+    if (pISAT->variableTimeStep())
+    {
+        //epsTemp2 += dphi[idp_];
+        epsTemp +=
+            sqr(
+                LT_(dim + 1, dim + 1) * dphi[idp_] + LT_(dim + 1, dim + 2) * dphi[iddeltaT_]);
+    }
+    else
+    {
+        epsTemp += sqr(LT_(dim + 1, dim + 1) * dphi[idp_]);
+    }
+
+    if (pISAT->variableTimeStep())
+    {
+        //epsTemp3 += sqr(LT_(dim + 2, dim + 2) * dphi[iddeltaT_]);
+        epsTemp += sqr(LT_(dim + 2, dim + 2) * dphi[iddeltaT_]);
+    }
+
+    if (printProportion_)
+    {
+        propEps[idT_] = sqr(
+            LT_(dim, dim) * dphi[idT_] + LT_(dim, dim + 1) * dphi[idp_]);
+
+        propEps[idp_] =
+            sqr(LT_(dim + 1, dim + 1) * dphi[idp_]);
+
+        if (pISAT->variableTimeStep())
+        {
+            propEps[iddeltaT_] =
+                sqr(LT_(dim + 2, dim + 2) * dphi[iddeltaT_]);
+        }
+    }
+    //bool zz = sqrt(epsTemp) > 1 + tolerance_;
+
+    if (sqrt(epsTemp) > 1 + tolerance_)
+    {
+        /*
+                if (out0 == 1500)
+                {
+                    FatalErrorInFunction
+                        << "FFFFFFFFFFFF"
+                        << "out0=" << out0
+                        << "\nepsTemp=" << epsTemp
+                        << "\nepsTemp0=" << epsTemp0
+                        << "\nepsTemp1=" << epsTemp1
+                        << "\nepsTemp2=" << epsTemp2
+                        << "\nepsTemp3=" << epsTemp3
+                        << "\nsqrt(epsTemp) > 1 + tolerance_=" << zz
+                        << abort(FatalError);
+                }*/
+        if (printProportion_)
+        {
+            scalar max = -1;
+            label maxIndex = -1;
+            for (label i = 0; i < completeSpaceSize; i++)
+            {
+                if (max < propEps[i])
+                {
+                    max = propEps[i];
+                    maxIndex = i;
+                }
+            }
+            word propName;
+            if (maxIndex >= completeSpaceSize - nAdditionalEqns_)
+            {
+                if (maxIndex == idT_)
+                {
+                    propName = "T";
+                }
+                else if (maxIndex == idp_)
+                {
+                    propName = "p";
+                }
+                else if (maxIndex == iddeltaT_)
+                {
+                    propName = "deltaT";
+                }
+            }
+            else
+            {
+                propName = pISAT->chemistry_.Y()[maxIndex].member();
+            }
+            Info << "Direction maximum impact to error in ellipsoid: "
+                 << propName << endl;
+            Info << "Proportion to the total error on the retrieve: "
+                 << max / (epsTemp + small) << endl;
+        }
+        return false;
+    }
+    else
+    { /*
+        if (out0 == 1500)
+        {
+            FatalErrorInFunction
+                << "TTTTTTTT"
+                << "out0=" << out0
+                << "\nepsTemp=" << epsTemp
+                << "\nepsTemp0=" << epsTemp0
+                << "\nepsTemp1=" << epsTemp1
+                << "\nepsTemp2=" << epsTemp2
+                << "\nepsTemp3=" << epsTemp3
+                << "\nsqrt(epsTemp) > 1 + tolerance_=" << zz
+                << abort(FatalError);
+        }
+*/
+        return true;
+    }
+}
+
+template <class CompType, class ThermoType>
+bool Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData::grow(const inputType &phiq)
+{
+
+    const label &completeSpaceSize = pISAT->completeSpaceSize_;
+    const label &nAdditionalEqns_ = pISAT->nAdditionalEqns_;
+    TDACChemistryModel<CompType, ThermoType> &chemistry_ = pISAT->chemistry_;
+
+    const label &idT_ = pISAT->idT_;
+    const label &idp_ = pISAT->idp_;
+    const label &iddeltaT_ = pISAT->iddeltaT_;
+    const scalar &tolerance_ = pISAT->tolerance();
+
+    scalarField dphi(completeSpaceSize);
+    for (label i = 0; i < completeSpaceSize; i++)
     {
         dphi[i] = phiq[i] - phi_[i];
     }
@@ -821,9 +957,7 @@ bool Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData
             // first test if the current chemPoint has an inactive species
             // corresponding to an active one in the query point
             if (
-                completeToSimplifiedIndex_[i] == -1
-                && chemistry_.completeToSimplifiedIndex()[i] != -1
-                )
+                completeToSimplifiedIndex_[i] == -1 && chemistry_.completeToSimplifiedIndex()[i] != -1)
             {
                 activeAdded++;
                 dimToAdd.append(i);
@@ -831,9 +965,7 @@ bool Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData
             // then test if an active species in the current chemPoint
             // corresponds to an inactive on the query side
             if (
-                completeToSimplifiedIndex_[i] != -1
-                && chemistry_.completeToSimplifiedIndex()[i] == -1
-                )
+                completeToSimplifiedIndex_[i] != -1 && chemistry_.completeToSimplifiedIndex()[i] == -1)
             {
                 activeAdded++;
                 // we don't need to add a new dimension but we count it to have
@@ -841,12 +973,8 @@ bool Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData
             }
             // finally test if both points have inactive species but
             // with a dphi!=0
-            if
-                (
-                    completeToSimplifiedIndex_[i] == -1
-                    && chemistry_.completeToSimplifiedIndex()[i] == -1
-                    && dphi[i] != 0
-                    )
+            if (
+                completeToSimplifiedIndex_[i] == -1 && chemistry_.completeToSimplifiedIndex()[i] == -1 && dphi[i] != 0)
             {
                 activeAdded++;
                 dimToAdd.append(i);
@@ -858,7 +986,7 @@ bool Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData
         //if (pISAT->zzzz2_ == 4 && phiq[0] < 1e-10)
         //{
         //    Pout << "!?!?!?!?!? in grow" << endl;
-            /*FatalErrorInFunction
+        /*FatalErrorInFunction
                 << "in grow"
                 << "activeAdded=" << activeAdded
                 << phiq
@@ -886,7 +1014,6 @@ bool Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData
             Pout << "!?!?!?!?!? in grow2" << endl;
         }*/
 
-
         //pISAT->zzzz_++;
         // the number of added dimension to the current chemPoint
         nActiveSpecies_ += dimToAdd.size();
@@ -912,9 +1039,9 @@ bool Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData
             label initSize = initNActiveSpecies + nAdditionalEqns_;
             scalarSquareMatrix LTvar(initSize);
             scalarSquareMatrix Avar(initSize);
-            for (label i = 0;i < initSize;i++)
+            for (label i = 0; i < initSize; i++)
             {
-                for (label j = 0;j < initSize;j++)
+                for (label j = 0; j < initSize; j++)
                 {
                     LTvar(i, j) = LT_(i, j);
                     Avar(i, j) = A_(i, j);
@@ -968,11 +1095,10 @@ bool Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData
                     Avar(initNActiveSpecies + 2, initNActiveSpecies + 2);
             }
 
-            for (label i = initNActiveSpecies; i < nActiveSpecies_;i++)
+            for (label i = initNActiveSpecies; i < nActiveSpecies_; i++)
             {
                 LT_(i, i) =
-                    1.0
-                    / (tolerance_ * scaleFactor_[simplifiedToCompleteIndex_[i]]);
+                    1.0 / (tolerance_ * scaleFactor_[simplifiedToCompleteIndex_[i]]);
                 A_(i, i) = 1;
             }
         }
@@ -987,7 +1113,7 @@ bool Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData
 
     for (label i = 0; i < dim; i++)
     {
-        for (label j = i; j < dim - nAdditionalEqns_; j++)// LT is upper triangular
+        for (label j = i; j < dim - nAdditionalEqns_; j++) // LT is upper triangular
         {
             label sj = j;
             if (isMechRedActive)
@@ -1017,7 +1143,7 @@ bool Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData
 
     for (label i = 0; i < dim; i++)
     {
-        for (label j = 0; j <= i;j++)
+        for (label j = 0; j <= i; j++)
         {
             v[i] += phiTilde[j] * LT_(j, i);
         }
@@ -1026,20 +1152,251 @@ bool Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData
     qrUpdate(LT_, dim, u, v);
     nGrowth_++;
 
+    return true;
+}
+
+template <class CompType, class ThermoType>
+bool Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData::grow(const inputType_old &phiq)
+{
+
+    const label &completeSpaceSize = pISAT->completeSpaceSize_;
+    const label &nAdditionalEqns_ = pISAT->nAdditionalEqns_;
+    TDACChemistryModel<CompType, ThermoType> &chemistry_ = pISAT->chemistry_;
+
+    const label &idT_ = pISAT->idT_;
+    const label &idp_ = pISAT->idp_;
+    const label &iddeltaT_ = pISAT->iddeltaT_;
+    const scalar &tolerance_ = pISAT->tolerance();
+
+    scalarField dphi(completeSpaceSize);
+    for (label i = 0; i < completeSpaceSize; i++)
+    {
+        dphi[i] = phiq[i] - phi_[i];
+    }
+
+    //scalarField dphi(phiq - phi());
+    label dim = pISAT->completeSpaceSize_;
+
+    label initNActiveSpecies(nActiveSpecies_);
+    bool isMechRedActive = pISAT->chemistry_.mechRed()->active();
+
+    if (isMechRedActive)
+    {
+        label activeAdded(0);
+        DynamicList<label> dimToAdd(0);
+
+        // check if the difference of active species is lower than the maximum
+        // number of new dimensions allowed
+        for (label i = 0; i < completeSpaceSize - nAdditionalEqns_; i++)
+        {
+            // first test if the current chemPoint has an inactive species
+            // corresponding to an active one in the query point
+            if (
+                completeToSimplifiedIndex_[i] == -1 && chemistry_.completeToSimplifiedIndex()[i] != -1)
+            {
+                activeAdded++;
+                dimToAdd.append(i);
+            }
+            // then test if an active species in the current chemPoint
+            // corresponds to an inactive on the query side
+            if (
+                completeToSimplifiedIndex_[i] != -1 && chemistry_.completeToSimplifiedIndex()[i] == -1)
+            {
+                activeAdded++;
+                // we don't need to add a new dimension but we count it to have
+                // control on the difference through maxNumNewDim
+            }
+            // finally test if both points have inactive species but
+            // with a dphi!=0
+            if (
+                completeToSimplifiedIndex_[i] == -1 && chemistry_.completeToSimplifiedIndex()[i] == -1 && dphi[i] != 0)
+            {
+                activeAdded++;
+                dimToAdd.append(i);
+            }
+        }
+
+        // if the number of added dimension is too large, growth fail
+
+        //if (pISAT->zzzz2_ == 4 && phiq[0] < 1e-10)
+        //{
+        //    Pout << "!?!?!?!?!? in grow" << endl;
+        /*FatalErrorInFunction
+                << "in grow"
+                << "activeAdded=" << activeAdded
+                << phiq
+                << abort(FatalError);
+                */
+        //}
+        /*if (pISAT->zzzz_ == 1)
+        {
+            Pout << "phiq=" << phiq << endl;
+            Pout << "phi=" << phi() << endl;
+            Pout << "activeAdded=" << activeAdded << endl;
+            FatalErrorInFunction
+                << "maxNumNewDim_=" << pISAT->maxNumNewDim_
+                << abort(FatalError);
+        }*/
+        if (activeAdded > pISAT->maxNumNewDim_)
+        {
+            //Pout << "???????? activeAdded=" << activeAdded << endl;
+            //Pout << "???????? maxNumNewDim_=" << pISAT->maxNumNewDim_ << endl;
+            return false;
+        }
+
+        /*if (pISAT->zzzz2_ == 4 && phiq[0] < 1e-10)
+        {
+            Pout << "!?!?!?!?!? in grow2" << endl;
+        }*/
+
+        //pISAT->zzzz_++;
+        // the number of added dimension to the current chemPoint
+        nActiveSpecies_ += dimToAdd.size();
+        //simplifiedToCompleteIndex_.setSize(nActiveSpecies_);
+        //Pout << "!!!!!!!!!!1" << endl;
+        forAll(dimToAdd, i)
+        {
+            label si = nActiveSpecies_ - dimToAdd.size() + i;
+            // add the new active species
+            simplifiedToCompleteIndex_[si] = dimToAdd[i];
+            completeToSimplifiedIndex_[dimToAdd[i]] = si;
+        }
+        //Pout << "!!!!!!!!!!2" << endl;
+
+        // update LT and A :
+        //-add new column and line for the new active species
+        //-transfer last two lines of the previous matrix (p and T) to the end
+        //  (change the diagonal position)
+        //-set all element of the new lines and columns to zero except diagonal
+        //  (=1/(tolerance*scaleFactor))
+        if (nActiveSpecies_ > initNActiveSpecies)
+        {
+            label initSize = initNActiveSpecies + nAdditionalEqns_;
+            scalarSquareMatrix LTvar(initSize);
+            scalarSquareMatrix Avar(initSize);
+            for (label i = 0; i < initSize; i++)
+            {
+                for (label j = 0; j < initSize; j++)
+                {
+                    LTvar(i, j) = LT_(i, j);
+                    Avar(i, j) = A_(i, j);
+                    LT_(i, j) = 0;
+                    A_(i, j) = 0;
+                }
+            }
+
+            //scalarSquareMatrix LTvar = LT_; // take a copy of LT_  //Todo
+            //scalarSquareMatrix Avar = A_; // take a copy of A_
+            //LT_ = scalarSquareMatrix(nActiveSpecies_ + nAdditionalEqns_, Zero);
+            //A_ = scalarSquareMatrix(nActiveSpecies_ + nAdditionalEqns_, Zero);
+
+            // write the initial active species
+
+            for (label i = 0; i < initNActiveSpecies; i++)
+            {
+                for (label j = 0; j < initNActiveSpecies; j++)
+                {
+                    LT_(i, j) = LTvar(i, j);
+                    A_(i, j) = Avar(i, j);
+                }
+            }
+
+            // write the columns for temperature and pressure
+            for (label i = 0; i < initNActiveSpecies; i++)
+            {
+                for (label j = 1; j >= 0; j--)
+                {
+                    LT_(i, nActiveSpecies_ + j) = LTvar(i, initNActiveSpecies + j);
+                    A_(i, nActiveSpecies_ + j) = Avar(i, initNActiveSpecies + j);
+                    LT_(nActiveSpecies_ + j, i) = LTvar(initNActiveSpecies + j, i);
+                    A_(nActiveSpecies_ + j, i) = Avar(initNActiveSpecies + j, i);
+                }
+            }
+            // end with the diagonal elements for temperature and pressure
+            LT_(nActiveSpecies_, nActiveSpecies_) =
+                LTvar(initNActiveSpecies, initNActiveSpecies);
+            A_(nActiveSpecies_, nActiveSpecies_) =
+                Avar(initNActiveSpecies, initNActiveSpecies);
+            LT_(nActiveSpecies_ + 1, nActiveSpecies_ + 1) =
+                LTvar(initNActiveSpecies + 1, initNActiveSpecies + 1);
+            A_(nActiveSpecies_ + 1, nActiveSpecies_ + 1) =
+                Avar(initNActiveSpecies + 1, initNActiveSpecies + 1);
+
+            if (pISAT->variableTimeStep())
+            {
+                LT_(nActiveSpecies_ + 2, nActiveSpecies_ + 2) =
+                    LTvar(initNActiveSpecies + 2, initNActiveSpecies + 2);
+                A_(nActiveSpecies_ + 2, nActiveSpecies_ + 2) =
+                    Avar(initNActiveSpecies + 2, initNActiveSpecies + 2);
+            }
+
+            for (label i = initNActiveSpecies; i < nActiveSpecies_; i++)
+            {
+                LT_(i, i) =
+                    1.0 / (tolerance_ * scaleFactor_[simplifiedToCompleteIndex_[i]]);
+                A_(i, i) = 1;
+            }
+        }
+
+        dim = nActiveSpecies_ + nAdditionalEqns_;
+    }
+
+    // beginning of grow algorithm
+    scalarField phiTilde(dim, 0);
+    scalar normPhiTilde = 0;
+    // p' = L^T.(p-phi)
+
+    for (label i = 0; i < dim; i++)
+    {
+        for (label j = i; j < dim - nAdditionalEqns_; j++) // LT is upper triangular
+        {
+            label sj = j;
+            if (isMechRedActive)
+            {
+                sj = simplifiedToCompleteIndex_[j];
+            }
+            phiTilde[i] += LT_(i, j) * dphi[sj];
+        }
+
+        phiTilde[i] += LT_(i, dim - nAdditionalEqns_) * dphi[idT_];
+        phiTilde[i] += LT_(i, dim - nAdditionalEqns_ + 1) * dphi[idp_];
+
+        if (pISAT->variableTimeStep())
+        {
+            phiTilde[i] += LT_(i, dim - nAdditionalEqns_ + 2) * dphi[iddeltaT_];
+        }
+        normPhiTilde += sqr(phiTilde[i]);
+    }
+
+    scalar invSqrNormPhiTilde = 1.0 / normPhiTilde;
+    normPhiTilde = sqrt(normPhiTilde);
+
+    // gamma = (1/|p'| - 1)/|p'|^2
+    scalar gamma = (1 / normPhiTilde - 1) * invSqrNormPhiTilde;
+    scalarField u(gamma * phiTilde);
+    scalarField v(dim, 0);
+
+    for (label i = 0; i < dim; i++)
+    {
+        for (label j = 0; j <= i; j++)
+        {
+            v[i] += phiTilde[j] * LT_(j, i);
+        }
+    }
+
+    qrUpdate(LT_, dim, u, v);
+    nGrowth_++;
 
     return true;
 }
 
-
-template<class CompType, class ThermoType>
-template<class M>
-void Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData::qrUpdate
-(
-    M& R,
+template <class CompType, class ThermoType>
+template <class M>
+void Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData::qrUpdate(
+    M &R,
     const label n,
-    const Foam::scalarField& u,
-    const Foam::scalarField& v
-)
+    const Foam::scalarField &u,
+    const Foam::scalarField &v)
 {
     label k;
 
@@ -1085,16 +1442,14 @@ void Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData
     }
 }
 
-template<class CompType, class ThermoType>
-template<class M>
-void Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData::rotate
-(
-    M& R,
+template <class CompType, class ThermoType>
+template <class M>
+void Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData::rotate(
+    M &R,
     const label i,
     const scalar a,
     const scalar b,
-    label n
-)
+    label n)
 {
     scalar c, fact, s, w, y;
     if (a == 0)
@@ -1114,7 +1469,7 @@ void Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData
         s = sign(b) / sqrt(1.0 + sqr(fact));
         c = fact * s;
     }
-    for (label j = i;j < n;j++)
+    for (label j = i; j < n; j++)
     {
         y = R(i, j);
         w = R(i + 1, j);
@@ -1123,27 +1478,23 @@ void Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData
     }
 }
 
-template<class CompType, class ThermoType>
-void Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData::retrieve
-(
-    const inputType& x,
-    outputType& Rphiq
-)
+template <class CompType, class ThermoType>
+void Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData::retrieve(
+    const inputType &x,
+    outputType &Rphiq)
 {
-    const label& nAdditionalEqns_ = pISAT->nAdditionalEqns_;
+    const label &nAdditionalEqns_ = pISAT->nAdditionalEqns_;
     label nEqns = pISAT->chemistry_.nEqns(); // Species, T, p
     bool mechRedActive = pISAT->chemistry_.mechRed()->active();
     scalarField dphi(Datasize);
-    for (label i = 0;i < Datasize;i++)
+    for (label i = 0; i < Datasize; i++)
     {
         Rphiq[i] = Rphi_[i];
         dphi[i] = x[i] - phi_[i];
     }
 
-
-    const gradientType& gradientsMatrix = A_;
-    inputType& completeToSimplified = completeToSimplifiedIndex_;
-
+    const gradientType &gradientsMatrix = A_;
+    inputType &completeToSimplified = completeToSimplifiedIndex_;
 
     // Rphiq[i]=Rphi0[i]+A(i, j)dphi[j]
     // where Aij is dRi/dphi_j
@@ -1166,14 +1517,12 @@ void Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData
                 Rphiq[i] +=
                     gradientsMatrix(si, nActiveSpecies_) * dphi[nEqns - 2];
                 Rphiq[i] +=
-                    gradientsMatrix(si, nActiveSpecies_ + 1)
-                    * dphi[nEqns - 1];
+                    gradientsMatrix(si, nActiveSpecies_ + 1) * dphi[nEqns - 1];
 
                 if (pISAT->variableTimeStep())
                 {
                     Rphiq[i] +=
-                        gradientsMatrix(si, nActiveSpecies_ + 2)
-                        * dphi[nEqns];
+                        gradientsMatrix(si, nActiveSpecies_ + 2) * dphi[nEqns];
                 }
 
                 // As we use an approximation of A, Rphiq should be checked for
@@ -1199,32 +1548,101 @@ void Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData
         }
     }
 }
-template<class CompType, class ThermoType>
-bool Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData::checkSolution
-(
-    const inputType& phiq,
-    const outputType& Rphiq
-)
+
+template <class CompType, class ThermoType>
+void Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData::retrieve(
+    const inputType_old &x,
+    outputType_old &Rphiq)
+{
+    const label &nAdditionalEqns_ = pISAT->nAdditionalEqns_;
+    label nEqns = pISAT->chemistry_.nEqns(); // Species, T, p
+    bool mechRedActive = pISAT->chemistry_.mechRed()->active();
+    scalarField dphi(Datasize);
+    for (label i = 0; i < Datasize; i++)
+    {
+        Rphiq[i] = Rphi_[i];
+        dphi[i] = x[i] - phi_[i];
+    }
+
+    const gradientType &gradientsMatrix = A_;
+    inputType &completeToSimplified = completeToSimplifiedIndex_;
+
+    // Rphiq[i]=Rphi0[i]+A(i, j)dphi[j]
+    // where Aij is dRi/dphi_j
+    for (label i = 0; i < nEqns - nAdditionalEqns_; i++)
+    {
+        if (mechRedActive)
+        {
+            label si = completeToSimplified[i];
+            // The species is active
+            if (si != -1)
+            {
+                for (label j = 0; j < nEqns - 2; j++)
+                {
+                    label sj = completeToSimplified[j];
+                    if (sj != -1)
+                    {
+                        Rphiq[i] += gradientsMatrix(si, sj) * dphi[j];
+                    }
+                }
+                Rphiq[i] +=
+                    gradientsMatrix(si, nActiveSpecies_) * dphi[nEqns - 2];
+                Rphiq[i] +=
+                    gradientsMatrix(si, nActiveSpecies_ + 1) * dphi[nEqns - 1];
+
+                if (pISAT->variableTimeStep())
+                {
+                    Rphiq[i] +=
+                        gradientsMatrix(si, nActiveSpecies_ + 2) * dphi[nEqns];
+                }
+
+                // As we use an approximation of A, Rphiq should be checked for
+                // negative values
+                Rphiq[i] = max(0, Rphiq[i]);
+            }
+            // The species is not active A(i, j) = I(i, j)
+            else
+            {
+                Rphiq[i] += dphi[i];
+                Rphiq[i] = max(0, Rphiq[i]);
+            }
+        }
+        else // Mechanism reduction is not active
+        {
+            for (label j = 0; j < nEqns; j++)
+            {
+                Rphiq[i] += gradientsMatrix(i, j) * dphi[j];
+            }
+            // As we use a first order gradient matrix, Rphiq should be checked
+            // for negative values
+            Rphiq[i] = max(0, Rphiq[i]);
+        }
+    }
+}
+template <class CompType, class ThermoType>
+bool Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData::checkSolution(
+    const inputType_old &phiq,
+    const outputType_old &Rphiq)
 {
     scalar eps2 = 0;
-    const label& iddeltaT_ = pISAT->iddeltaT_;
-    const label& idT_ = pISAT->idT_;
-    const label& idp_ = pISAT->idp_;
-    const scalar& tolerance_ = pISAT->tolerance();
-    const label& completeSpaceSize = pISAT->completeSpaceSize_;
-    const label& nAdditionalEqns_ = pISAT->nAdditionalEqns_;
+    const label &iddeltaT_ = pISAT->iddeltaT_;
+    const label &idT_ = pISAT->idT_;
+    const label &idp_ = pISAT->idp_;
+    const scalar &tolerance_ = pISAT->tolerance();
+    const label &completeSpaceSize = pISAT->completeSpaceSize_;
+    const label &nAdditionalEqns_ = pISAT->nAdditionalEqns_;
     scalarField dR(Datasize);
     scalarField dphi(Datasize);
     //scalarField dR(Rphiq - Rphi());
     //scalarField dphi(phiq - phi());
-    for (label i = 0;i < Datasize;i++)
+    for (label i = 0; i < Datasize; i++)
     {
         dR[i] = Rphiq[i] - Rphi_[i];
         dphi[i] = phiq[i] - phi_[i];
     }
 
-    const outputType& scaleFactorV = scaleFactor_;
-    const gradientType& Avar = A_;
+    const outputType &scaleFactorV = scaleFactor_;
+    const gradientType &Avar = A_;
     bool isMechRedActive = pISAT->chemistry_.mechRed()->active();
     scalar dRl = 0;
     label dim = completeSpaceSize - 2;
@@ -1291,31 +1709,28 @@ bool Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData
         return true;
     }
 }
-template<class CompType, class ThermoType>
-void Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::nodeData::calcV
-(
-    leafData& elementLeft,
-    leafData& elementRight,
-    inputType& v
-)
+template <class CompType, class ThermoType>
+void Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::nodeData::calcV(
+    leafData &elementLeft,
+    leafData &elementRight,
+    inputType &v)
 {
 
-    const label& nAdditionalEqns_ = pISAT->nAdditionalEqns_;
+    const label &nAdditionalEqns_ = pISAT->nAdditionalEqns_;
     // LT is the transpose of the L matrix
-    gradientType& LT = elementLeft.LT_;
+    gradientType &LT = elementLeft.LT_;
     bool mechReductionActive = pISAT->chemistry_.mechRed()->active();
 
     // Difference of composition in the full species domain
     scalarField phiDif(Datasize);
 
-    for (label i = 0;i < Datasize;i++)
+    for (label i = 0; i < Datasize; i++)
     {
         phiDif[i] = elementRight.phi_[i] - elementLeft.phi_[i];
     }
 
-
-    const outputType& scaleFactor = elementLeft.scaleFactor_;
-    const scalar& epsTol = pISAT->tolerance();
+    const outputType &scaleFactor = elementLeft.scaleFactor_;
+    const scalar &epsTol = pISAT->tolerance();
 
     // v = LT.T()*LT*phiDif
     for (label i = 0; i < pISAT->completeSpaceSize_; i++)
@@ -1355,19 +1770,12 @@ void Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::nodeData
                     {
                         outOfIndexJ = false;
                         const label dif =
-                            j
-                            - (
-                                pISAT->completeSpaceSize_
-                                - nAdditionalEqns_
-                                );
+                            j - (pISAT->completeSpaceSize_ - nAdditionalEqns_);
                         sj = elementLeft.nActiveSpecies_ + dif;
                     }
                 }
-                if
-                    (
-                        !mechReductionActive
-                        || (mechReductionActive && !(outOfIndexJ))
-                        )
+                if (
+                    !mechReductionActive || (mechReductionActive && !(outOfIndexJ)))
                 {
                     // Since L is a lower triangular matrix k=0->min(i, j)
                     for (label k = 0; k <= min(si, sj); k++)
@@ -1385,21 +1793,19 @@ void Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::nodeData
         }
     }
 }
-template<class CompType, class ThermoType>
-Foam::scalar Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::nodeData::calcA
-(
-    const leafData& elementLeft,
-    const leafData& elementRight
-)
+template <class CompType, class ThermoType>
+Foam::scalar Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::nodeData::calcA(
+    const leafData &elementLeft,
+    const leafData &elementRight)
 {
     scalarField phih(Datasize);
     //scalarField phih((elementLeft->phi() + elementRight->phi())/2);
-    for (label i = 0;i < Datasize;i++)
+    for (label i = 0; i < Datasize; i++)
     {
         phih[i] = (elementLeft.phi_[i] + elementRight.phi_[i]) / 2;
     }
     scalar a = 0;
-    for (label i = 0;i < Datasize;i++)
+    for (label i = 0; i < Datasize; i++)
     {
         a += v_[i] * phih[i];
     }
@@ -1407,24 +1813,21 @@ Foam::scalar Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::
     return a;
 }
 
-
-template<class CompType, class ThermoType>
+template <class CompType, class ThermoType>
 void Foam::chemistryTabulationMethods::parallelISAT_chem<CompType, ThermoType>::balance()
 {
     scalarField mean(completeSpaceSize_, 0.0);
 
-
-
     //1) walk through the entire tree by starting with the tree's most left
     // chemPoint
-    label x = this->treeMin();
-    List<label> chemPoints(this->size_leaf_);
+    SharedPointer<typename parallelISAT<ISAT_chem<CompType, ThermoType>, emptyClass>::Leaf> x = this->treeMin();
+    List<SharedPointer<typename parallelISAT<ISAT_chem<CompType, ThermoType>, emptyClass>::Leaf>> chemPoints(this->size_leaf_);
     label chPi = 0;
     //2) compute the mean composition
     while (x != -1)
     {
-        const typename DataType::inputType& phij = this->leafmem[x].phi();
-        for (int i = 0;i < Datasize;i++)
+        const typename DataType::inputType &phij = x->phi();
+        for (int i = 0; i < Datasize; i++)
         {
             mean[i] += phij[i];
         }
@@ -1432,7 +1835,7 @@ void Foam::chemistryTabulationMethods::parallelISAT_chem<CompType, ThermoType>::
         chemPoints[chPi++] = x;
         x = this->treeSuccessor(x);
     }
-    for (int i = 0;i < Datasize;i++)
+    for (int i = 0; i < Datasize; i++)
     {
         mean[i] /= this->size_leaf_;
     }
@@ -1442,7 +1845,7 @@ void Foam::chemistryTabulationMethods::parallelISAT_chem<CompType, ThermoType>::
     List<scalar> variance(completeSpaceSize_, 0.0);
     forAll(chemPoints, j)
     {
-        const typename DataType::inputType& phij = this->leafmem[chemPoints[j]].phi();
+        const typename DataType::inputType &phij = chemPoints[j]->phi();
         forAll(variance, vi)
         {
             variance[vi] += sqr(phij[vi] - mean[vi]);
@@ -1468,7 +1871,7 @@ void Foam::chemistryTabulationMethods::parallelISAT_chem<CompType, ThermoType>::
     SortableList<scalar> phiMaxDir(chemPoints.size(), 0.0);
     forAll(chemPoints, j)
     {
-        phiMaxDir[j] = this->leafmem[chemPoints[j]].phi()[maxDir];
+        phiMaxDir[j] = chemPoints[j]->phi()[maxDir];
     }
 
     phiMaxDir.sort();
@@ -1479,19 +1882,20 @@ void Foam::chemistryTabulationMethods::parallelISAT_chem<CompType, ThermoType>::
         << "size_node=" << this->size_node
         << abort(FatalError);*/
     // add the node for the two extremum
-    label newNode = this->node_manager.New();
+    SharedPointer<typename parallelISAT<ISAT_chem<CompType, ThermoType>, emptyClass>::Node> newNode = this->node_manager.New();
+    //std::cout<<"Here:1483"<<std::endl;
     if (newNode == -1)
     {
         FatalErrorInFunction
             << "run out of memory"
             << exit(FatalError);
     }
-    this->nodemem[newNode].set(this->leafmem[chemPoints[phiMaxDir.indices()[0]]], this->leafmem[chemPoints[phiMaxDir.indices()[phiMaxDir.size() - 1]]]);
-    this->nodemem[newNode].parent_ = -1;
-    this->nodemem[newNode].leafLeft_ = chemPoints[phiMaxDir.indices()[0]];
-    this->nodemem[newNode].leafRight_ = chemPoints[phiMaxDir.indices()[phiMaxDir.size() - 1]];
-    this->nodemem[newNode].nodeLeft_ = -1;
-    this->nodemem[newNode].nodeRight_ = -1;
+    newNode->set(*chemPoints[phiMaxDir.indices()[0]], *chemPoints[phiMaxDir.indices()[phiMaxDir.size() - 1]]);
+    newNode->parent_2.offset = -1;
+    newNode->leafLeft_2.offset = chemPoints[phiMaxDir.indices()[0]].offset;
+    newNode->leafRight_2.offset = chemPoints[phiMaxDir.indices()[phiMaxDir.size() - 1]].offset;
+    newNode->nodeLeft_2.offset = -1;
+    newNode->nodeRight_2.offset = -1;
 
     /*label newNode = new bn
     (
@@ -1499,50 +1903,44 @@ void Foam::chemistryTabulationMethods::parallelISAT_chem<CompType, ThermoType>::
         chemPoints[phiMaxDir.indices()[phiMaxDir.size() - 1]],
         nullptr
     );*/
-    this->root_ = newNode;
+    this->root_2 = newNode;
 
-    this->leafmem[chemPoints[phiMaxDir.indices()[0]]].node_ = newNode;
-    this->leafmem[chemPoints[phiMaxDir.indices()[phiMaxDir.size() - 1]]].node_ = newNode;
+    chemPoints[phiMaxDir.indices()[0]]->node_2.offset = newNode.offset;
+    chemPoints[phiMaxDir.indices()[phiMaxDir.size() - 1]]->node_2.offset = newNode.offset;
 
     for (label cpi = 1; cpi < chemPoints.size() - 1; cpi++)
     {
-        label phi0;
+        SharedPointer<typename parallelISAT<ISAT_chem<CompType, ThermoType>, emptyClass>::Leaf> phi0;
 
-
-        phi0 = this->binaryTreeSearch
-        (
-            this->leafmem[chemPoints[phiMaxDir.indices()[cpi]]].phi(),
-            this->root_
-        );
-
+        phi0 = this->binaryTreeSearch(
+            chemPoints[phiMaxDir.indices()[cpi]]->phi(),
+            this->root_2);
 
         // add the chemPoint
-        label nodeToAdd = this->node_manager.New();
-        if (nodeToAdd == -1)
+        SharedPointer<typename parallelISAT<ISAT_chem<CompType, ThermoType>, emptyClass>::Node> nodeToAdd = this->node_manager.New();
+        //std::cout<<"Here:1522"<<std::endl;
+        if (nodeToAdd.isNULL())
         {
             FatalErrorInFunction
                 << "run out of memory"
                 << exit(FatalError);
         }
-        this->nodemem[nodeToAdd].set(this->leafmem[phi0], this->leafmem[chemPoints[phiMaxDir.indices()[cpi]]]);
-        this->nodemem[nodeToAdd].parent_ = this->leafmem[phi0].node_;
-        this->nodemem[nodeToAdd].leafLeft_ = phi0;
-        this->nodemem[nodeToAdd].leafRight_ = chemPoints[phiMaxDir.indices()[cpi]];
-        this->nodemem[nodeToAdd].nodeLeft_ = -1;
-        this->nodemem[nodeToAdd].nodeRight_ = -1;
+        nodeToAdd->set(*phi0, *chemPoints[phiMaxDir.indices()[cpi]]);
+        nodeToAdd->parent_2.offset = phi0->node_2.offset;
+        nodeToAdd->leafLeft_2.offset = phi0.offset;
+        nodeToAdd->leafRight_2.offset = chemPoints[phiMaxDir.indices()[cpi]].offset;
+        nodeToAdd->nodeLeft_2.offset = -1;
+        nodeToAdd->nodeRight_2.offset = -1;
         //new bn(phi0, chemPoints[phiMaxDir.indices()[cpi]], phi0->node());
         // make the parent of phi0 point to the newly created node
         this->insertNode(phi0, nodeToAdd);
-        this->leafmem[phi0].node_ = nodeToAdd;
-        this->leafmem[chemPoints[phiMaxDir.indices()[cpi]]].node_ = nodeToAdd;
-
+        phi0->node_2.offset = nodeToAdd.offset;
+        chemPoints[phiMaxDir.indices()[cpi]]->node_2 = nodeToAdd;
     }
 }
 
-
-template<class CompType, class ThermoType>
-bool
-Foam::chemistryTabulationMethods::parallelISAT_chem<CompType, ThermoType>::cleanAndBalance()
+template <class CompType, class ThermoType>
+bool Foam::chemistryTabulationMethods::parallelISAT_chem<CompType, ThermoType>::cleanAndBalance()
 {
     if (this->size_leaf_ < 1)
     {
@@ -1552,14 +1950,14 @@ Foam::chemistryTabulationMethods::parallelISAT_chem<CompType, ThermoType>::clean
 
     // Check all chemPoints to see if we need to delete some of the chemPoints
     // according to the ellapsed time and number of growths
-    label x = this->treeMin();
+    SharedPointer<typename parallelISAT<ISAT_chem<CompType, ThermoType>, emptyClass>::Leaf> x = this->treeMin();
     //Pout << "!!!!!!!!!!!!!1 x=" << x << endl;
-    while (x != -1)
+    while (!x.isNULL())
     {
 
-        label xtmp = this->treeSuccessor(x);
+        SharedPointer<typename parallelISAT<ISAT_chem<CompType, ThermoType>, emptyClass>::Leaf> xtmp = this->treeSuccessor(x);
         //Pout << "!!!!!!!!!!!!!21 xtmp=" << xtmp << endl;
-        scalar elapsedTimeSteps = this->chemistry_.timeSteps() - this->leafmem[x].timeTag();
+        scalar elapsedTimeSteps = this->chemistry_.timeSteps() - x->timeTag();
         //Pout << "!!!!!!!!!!!!!22 xtmp=" << xtmp << endl;
         //(elapsedTimeSteps > chPMaxLifeTime_);
         //Pout << "!!!!!!!!!!!!!22.5 elapsedTimeSteps=" << this->leafmem[x].nGrowth() << endl;
@@ -1573,7 +1971,7 @@ Foam::chemistryTabulationMethods::parallelISAT_chem<CompType, ThermoType>::clean
                 << "\n growth=" << this->totalGrowth_
                 << abort(FatalError);
         }*/
-        if ((elapsedTimeSteps > chPMaxLifeTime_) || (this->leafmem[x].nGrowth() > maxGrowth_))
+        if ((elapsedTimeSteps > chPMaxLifeTime_) || (x->nGrowth() > maxGrowth_))
         {
 
             //Pout << "!!!!!!!!!!!!!23 xtmp=" << xtmp << endl;
@@ -1591,12 +1989,9 @@ Foam::chemistryTabulationMethods::parallelISAT_chem<CompType, ThermoType>::clean
     // Check if the tree should be balanced according to criterion:
     //  -the depth of the tree bigger than a*log2(size), log2(size) being the
     //      ideal depth (e.g. 4 leafs can be stored in a tree of depth 2)
-    if
-        (
-            size() > minBalanceThreshold_
-            && this->depth() >
-            maxDepthFactor_ * log(scalar(size())) / log(2.0)
-            )
+    if (
+        size() > minBalanceThreshold_ && this->depth() >
+                                             maxDepthFactor_ * log(scalar(size())) / log(2.0))
     {
 
         balance();
@@ -1609,11 +2004,8 @@ Foam::chemistryTabulationMethods::parallelISAT_chem<CompType, ThermoType>::clean
 }
 // * * * * * * * * * * * * * * Member Operators  * * * * * * * * * * * * * * //
 
-
 // * * * * * * * * * * * * * * Friend Functions  * * * * * * * * * * * * * * //
 
-
 // * * * * * * * * * * * * * * Friend Operators * * * * * * * * * * * * * * //
-
 
 // ************************************************************************* //

@@ -37,8 +37,9 @@ SourceFiles
 #define PARALLELISAT_H
 
 #include "SUPstream.H"
-#include<fstream>
+#include <fstream>
 #include "IOstreams.H"
+#include "slab.H"
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 namespace Foam
@@ -49,47 +50,44 @@ namespace Foam
     class Ostream;
 
     // Forward declaration of friend functions and operators
-    template<typename T, typename T2>
+    template <typename T, typename T2>
     class parallelISAT;
     //Istream& operator>>(Istream&, parallelISAT&);
     //Ostream& operator<<(Ostream&, const parallelISAT&);
 
-
     /*---------------------------------------------------------------------------*\
                              Class parallelISAT Declaration
     \*---------------------------------------------------------------------------*/
-    template<typename T, typename T2>
-    class parallelISAT :public T2
+    template <typename T, typename T2>
+    class parallelISAT : public T2
     {
 
     public:
         typedef typename T::inputType inputType;
         typedef typename T::outputType outputType;
+
     protected:
         // Private data
 
-            //- Description of data_
-            //dataType data_;
-        SUPstream::mpi_manager& manager_;
-        SUPstream::mpi_sync& sync_;
+        //- Description of data_
+        //dataType data_;
+        SUPstream::mpi_manager &manager_;
+        SUPstream::mpi_sync &sync_;
         label maxNLeafs_;
         label nmem_leaf_;
         label nmem_node_;
 
         scalar tolerance_;
 
-
-
-
         // Private Member Functions
 
-            //- Disallow default bitwise copy construct
-        parallelISAT(const parallelISAT&);
+        //- Disallow default bitwise copy construct
+        parallelISAT(const parallelISAT &);
 
         //- Disallow default bitwise assignment
-        void operator=(const parallelISAT&);
+        void operator=(const parallelISAT &);
         struct Node;
-        struct Leaf :public T::leafData
+        struct Leaf : public T::leafData
         {
 
             //Node* node_;
@@ -118,7 +116,8 @@ namespace Foam
 
             //- Reference to the node in the binary tree holding this chemPoint
             // Only for write
-            label node_;
+            //label node_;
+            SharedPointer<Node> node_2;
 
             //- The size of the composition space (size of the vector phi)
             //label completeSpaceSize_;
@@ -161,29 +160,33 @@ namespace Foam
             //label idT_;
             //label idp_;
             //label iddeltaT_;
-
         };
-        struct Node :public T::nodeData
+        struct Node : public T::nodeData
         {
             //Leaf* leaf_;
             //label v;
             //scalar v;
 
-            label leafLeft_;
+            SharedPointer<Leaf> leafLeft_2;
+            //label leafLeft_;
 
             //- Element on the right
-            label leafRight_;
+            SharedPointer<Leaf> leafRight_2;
+            //label leafRight_;
 
             //- Node which follows on the left
 
             //first check node
-            label nodeLeft_;
+            SharedPointer<Node> nodeLeft_2;
+            //label nodeLeft_;
 
             //- Node which follows on the right
-            label nodeRight_;
+            SharedPointer<Node> nodeRight_2;
+            //label nodeRight_;
 
             //- Parent node  Only for write
-            label parent_;
+            SharedPointer<Node> parent_2;
+            //label parent_;
 
             //- Number of equations in addition to the species eqs.
             //label nAdditionalEqns_;
@@ -192,56 +195,76 @@ namespace Foam
 
             //scalar a_;
         };
-        SUPstream::shared_data<Leaf> leafmem;
+        //SUPstream::shared_data<Leaf> leafmem;
         SUPstream::shared_data<label> emptylist_leaf;
-        SUPstream::shared_data<Node> nodemem;
+        //SUPstream::shared_data<Node> nodemem;
+        //SUPstream::shared_data<label> emptylist_node;
         SUPstream::shared_data<label> emptylist_node;
 
+        template <class Type>
         class Mem_manager
         {
-            SUPstream::shared_data<label>& emptylist_;
-            //label& size_;
 
-            label& head_;
-            label& temp_tail_;
-            label& tail_;
-            label& nmem_;
+            label &size_;
+            label &tmp_size_;
+            SUPstream::shared_data<label> &emptylist_;
+            label &tail_;
+
         public:
-            Mem_manager(
-                SUPstream::shared_data<label>& emptylist,
-                label& head, label& tail, label& temp_tail, label& nmem
-            ) :emptylist_(emptylist), head_(head),
-                temp_tail_(temp_tail), tail_(tail), nmem_(nmem)
+            Mem_manager(SUPstream::shared_data<label> &emptylist_in, label &tail_in, label &size_in, label &tmp_size_in) : emptylist_(emptylist_in), tail_(tail_in), size_(size_in), tmp_size_(tmp_size_in) { tail_ = 0; }
+            inline SharedPointer<Type> New()
             {
-                head_ = 0;
-                temp_tail_ = nmem - 1;
-                tail_ = nmem - 1;
-                for (label i = 0;i < nmem;i++)
-                {
-                    emptylist_[i] = i;
-                }
-            }
-            inline label New()
-            {
-                if (head_ == temp_tail_)
-                    return -1;
-                label ret = emptylist_[head_];
-                head_ = (head_ + 1) % nmem_;
-                return ret;
-            }
-            inline void Delete(label index)
-            {
-                if ((tail_ + 1) % nmem_ == head_)
-                {
+                size_++;
+                auto ret = pslab->alloc(sizeof(Type));
+                /*
+                std::cout << "----------------------- new " << ret << std::endl;
+                pslab->report();
+                report();
+                std::cout << "----------------------- " << std::endl;
+                if (size_ == 2)
                     FatalErrorInFunction
-                        << "delete empty memory"
+                        << "!!!!!!!!"
                         << abort(FatalError);
-                }
-                tail_ = (tail_ + 1) % nmem_;
-                emptylist_[tail_] = index;
+                        */
+                //std::cout << pslab->manager_.rank << "AAAAAAAAAAAAAAAAAA " << ret <<" "<<sizeof(Type)  << std::endl;
+                return SharedPointer<Type>(ret);
             }
-            inline void update() { temp_tail_ = tail_; }
-            void clear()
+            inline void Delete(SharedPointer<Type> &in)
+            {
+                size_--;
+                tmp_size_++;
+                /*
+                std::cout << "----------------------- delete" << std::endl;
+                pslab->report();
+                report();
+                std::cout << "----------------------- " << std::endl;
+                if (size_ == 2)
+                    FatalErrorInFunction
+                        << "!!!!!!!!"
+                        << abort(FatalError);
+                        */
+                //std::cout << pslab->manager_.rank << "AAAAAAAAAAAAAAAAAA- " << in.offset << std::endl;
+                emptylist_[tail_] = in.offset;
+                tail_++;
+                //pslab->free(sizeof(Type), in.offset);
+            }
+            inline void update()
+            {
+                tmp_size_ = 0;
+                //std::cout << pslab->manager_.rank << sizeof(Type) << " AAAAAAAAAAAAAAAAAA1 " << tail_ << std::endl;
+                while (tail_ > 0)
+                {
+                    pslab->free(sizeof(Type), emptylist_[--tail_]);
+                }
+
+                //std::cout << pslab->manager_.rank << sizeof(Type) << " AAAAAAAAAAAAAAAAAA " << tail_ << std::endl;
+            }
+            inline void report()
+            {
+                std::cout << "Mem_manager" << std::endl;
+                std::cout << "Total:" << (tmp_size_ + size_) * sizeof(Type) << " Used:" << size_ * sizeof(Type) << " Temp:" << (tmp_size_) * sizeof(Type) << std::endl;
+            }
+            /*void clear()
             {
                 head_ = 0;
                 temp_tail_ = nmem_ - 1;
@@ -250,24 +273,29 @@ namespace Foam
                 {
                     emptylist_[i] = i;
                 }
-            }
+            }*/
         };
         struct Private_variable
         {
             //         head      temp_tail       tail
             //         |         |               |
-            //    | | |X|X|X|X|X|X|Y|Y|Y|Y|Y|Y|Y|Y| | | | 
+            //    | | |X|X|X|X|X|X|Y|Y|Y|Y|Y|Y|Y|Y| | | |
             label size_leaf;
             label head_leaf;
             label tail_leaf;
+            label tmp_size_leaf;
             label temp_tail_leaf;
+            label m_size_leaf;
 
             label size_node;
             label heaf_node;
             label tail_node;
+            label tmp_size_node;
             label temp_tail_node;
+            label m_size_node;
 
             label root;
+            SharedPointer<Node> root_2;
 
             label totalGrowth;
             //label zzzz;
@@ -275,48 +303,47 @@ namespace Foam
         };
 
         SUPstream::shared_data<Private_variable> pv_;
-        label& size_leaf_;
-        label& head_leaf;
-        label& tail_leaf;
-        label& temp_tail_leaf;
+        label &size_leaf_;
+        label &head_leaf;
+        label &tail_leaf;
+        label &temp_tail_leaf;
 
-        label& size_node;
-        label& head_node;
-        label& tail_node;
-        label& temp_tail_node;
+        label &size_node;
+        label &head_node;
+        label &tail_node;
+        label &temp_tail_node;
 
-        label& root_;
-        label& totalGrowth_;
+        label &root_;
+        SharedPointer<Node> &root_2;
+        label &totalGrowth_;
 
         //label& zzzz_;
         //label& zzzz2_;
         SUPstream::mpi_mutex write_lock;
 
-        Mem_manager leaf_manager, node_manager;
+        Mem_manager<Node> node_manager;
+        Mem_manager<Leaf> leaf_manager;
 
         label nRetrieved_;
         label nGrowth_;
         label nAdd_;
 
-
-
     public:
         //Node tnode;
         //Leaf tleaf;
-    // Static data members
+        // Static data members
 
         //- Static data staticData
         //static const dataType staticData;
 
-
-    // Constructors
+        // Constructors
 
         //- Construct null
         //parallelISAT();
 
         //- Construct from components
-        template<typename ...Args>
-        parallelISAT(SUPstream::mpi_manager& manager_in, label nmem, label maxNleafs, SUPstream::mpi_sync& sync_in, Args ...args);
+        template <typename... Args>
+        parallelISAT(SUPstream::mpi_manager &manager_in, label nmem, label maxNleafs, SUPstream::mpi_sync &sync_in, Args... args);
 
         //- Construct from Istream
         //ISAT(Istream&);
@@ -324,85 +351,126 @@ namespace Foam
         //- Construct as copy
         //ISAT(const ISAT&);
 
-
-    // Selectors
+        // Selectors
 
         //- Select null constructed
         //static autoPtr<ISAT> New();
 
-
-    //- Destructor
+        //- Destructor
         ~parallelISAT();
-
 
         // Member Functions
 
         // Access
         bool isFull();
-        const label& size_leaf() { return size_leaf_; }
+        const label &size_leaf() { return size_leaf_; }
         //inline scalar& tolerance() { return tolerance_; }
-        label binaryTreeSearch(inputType value, label node_index);
-        label binaryTreeSearch(inputType value);
+        SharedPointer<Leaf> binaryTreeSearch(inputType value, SharedPointer<Node> node_index);
+        SharedPointer<Leaf> binaryTreeSearch(inputType value);
         void writeDot(string name);
-        void writeDot(label nodeindex, std::ofstream& fout);
-        scalar leafvalue(label index) { if (index == -1)return -1;return leafmem[index].v; };
+        void writeDot(label nodeindex, std::ofstream &fout);
+        scalar leafvalue(SharedPointer<Leaf> index)
+        {
+            if (index.isNULL())
+            {
+                return -1;
+            };
+            return index->v;
+        };
 
-        bool retrieve(const inputType& x, outputType& y);
+        bool retrieve(const inputType &x, outputType &y);
         // Check
 
         // Edit
-        bool grow(const inputType& value);
+        bool grow(const inputType &value);
         //void insert(const inputType& value);
-        template<typename ...Args>
-        label add(const inputType& x, const outputType& y, Args ...args);
-        label add(const inputType& x);
-        bool update() { leaf_manager.update(); node_manager.update(); return true; }
-        void clear(){leaf_manager.clear();size_leaf_=0; node_manager.clear();size_node=0;root_=-1;}
-        //serial function
-        label treeMin(label subTreeRoot);
-
-        inline label treeMin()
+        template <typename... Args>
+        label add(const inputType &x, const outputType &y, Args... args);
+        label add(const inputType &x);
+        void report()
         {
-            return treeMin(root_);
+            std::cout << "----------------------- report " << size_leaf_ << std::endl;
+            pslab->report();
+            leaf_manager.report();
+            node_manager.report();
+            std::cout << "-----------------------  " << std::endl;
+        }
+        bool update()
+        {
+            /*             std::cout << "----------------------- update1 " << size_leaf_ << std::endl;
+            pslab->report();
+            leaf_manager.report();
+            node_manager.report();
+            std::cout << "-----------------------  " << std::endl; */
+            leaf_manager.update();
+            node_manager.update();
+            /*             std::cout << "----------------------- update2 " << size_leaf_ << std::endl;
+            pslab->report();
+            leaf_manager.report();
+            node_manager.report();
+            std::cout << "-----------------------  " << std::endl; */
+            return true;
+        }
+        void clear()
+        {
+            deleteAll();
+            //leaf_manager.clear();
+            size_leaf_ = 0;
+            //node_manager.clear();
+            size_node = 0;
+            root_2.offset = -1;
+        }
+        //serial function
+        SharedPointer<Leaf> treeMin(SharedPointer<Node> subTreeRoot);
+
+        inline SharedPointer<Leaf> treeMin()
+        {
+            return treeMin(root_2);
         }
 
-        label treeSuccessor(label x);
+        SharedPointer<Leaf> treeSuccessor(SharedPointer<Leaf> x);
 
-        label leafPSibling(label x);
+        SharedPointer<Leaf> leafPSibling(SharedPointer<Leaf> x);
 
-        label nodeSibling_leaf(label y);
-        label nodeSibling_node(label y);
+        SharedPointer<Node> nodeSibling_leaf(SharedPointer<Leaf> y);
+        SharedPointer<Node> nodeSibling_node(SharedPointer<Node> y);
 
-        void transplant(label u, label v);
+        void transplant(SharedPointer<Node> u, SharedPointer<Node> v);
 
-        label depth(label subTreeRoot);
+        label depth(SharedPointer<Node> subTreeRoot);
 
         inline label depth()
         {
-            return depth(root_);
+            return depth(root_2);
         }
 
-        void deleteLeaf(label index_phi0);
+        void deleteLeaf(SharedPointer<Leaf> index_phi0);
 
-        void deleteAllNode(label subTreeRoot);
+        void deleteAllNode(SharedPointer<Node> subTreeRoot);
 
         inline void deleteAllNode()
         {
-            deleteAllNode(root_);
-            node_manager.update();
+            deleteAllNode(root_2);
+            //node_manager.update();
         }
 
-        void insertNode
-        (
-            label phi0,
-            label newNode
-        );
-        bool treeCheck(label index);
+        void deleteAll(SharedPointer<Node> subTreeRoot);
+
+        inline void deleteAll()
+        {
+            deleteAll(root_2);
+            //node_manager.update();
+        }
+
+        void insertNode(
+            SharedPointer<Leaf> phi0,
+            SharedPointer<Node> newNode);
+        bool treeCheck(SharedPointer<Node> index);
         inline bool treeCheck()
         {
             if (size_leaf_ == 0)
             {
-                if (root_ == -1)
+                if (root_2.isNULL())
                     return true;
                 else
                 {
@@ -415,19 +483,19 @@ namespace Foam
             if (size_leaf_ == 1)
             {
                 bool ret;
-                if (root_ == -1)
+                if (root_2.isNULL())
                 {
                     FatalErrorInFunction
                         << "p1 ";
                     // << abort(FatalError);
                     return false;
                 }
-                ret = (nodemem[root_].leafLeft_ != -1);
-                ret = ret && (nodemem[root_].nodeLeft_ == -1);
-                ret = ret && (nodemem[root_].nodeRight_ == -1);
-                ret = ret && (nodemem[root_].leafRight_ == -1);
-                ret = ret && (nodemem[root_].parent_ == -1);
-                ret = ret && (leafmem[nodemem[root_].leafLeft_].node_ == root_);
+                ret = (!root_2->leafLeft_2.isNUL());
+                ret = ret && (root_2->nodeLeft_.isNUL());
+                ret = ret && (root_2->nodeRight_.isNUL());
+                ret = ret && (root_2->leafRight_.isNUL());
+                ret = ret && (root_2->parent_.isNUL());
+                ret = ret && (root_2->leafLeft_2->node_2.offset == root_2.offset);
                 if (ret == false)
                 {
                     FatalErrorInFunction
@@ -436,7 +504,7 @@ namespace Foam
                 }
                 return ret;
             }
-            if (nodemem[root_].parent_ != -1)
+            if (!root_2->parent_2.isNULL())
             {
                 FatalErrorInFunction
                     << "p3 ";
@@ -444,7 +512,7 @@ namespace Foam
                 return false;
             }
 
-            return treeCheck(root_);
+            return treeCheck(root_2);
         }
         /* virtual label add
          (
@@ -454,24 +522,21 @@ namespace Foam
              const scalar deltaT
          );
          */
-         // Write
+        // Write
 
+        // Member Operators
 
-     // Member Operators
+        //void operator=(const ISAT&);
 
-         //void operator=(const ISAT&);
+        // Friend Functions
 
+        // Friend Operators
 
-     // Friend Functions
+        // IOstream Operators
 
-     // Friend Operators
-
-     // IOstream Operators
-
-         //friend Istream& operator>>(Istream&, parallelISAT&);
-         //friend Ostream& operator<<(Ostream&, const parallelISAT&);
+        //friend Istream& operator>>(Istream&, parallelISAT&);
+        //friend Ostream& operator<<(Ostream&, const parallelISAT&);
     };
-
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

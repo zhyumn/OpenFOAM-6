@@ -46,19 +46,72 @@ namespace Foam
     namespace chemistryTabulationMethods
     {
 
-        template<class CompType, class ThermoType>
+        template <class CompType, class ThermoType>
         class parallelISAT_chem;
+
+        template <class Type>
+        struct SList
+        {
+            int size_;
+            SharedPointer<Type> v_;
+            SList() : size_(Datasize)
+            {
+            }
+            void init()
+            {
+                size_ = Datasize;
+                v_ = pslab->alloc(sizeof(Type) * size_);
+            }
+            inline Type &operator[](int x)
+            {
+                return v_()[x];
+            }
+            inline const Type &operator[](int x) const
+            {
+                return v_()[x];
+            }
+
+            inline const SList<Type> &operator=(const SList<Type> &x)
+            {
+                for (int i = 0; i < size_; i++)
+                    v_()[i] = x[i];
+                return *this;
+            }
+
+            inline const SList<Type> &operator=(const FixedList<scalar, Datasize> &x)
+            {
+                for (int i = 0; i < size_; i++)
+                    v_()[i] = x[i];
+                return *this;
+            }
+            const int &size() const
+            {
+                return size_;
+            }
+            void Delete()
+            {
+                //std::cout << size_ << std::endl;
+                pslab->free(sizeof(Type) * size_, v_.offset);
+            }
+            ~SList()
+            {
+                pslab->free(sizeof(Type) * size_, v_.offset);
+            }
+        };
+
         /*---------------------------------------------------------------------------*\
                                  Class parallelISAT_chem Declaration
         \*---------------------------------------------------------------------------*/
-        template<class CompType, class ThermoType>
+        template <class CompType, class ThermoType>
         struct ISAT_chem
         {
-            typedef FixedList<scalar, Datasize> inputType;
-            typedef FixedList<scalar, Datasize> outputType;
+            typedef FixedList<scalar, Datasize> inputType_old;
+            typedef SList<scalar> inputType;
+            typedef FixedList<scalar, Datasize> outputType_old;
+            typedef SList<scalar> outputType;
             typedef FixedSquareMatrix<scalar, Datasize> gradientType;
 
-            static parallelISAT_chem<CompType, ThermoType>* pISAT;
+            static parallelISAT_chem<CompType, ThermoType> *pISAT;
 
             //static label out;
             class nodeData;
@@ -67,9 +120,8 @@ namespace Foam
             private:
                 inputType phi_;
                 outputType Rphi_;
-                gradientType A_;//gradient
+                gradientType A_; //gradient
                 gradientType LT_;
-
 
                 inputType simplifiedToCompleteIndex_;
                 inputType completeToSimplifiedIndex_;
@@ -79,100 +131,118 @@ namespace Foam
                 label nGrowth_;
                 scalar timeTag_;
                 scalar EOA;
+
             public:
                 //void set(const inputType& x) { v = x; Rv = x * x; gradient = 2 * x; EOA = pISAT->tolerance_ / max(fabs(gradient), 1); }
                 //void set(const inputType& x);
 
-                void set(const inputType& x, const outputType& y, const scalar rhoi, const scalar dt);
+                void set(const inputType_old &x, const outputType_old &y, const scalar rhoi, const scalar dt);
                 //template<typename ...Args>
                 //static void computeA(const inputType& x, const outputType& y, gradientType& A, Args ...args);
 
-                static void computeA
-                (
-                    const inputType& phiq,
-                    const outputType& Rphiq,
-                    gradientType& A_out,
-                    scalarSquareMatrix& A,
+                static void computeA(
+                    const inputType_old &phiq,
+                    const outputType_old &Rphiq,
+                    gradientType &A_out,
+                    scalarSquareMatrix &A,
                     const scalar rhoi,
-                    const scalar dt
-                );
+                    const scalar dt);
 
-                void qrDecompose
-                (
+                void qrDecompose(
                     const label nCols,
-                    scalarSquareMatrix& R
-                );
-                template<class M>
-                void qrUpdate
-                (
-                    M& R,
+                    scalarSquareMatrix &R);
+                template <class M>
+                void qrUpdate(
+                    M &R,
                     const label n,
-                    const Foam::scalarField& u,
-                    const Foam::scalarField& v
-                );
-                template<class M>
-                void rotate
-                (
-                    M& R,
+                    const Foam::scalarField &u,
+                    const Foam::scalarField &v);
+                template <class M>
+                void rotate(
+                    M &R,
                     const label i,
                     const scalar a,
                     const scalar b,
-                    label n
-                );
+                    label n);
 
-                bool checkSolution
-                (
-                    const inputType& phiq,
-                    const outputType& Rphiq
-                );
+                bool checkSolution(
+                    const inputType_old &phiq,
+                    const outputType_old &Rphiq);
 
-                bool grow(const inputType& x);
-                static outputType func(const inputType& x);
-                static gradientType gradFunc(const inputType& x);
+                bool grow(const inputType &x);
+                bool grow(const inputType_old &x);
+                static outputType func(const inputType &x);
+                static gradientType gradFunc(const inputType &x);
                 //bool collide(const inputType& x) { return x == phi_; }
-                void retrieve(const inputType& x, outputType& y);
-                bool inEOA(const inputType& x);
-                void computeLT(scalarSquareMatrix& A);
+                void retrieve(const inputType &x, outputType &y);
+                void retrieve(const inputType_old &x, outputType_old &y);
+                void Delete()
+                {
+                    phi_.Delete();
+                    Rphi_.Delete();
+
+                    simplifiedToCompleteIndex_.Delete();
+                    completeToSimplifiedIndex_.Delete();
+                    scaleFactor_.Delete();
+                }
+                void init()
+                {
+                    phi_.init();
+                    Rphi_.init();
+
+                    simplifiedToCompleteIndex_.init();
+                    completeToSimplifiedIndex_.init();
+                    scaleFactor_.init();
+                }
+                bool inEOA(const inputType &x);
+                bool inEOA(const inputType_old &x);
+                void computeLT(scalarSquareMatrix &A);
                 label simplifiedToCompleteIndex(const label i);
-                inline const scalar& timeTag() { return timeTag_; }
-                inline const label& nGrowth() { return nGrowth_; }
-                inline const inputType& phi() { return phi_; };
+                inline const scalar &timeTag() { return timeTag_; }
+                inline const label &nGrowth() { return nGrowth_; }
+                inline const inputType &phi() { return phi_; };
                 friend nodeData;
-                template<class CompType_, class ThermoType_>
-                friend std::ostream& operator<<(std::ostream& out, typename ISAT_chem<CompType_, ThermoType_>::leafData& A);
+                template <class CompType_, class ThermoType_>
+                friend std::ostream &operator<<(std::ostream &out, typename ISAT_chem<CompType_, ThermoType_>::leafData &A);
             };
             struct nodeData
             {
             private:
                 inputType v_;
                 scalar a_;
+
             public:
-                void set() { }
+                void set() {}
                 //void set(const inputType& x, const inputType& y) {  }
-                void set(leafData& x, leafData& y)
+                void set(leafData &x, leafData &y)
                 {
                     calcV(x, y, v_);
                     a_ = calcA(x, y);
                 }
-                void calcV
-                (
-                    leafData& elementLeft,
-                    leafData& elementRight,
-                    inputType& v
-                );
-                scalar calcA
-                (
-                    const leafData& elementLeft,
-                    const leafData& elementRight
-                );
+                void calcV(
+                    leafData &elementLeft,
+                    leafData &elementRight,
+                    inputType &v);
+                scalar calcA(
+                    const leafData &elementLeft,
+                    const leafData &elementRight);
 
-                bool goLeft(inputType& x) {
+                bool goLeft(const inputType &x)
+                {
                     scalar vPhi = 0.0;
                     for (label i = 0; i < Datasize; i++)
                         vPhi += x[i] * v_[i];
                     return vPhi < a_;
                 }
-                bool goLeft(leafData& x)
+
+                bool goLeft(const inputType_old &x)
+                {
+                    scalar vPhi = 0.0;
+                    for (label i = 0; i < Datasize; i++)
+                        vPhi += x[i] * v_[i];
+                    return vPhi < a_;
+                }
+                bool goLeft(leafData &x)
                 {
                     scalar vPhi = 0.0;
                     for (label i = 0; i < Datasize; i++)
@@ -180,31 +250,40 @@ namespace Foam
                     return vPhi < a_;
                     //return true;
                 }
+                void Delete()
+                {
+                    v_.Delete();
+                }
+                void init()
+                {
+                    v_.init();
+                }
                 friend leafData;
-                template<class CompType_, class ThermoType_>
-                friend std::ostream& operator<<(std::ostream& out, typename ISAT_chem<CompType_, ThermoType_>::nodeData& A);
+                template <class CompType_, class ThermoType_>
+                friend std::ostream &operator<<(std::ostream &out, typename ISAT_chem<CompType_, ThermoType_>::nodeData &A);
             };
         };
-        template<class CompType, class ThermoType>
-        std::ostream& operator<<(std::ostream& out, typename ISAT_chem<CompType, ThermoType>::leafData& A);
-        template<class CompType, class ThermoType>
-        std::ostream& operator<<(std::ostream& out, typename ISAT_chem<CompType, ThermoType>::nodeData& A);
+        template <class CompType, class ThermoType>
+        std::ostream &operator<<(std::ostream &out, typename ISAT_chem<CompType, ThermoType>::leafData &A);
+        template <class CompType, class ThermoType>
+        std::ostream &operator<<(std::ostream &out, typename ISAT_chem<CompType, ThermoType>::nodeData &A);
         struct emptyClass
-        {};
-        template<class CompType, class ThermoType>
+        {
+        };
+        template <class CompType, class ThermoType>
         class parallelISAT_chem
-            :public chemistryTabulationMethod<CompType, ThermoType>,
-            public parallelISAT<ISAT_chem<CompType, ThermoType>, emptyClass>
+            : public chemistryTabulationMethod<CompType, ThermoType>,
+              public parallelISAT<ISAT_chem<CompType, ThermoType>, emptyClass>
         {
             // Private data
 
-                //- Description of data_
+            //- Description of data_
             //dataType data_;
 
             //- Number of equations in addition to the species eqs.
             label nAdditionalEqns_;
 
-            const Time& runTime_;
+            const Time &runTime_;
 
             //scalar tolerance_;
 
@@ -224,15 +303,9 @@ namespace Foam
             label chPMaxLifeTime_;
             label maxGrowth_;
 
-
             scalar minBalanceThreshold_;
 
             scalar maxDepthFactor_;
-
-
-
-
-
 
             autoPtr<OFstream> nRetrievedFile_;
             autoPtr<OFstream> nGrowthFile_;
@@ -242,34 +315,27 @@ namespace Foam
 
             // Private Member Functions
 
-                //- Disallow default bitwise copy construct
-
+            //- Disallow default bitwise copy construct
 
             //- Disallow default bitwise assignment
 
-
-
         public:
-
             TypeName("parallelISAT");
 
             // Static data members
 
             //- Static data staticData
-        //static const dataType staticData;
+            //static const dataType staticData;
 
             typedef ISAT_chem<CompType, ThermoType> DataType;
             // Constructors
 
-                //- Construct null
-
+            //- Construct null
 
             //- Construct from components
-            parallelISAT_chem
-            (
-                const dictionary& dict,
-                TDACChemistryModel<CompType, ThermoType>& chemistry
-            );
+            parallelISAT_chem(
+                const dictionary &dict,
+                TDACChemistryModel<CompType, ThermoType> &chemistry);
 
             //- Construct from Istream
             //parallelISAT_chem(Istream&);
@@ -277,26 +343,23 @@ namespace Foam
             //- Construct as copy
             //parallelISAT_chem(const parallelISAT_chem&);
 
-
             // Selectors
 
-                //- Select null constructed
+            //- Select null constructed
             //static autoPtr<parallelISAT_chem> New();
-
 
             //- Destructor
             ~parallelISAT_chem();
 
-
             // Member Functions
 
-                // Access
+            // Access
 
-                // Check
+            // Check
 
-                // Edit
+            // Edit
             //void computeA(scalarSquareMatrix& A, const calarField& Rphiq, const scalar rhoi, const scalar dt);
-                // Write
+            // Write
             void balance();
 
             bool cleanAndBalance();
@@ -330,10 +393,12 @@ namespace Foam
                     //        << abort(FatalError);
                     //}
                 }
+                this->sync_.sync();
                 return ret;
             }
             label size() { return this->size_leaf(); };
-            void writePerformance() {
+            void writePerformance()
+            {
 
                 if (this->log())
                 {
@@ -368,11 +433,9 @@ namespace Foam
                         << abort(FatalError);
                 }*/
             }
-            bool retrieve
-            (
-                const scalarField& phiQ,
-                scalarField& RphiQ
-            )
+            bool retrieve(
+                const scalarField &phiQ,
+                scalarField &RphiQ)
             {
                 /*if (!this->treeCheck())
                 {
@@ -390,13 +453,13 @@ namespace Foam
                         << abort(FatalError);
                 }*/
                 //out0++;
-                typename DataType::inputType phiQ_fixed, RphiQ_fixed;
-                for (label i = 0;i < Datasize;i++)
+                typename DataType::inputType_old phiQ_fixed, RphiQ_fixed;
+                for (label i = 0; i < Datasize; i++)
                 {
                     phiQ_fixed[i] = phiQ[i];
                 }
                 bool flag = parallelISAT<ISAT_chem<CompType, ThermoType>, emptyClass>::retrieve(phiQ_fixed, RphiQ_fixed);
-                for (label i = 0;i < Datasize;i++)
+                for (label i = 0; i < Datasize; i++)
                 {
                     RphiQ[i] = RphiQ_fixed[i];
                 }
@@ -414,13 +477,11 @@ namespace Foam
                 return flag;
             };
 
-            label add
-            (
-                const scalarField& phiQ,
-                const scalarField& RphiQ,
+            label add(
+                const scalarField &phiQ,
+                const scalarField &RphiQ,
                 const scalar rho,
-                const scalar deltaT
-            )
+                const scalar deltaT)
             {
 
                 /*if (!this->treeCheck())
@@ -431,8 +492,8 @@ namespace Foam
                         << abort(FatalError);
                 }*/
 
-                typename DataType::inputType phiQ_fixed, RphiQ_fixed;
-                for (label i = 0;i < Datasize;i++)
+                typename DataType::inputType_old phiQ_fixed, RphiQ_fixed;
+                for (label i = 0; i < Datasize; i++)
                 {
                     phiQ_fixed[i] = phiQ[i];
                     RphiQ_fixed[i] = RphiQ[i];
@@ -453,7 +514,6 @@ namespace Foam
 
             //void operator=(const parallelISAT_chem&);
 
-
             // Friend Functions
 
             // Friend Operators
@@ -464,7 +524,6 @@ namespace Foam
             //friend Ostream& operator<<(Ostream&, const parallelISAT_chem&);
             friend ISAT_chem<CompType, ThermoType>;
         };
-
 
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
     } // End namespace chemistryTabulationMethods
