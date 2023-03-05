@@ -763,7 +763,7 @@ Foam::label Foam::parallelISAT<T, T2>::add(
             //std::cout << "BBBBBBBBBBBBBBBBZ " << parentNode.offset << std::endl;
             //std::cout << "BBBBBBBBBBBBBBBBZ " << pnode_new.offset << std::endl;
             parentNode->nodeRight_2.offset = pnode_new.offset;
-            if (parentNode->nodeRight_2.offset == parentNode.offset)
+            /*if (parentNode->nodeRight_2.offset == parentNode.offset)
             {
                 FatalErrorInFunction
                     << "696 "
@@ -771,7 +771,7 @@ Foam::label Foam::parallelISAT<T, T2>::add(
                     << " "
                     << parentNode->nodeRight_2.offset
                     << exit(FatalError);
-            }
+            }*/
             parentNode->leafRight_2.offset = -1;
         }
         size_leaf_++;

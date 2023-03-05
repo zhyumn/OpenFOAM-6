@@ -54,9 +54,7 @@ namespace Foam
         {
             int size_;
             SharedPointer<Type> v_;
-            SList() : size_(Datasize)
-            {
-            }
+
             void init()
             {
                 size_ = Datasize;
@@ -99,6 +97,53 @@ namespace Foam
             }
         };
 
+        template <class Type>
+        struct SSquareMatrix
+        {
+            int size_;
+            SharedPointer<Type> v_;
+            void init()
+            {
+                size_ = Datasize * Datasize;
+                v_ = pslab->alloc(sizeof(Type) * size_);
+            }
+            inline Type &operator()(int x, int y)
+            {
+                return v_()[x * Datasize + y];
+            }
+            inline const Type &operator()(int x, int y) const
+            {
+                return v_()[x * Datasize + y];
+            }
+
+            inline const SSquareMatrix<Type> &operator=(const SSquareMatrix<Type> &x)
+            {
+                for (int i = 0; i < size_; i++)
+                    v_()[i] = x[i];
+                return *this;
+            }
+            /*
+            inline const SList<Type> &operator=(const FixedList<scalar, Datasize> &x)
+            {
+                for (int i = 0; i < size_; i++)
+                    v_()[i] = x[i];
+                return *this;
+            }*/
+            const int &size() const
+            {
+                return size_;
+            }
+            void Delete()
+            {
+                //std::cout << size_ << std::endl;
+                pslab->free(sizeof(Type) * size_, v_.offset);
+            }
+            ~SSquareMatrix()
+            {
+                pslab->free(sizeof(Type) * size_, v_.offset);
+            }
+        };
+
         /*---------------------------------------------------------------------------*\
                                  Class parallelISAT_chem Declaration
         \*---------------------------------------------------------------------------*/
@@ -109,7 +154,8 @@ namespace Foam
             typedef SList<scalar> inputType;
             typedef FixedList<scalar, Datasize> outputType_old;
             typedef SList<scalar> outputType;
-            typedef FixedSquareMatrix<scalar, Datasize> gradientType;
+            typedef SSquareMatrix<scalar> gradientType;
+            typedef FixedSquareMatrix<scalar, Datasize> gradientType_old;
 
             static parallelISAT_chem<CompType, ThermoType> *pISAT;
 
@@ -122,6 +168,9 @@ namespace Foam
                 outputType Rphi_;
                 gradientType A_; //gradient
                 gradientType LT_;
+
+                gradientType_old A_old;
+                gradientType_old LT_old;
 
                 inputType simplifiedToCompleteIndex_;
                 inputType completeToSimplifiedIndex_;
@@ -144,6 +193,7 @@ namespace Foam
                     const inputType_old &phiq,
                     const outputType_old &Rphiq,
                     gradientType &A_out,
+                    gradientType_old &A_old_out,
                     scalarSquareMatrix &A,
                     const scalar rhoi,
                     const scalar dt);
@@ -180,7 +230,8 @@ namespace Foam
                 {
                     phi_.Delete();
                     Rphi_.Delete();
-
+                    A_.Delete();
+                    LT_.Delete();
                     simplifiedToCompleteIndex_.Delete();
                     completeToSimplifiedIndex_.Delete();
                     scaleFactor_.Delete();
@@ -189,7 +240,8 @@ namespace Foam
                 {
                     phi_.init();
                     Rphi_.init();
-
+                    A_.init();
+                    LT_.init();
                     simplifiedToCompleteIndex_.init();
                     completeToSimplifiedIndex_.init();
                     scaleFactor_.init();
