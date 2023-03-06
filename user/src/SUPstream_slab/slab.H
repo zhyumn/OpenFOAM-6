@@ -19,6 +19,8 @@
 #include "create_memory.H"
 #include <time.h>
 
+#define HY_DEBUG
+
 namespace Foam
 {
     struct slab_header;
@@ -86,6 +88,18 @@ namespace Foam
                     isize *= 2;
                 }
             }
+        }
+        void d_report()
+        {
+            mempool.report();
+            int to = 0, us = 0, fr = 0;
+            for (size_t i = 0; i <= nslab_chain; i++)
+            {
+                s[i].report();
+                s[i].report(to, us, fr);
+            }
+            std::cout << "Slab" << std::endl;
+            std::cout << "Total:" << to << " Used:" << us << " Free:" << fr << std::endl;
         }
         void report()
         {

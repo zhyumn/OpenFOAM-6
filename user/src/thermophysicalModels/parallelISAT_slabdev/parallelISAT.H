@@ -434,7 +434,7 @@ namespace Foam
         void report()
         {
             std::cout << "----------------------- report " << size_leaf_ << std::endl;
-            pslab->report();
+            pslab->d_report();
             leaf_manager.report();
             node_manager.report();
             std::cout << "-----------------------  " << std::endl;

@@ -216,8 +216,8 @@ namespace Foam
                 gradientType A_; //gradient
                 gradientType LT_;
 
-                gradientType_old A_old;
-                gradientType_old LT_old;
+                //gradientType_old A_old;
+                //gradientType_old LT_old;
 
                 inputType simplifiedToCompleteIndex_;
                 inputType completeToSimplifiedIndex_;
@@ -266,8 +266,8 @@ namespace Foam
                     A_.init(x.A_);
                     LT_.init(x.LT_);
 
-                    A_old = x.A_old;
-                    LT_old = x.LT_old;
+                    //A_old = x.A_old;
+                    //LT_old = x.LT_old;
                     simplifiedToCompleteIndex_.init(x.simplifiedToCompleteIndex_);
                     completeToSimplifiedIndex_.init(x.completeToSimplifiedIndex_);
 
@@ -282,7 +282,7 @@ namespace Foam
                     const inputType_old &phiq,
                     const outputType_old &Rphiq,
                     gradientType &A_out,
-                    gradientType_old &A_old_out,
+                    //gradientType_old &A_old_out,
                     scalarSquareMatrix &A,
                     const scalar rhoi,
                     const scalar dt);
@@ -291,7 +291,7 @@ namespace Foam
                     const scalarField &phiq,
                     const scalarField &Rphiq,
                     gradientType &A_out,
-                    gradientType_old &A_old_out,
+                    //gradientType_old &A_old_out,
                     scalarSquareMatrix &A,
                     const scalar rhoi,
                     const scalar dt);
