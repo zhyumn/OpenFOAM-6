@@ -54,22 +54,41 @@ namespace Foam
         {
             int size_;
             SharedPointer<Type> v_;
-
-            void init()
+            void init(int size_in)
             {
-                size_ = Datasize;
+                size_ = size_in;
                 v_ = pslab->alloc(sizeof(Type) * size_);
+            }
+            void init(const SList<Type> &x)
+            {
+                init(x.size_);
+                this->operator=(x);
             }
             inline Type &operator[](int x)
             {
+                if (x >= size_)
+                    FatalErrorInFunction
+                        << abort(FatalError);
+                assert(x < size_);
                 return v_()[x];
             }
             inline const Type &operator[](int x) const
             {
+                if (x >= size_)
+                    FatalErrorInFunction
+                        << abort(FatalError);
+                assert(x < size_);
                 return v_()[x];
             }
 
             inline const SList<Type> &operator=(const SList<Type> &x)
+            {
+                for (int i = 0; i < size_; i++)
+                    v_()[i] = x[i];
+                return *this;
+            }
+
+            inline const SList<Type> &operator=(const List<Type> &x)
             {
                 for (int i = 0; i < size_; i++)
                     v_()[i] = x[i];
@@ -82,6 +101,11 @@ namespace Foam
                     v_()[i] = x[i];
                 return *this;
             }
+            inline void setSize(int size_in)
+            {
+                Delete();
+                init(size_in);
+            }
             const int &size() const
             {
                 return size_;
@@ -89,7 +113,8 @@ namespace Foam
             void Delete()
             {
                 //std::cout << size_ << std::endl;
-                pslab->free(sizeof(Type) * size_, v_.offset);
+                if (size_ != 0)
+                    pslab->free(sizeof(Type) * size_, v_.offset);
             }
             ~SList()
             {
@@ -101,25 +126,41 @@ namespace Foam
         struct SSquareMatrix
         {
             int size_;
+            int total_size_;
             SharedPointer<Type> v_;
+
             void init()
             {
-                size_ = Datasize * Datasize;
-                v_ = pslab->alloc(sizeof(Type) * size_);
+                size_ = 0;
+            }
+            void init(int size_in)
+            {
+                size_ = size_in;
+                total_size_ = size_in * size_in;
+                v_ = pslab->alloc(sizeof(Type) * total_size_);
+            }
+            void init(const SSquareMatrix<Type> &x)
+            {
+                init(x.size_);
+                this->operator=(x);
             }
             inline Type &operator()(int x, int y)
             {
-                return v_()[x * Datasize + y];
+                assert(x < size_);
+                assert(y < size_);
+                return v_()[x * size_ + y];
             }
             inline const Type &operator()(int x, int y) const
             {
-                return v_()[x * Datasize + y];
+                assert(x < size_);
+                assert(y < size_);
+                return v_()[x * size_ + y];
             }
 
             inline const SSquareMatrix<Type> &operator=(const SSquareMatrix<Type> &x)
             {
-                for (int i = 0; i < size_; i++)
-                    v_()[i] = x[i];
+                for (int i = 0; i < total_size_; i++)
+                    v_()[i] = x.v_()[i];
                 return *this;
             }
             /*
@@ -129,18 +170,24 @@ namespace Foam
                     v_()[i] = x[i];
                 return *this;
             }*/
+            inline void setSize(int size_in)
+            {
+                Delete();
+                init(size_in);
+            }
             const int &size() const
             {
-                return size_;
+                return total_size_;
             }
             void Delete()
             {
                 //std::cout << size_ << std::endl;
-                pslab->free(sizeof(Type) * size_, v_.offset);
+                if (size_ != 0)
+                    pslab->free(sizeof(Type) * total_size_, v_.offset);
             }
             ~SSquareMatrix()
             {
-                pslab->free(sizeof(Type) * size_, v_.offset);
+                pslab->free(sizeof(Type) * total_size_, v_.offset);
             }
         };
 
@@ -185,13 +232,64 @@ namespace Foam
                 //void set(const inputType& x) { v = x; Rv = x * x; gradient = 2 * x; EOA = pISAT->tolerance_ / max(fabs(gradient), 1); }
                 //void set(const inputType& x);
 
+                void set(const scalarField &x, const scalarField &y, const scalar rhoi, const scalar dt);
                 void set(const inputType_old &x, const outputType_old &y, const scalar rhoi, const scalar dt);
                 //template<typename ...Args>
                 //static void computeA(const inputType& x, const outputType& y, gradientType& A, Args ...args);
+                /* void init(const leafData &x)
+                {
+                    phi_ = x.phi_;
+                    Rphi_ = x.Rphi_;
+                    A_.init(x.A_.size_);
+                    A_ = x.A_;
+                    LT_.init(x.LT_.size_);
+                    LT_ = x.LT_;
+
+                    A_old = x.A_old;
+                    LT_old = x.LT_old;
+                    simplifiedToCompleteIndex_.setSize(x.simplifiedToCompleteIndex_.size_);
+                    completeToSimplifiedIndex_.setSize(x.completeToSimplifiedIndex_.size_);
+                    simplifiedToCompleteIndex_ = x.simplifiedToCompleteIndex_;
+                    completeToSimplifiedIndex_ = x.completeToSimplifiedIndex_;
+
+                    nActiveSpecies_ = x.nActiveSpecies_;
+                    scaleFactor_ = x.scaleFactor_;
+                    nGrowth_ = x.nGrowth_;
+                    timeTag_ = x.timeTag_;
+                    EOA = x.EOA;
+                } */
+
+                void init(const leafData &x)
+                {
+                    phi_.init(x.phi_);
+                    Rphi_.init(x.Rphi_);
+                    A_.init(x.A_);
+                    LT_.init(x.LT_);
+
+                    A_old = x.A_old;
+                    LT_old = x.LT_old;
+                    simplifiedToCompleteIndex_.init(x.simplifiedToCompleteIndex_);
+                    completeToSimplifiedIndex_.init(x.completeToSimplifiedIndex_);
+
+                    nActiveSpecies_ = x.nActiveSpecies_;
+                    scaleFactor_.init(x.scaleFactor_);
+                    nGrowth_ = x.nGrowth_;
+                    timeTag_ = x.timeTag_;
+                    EOA = x.EOA;
+                }
 
                 static void computeA(
                     const inputType_old &phiq,
                     const outputType_old &Rphiq,
+                    gradientType &A_out,
+                    gradientType_old &A_old_out,
+                    scalarSquareMatrix &A,
+                    const scalar rhoi,
+                    const scalar dt);
+
+                static void computeA(
+                    const scalarField &phiq,
+                    const scalarField &Rphiq,
                     gradientType &A_out,
                     gradientType_old &A_old_out,
                     scalarSquareMatrix &A,
@@ -219,11 +317,17 @@ namespace Foam
                     const inputType_old &phiq,
                     const outputType_old &Rphiq);
 
+                bool checkSolution(
+                    const scalarField &phiq,
+                    const scalarField &Rphiq);
+
+                bool grow(const scalarField &x);
                 bool grow(const inputType &x);
                 bool grow(const inputType_old &x);
                 static outputType func(const inputType &x);
                 static gradientType gradFunc(const inputType &x);
                 //bool collide(const inputType& x) { return x == phi_; }
+                void retrieve(const scalarField &x, scalarField &y);
                 void retrieve(const inputType &x, outputType &y);
                 void retrieve(const inputType_old &x, outputType_old &y);
                 void Delete()
@@ -236,16 +340,17 @@ namespace Foam
                     completeToSimplifiedIndex_.Delete();
                     scaleFactor_.Delete();
                 }
-                void init()
+                void init(int size_in)
                 {
-                    phi_.init();
-                    Rphi_.init();
+                    phi_.init(size_in);
+                    Rphi_.init(size_in);
                     A_.init();
                     LT_.init();
-                    simplifiedToCompleteIndex_.init();
-                    completeToSimplifiedIndex_.init();
-                    scaleFactor_.init();
+                    simplifiedToCompleteIndex_.init(size_in);
+                    completeToSimplifiedIndex_.init(size_in);
+                    scaleFactor_.init(size_in);
                 }
+                bool inEOA(const scalarField &x);
                 bool inEOA(const inputType &x);
                 bool inEOA(const inputType_old &x);
                 void computeLT(scalarSquareMatrix &A);
@@ -287,6 +392,14 @@ namespace Foam
                     return vPhi < a_;
                 }
 
+                bool goLeft(const scalarField &x)
+                {
+                    scalar vPhi = 0.0;
+                    for (label i = 0; i < x.size(); i++)
+                        vPhi += x[i] * v_[i];
+                    return vPhi < a_;
+                }
+
                 bool goLeft(const inputType_old &x)
                 {
                     scalar vPhi = 0.0;
@@ -306,9 +419,9 @@ namespace Foam
                 {
                     v_.Delete();
                 }
-                void init()
+                void init(int size_in)
                 {
-                    v_.init();
+                    v_.init(size_in);
                 }
                 friend leafData;
                 template <class CompType_, class ThermoType_>
@@ -505,16 +618,16 @@ namespace Foam
                         << abort(FatalError);
                 }*/
                 //out0++;
-                typename DataType::inputType_old phiQ_fixed, RphiQ_fixed;
-                for (label i = 0; i < Datasize; i++)
-                {
-                    phiQ_fixed[i] = phiQ[i];
-                }
-                bool flag = parallelISAT<ISAT_chem<CompType, ThermoType>, emptyClass>::retrieve(phiQ_fixed, RphiQ_fixed);
-                for (label i = 0; i < Datasize; i++)
-                {
-                    RphiQ[i] = RphiQ_fixed[i];
-                }
+                //typename DataType::inputType_old phiQ_fixed, RphiQ_fixed;
+                //for (label i = 0; i < Datasize; i++)
+                //{
+                //    phiQ_fixed[i] = phiQ[i];
+                //}
+                bool flag = parallelISAT<ISAT_chem<CompType, ThermoType>, emptyClass>::retrieve(phiQ, RphiQ);
+                //for (label i = 0; i < Datasize; i++)
+                //{
+                //    RphiQ[i] = RphiQ_fixed[i];
+                //}
                 //if (flag == true)
                 //{
                 //    out1++;
@@ -543,15 +656,15 @@ namespace Foam
                         << "out = " << DataType::out
                         << abort(FatalError);
                 }*/
-
+                /*
                 typename DataType::inputType_old phiQ_fixed, RphiQ_fixed;
                 for (label i = 0; i < Datasize; i++)
                 {
                     phiQ_fixed[i] = phiQ[i];
                     RphiQ_fixed[i] = RphiQ[i];
                 }
-
-                label ret = parallelISAT<ISAT_chem<CompType, ThermoType>, emptyClass>::add(phiQ_fixed, RphiQ_fixed, rho, deltaT);
+*/
+                label ret = parallelISAT<ISAT_chem<CompType, ThermoType>, emptyClass>::add(phiQ, RphiQ, rho, deltaT);
                 /*if (!this->treeCheck())
                 {
                     FatalErrorInFunction

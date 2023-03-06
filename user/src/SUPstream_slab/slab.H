@@ -105,7 +105,9 @@ namespace Foam
             //std::cout << "alloc index= !!!!!!!!!!!!!!!!!!!!!!!!!!!"<<index<<std::endl;
             //std::cout << "alloc nslab_chain= !!!!!!!!!!!!!!!!!!!!!!!!!!!"<<nslab_chain<<std::endl;
             assert(index <= nslab_chain);
-            return s[index].alloc(mempool);
+            SHAREDPOINTER ret = s[index].alloc(mempool);
+            assert(ret != sptr_NULL);
+            return ret;
         }
         void free(size_t size, SHAREDPOINTER addr)
         {

@@ -148,7 +148,7 @@ namespace Foam
 
     SHAREDPOINTER slab_chain::alloc(MemPool& mempool)
     {
-        //std::cout<<"here!!!!!!!!!!!!!alloc start"<<std::endl;
+        //std::cout<<"here!!!!!!!!!!!!!alloc start151"<<std::endl;
         assert(is_valid());
 
         if (LIKELY(this->partial != sptr_NULL)) {
@@ -169,10 +169,12 @@ namespace Foam
 
                 this->full = tmp;
                 //std::cout<<"here!!!!!!!!!!!!!alloc end"<<std::endl;
+                assert(is_valid());
                 return (SHAREDPOINTER)(this->full->data + slot * this->itemsize - MemStart<0>::start);
             }
             else {
                 //std::cout<<"here!!!!!!!!!!!!!alloc end"<<std::endl;
+                assert(is_valid());
                 return (SHAREDPOINTER)(this->partial->data + slot * this->itemsize - MemStart<0>::start);
             }
         }
@@ -189,6 +191,7 @@ namespace Foam
 
             this->partial->slots = this->initial_slotmask;
             //std::cout<<"here!!!!!!!!!!!!!alloc end"<<std::endl;
+            assert(is_valid());
             return (SHAREDPOINTER)(this->partial->data - MemStart<0>::start);
         }
         else {
@@ -200,6 +203,7 @@ namespace Foam
             if (UNLIKELY(this->partial == sptr_NULL))
                {
                 //std::cout<<"here!!!!!!!!!!!!!alloc end"<<std::endl;
+                assert(is_valid());
                  return perror("get_page failed"), this->partial = sptr_NULL;}
 
             SharedPointer_SLAB prev;
@@ -241,6 +245,7 @@ namespace Foam
                 prev->next = sptr_NULL;
             }
             //std::cout<<"here!!!!!!!!!!!!!alloc end"<<std::endl;
+            assert(is_valid());
             return (SHAREDPOINTER)(this->partial->data - MemStart<0>::start);
         }
 
@@ -347,6 +352,7 @@ namespace Foam
             /* target slab is partial, no need to change state */
             slab->slots |= SLOTS_FIRST << slot;
         }
+        assert(is_valid());
     }
 
     void slab_chain::traverse(void (*fn)(const void*))

@@ -120,6 +120,16 @@ namespace Foam
             // Only for write
             //label node_;
             SharedPointer<Node> node_2;
+            void init(const Leaf &x)
+            {
+                T::leafData::init(x);
+                node_2.offset = x.node_2.offset;
+            }
+            void init(int x)
+            {
+                T::leafData::init(x);
+                //node_2.offset = x.offset;
+            }
 
             //- The size of the composition space (size of the vector phi)
             //label completeSpaceSize_;
@@ -214,11 +224,29 @@ namespace Foam
 
         public:
             Mem_manager(SUPstream::shared_data<label> &emptylist_in, label &tail_in, label &size_in, label &tmp_size_in) : emptylist_(emptylist_in), tail_(tail_in), size_(size_in), tmp_size_(tmp_size_in) { tail_ = 0; }
-            inline SharedPointer<Type> New()
+            inline SharedPointer<Type> New(int size_in)
             {
                 size_++;
                 auto ret = pslab->alloc(sizeof(Type));
-                (*SharedPointer<Type>(ret)).init();
+                (*SharedPointer<Type>(ret)).init(size_in);
+                /*
+                std::cout << "----------------------- new " << ret << std::endl;
+                pslab->report();
+                report();
+                std::cout << "----------------------- " << std::endl;
+                if (size_ == 2)
+                    FatalErrorInFunction
+                        << "!!!!!!!!"
+                        << abort(FatalError);
+                        */
+                //std::cout << pslab->manager_.rank << "AAAAAAAAAAAAAAAAAA " << ret <<" "<<sizeof(Type)  << std::endl;
+                return SharedPointer<Type>(ret);
+            }
+            inline SharedPointer<Type> New(const Type &x)
+            {
+                size_++;
+                auto ret = pslab->alloc(sizeof(Type));
+                (*SharedPointer<Type>(ret)).init(x);
                 /*
                 std::cout << "----------------------- new " << ret << std::endl;
                 pslab->report();
@@ -310,6 +338,7 @@ namespace Foam
         };
 
         SUPstream::shared_data<Private_variable> pv_;
+        SUPstream::shared_data<label> r_;
         label &size_leaf_;
         label &head_leaf;
         label &tail_leaf;
@@ -372,9 +401,11 @@ namespace Foam
         bool isFull();
         const label &size_leaf() { return size_leaf_; }
         //inline scalar& tolerance() { return tolerance_; }
-        SharedPointer<Leaf> binaryTreeSearch(const inputType_old & value, SharedPointer<Node> node_index);
-        SharedPointer<Leaf> binaryTreeSearch(const inputType & value, SharedPointer<Node> node_index);
-        SharedPointer<Leaf> binaryTreeSearch(const inputType_old & value);
+        SharedPointer<Leaf> binaryTreeSearch(const inputType_old &value, SharedPointer<Node> node_index);
+        SharedPointer<Leaf> binaryTreeSearch(const inputType &value, SharedPointer<Node> node_index);
+        SharedPointer<Leaf> binaryTreeSearch(const inputType_old &value);
+        SharedPointer<Leaf> binaryTreeSearch(const scalarField &value);
+        SharedPointer<Leaf> binaryTreeSearch(const scalarField &value, SharedPointer<Node> node_index);
         void writeDot(string name);
         void writeDot(label nodeindex, std::ofstream &fout);
         scalar leafvalue(SharedPointer<Leaf> index)
@@ -386,12 +417,17 @@ namespace Foam
             return index->v;
         };
 
+        bool retrieve(const scalarField &x, scalarField &y);
         bool retrieve(const inputType_old &x, outputType_old &y);
         // Check
 
         // Edit
+        bool grow(const scalarField &x, SharedPointer<Leaf> &pleaf);
         bool grow(const inputType &value);
         //void insert(const inputType& value);
+
+        template <typename... Args>
+        label add(const scalarField &x, const scalarField &y, Args... args);
         template <typename... Args>
         label add(const inputType_old &x, const outputType_old &y, Args... args);
         label add(const inputType &x);
