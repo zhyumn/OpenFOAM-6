@@ -51,7 +51,7 @@ Foam::parallelISAT<T, T2>::parallelISAT(SUPstream::mpi_manager &manager_in, labe
       tail_leaf(pv_().tail_leaf), temp_tail_leaf(pv_().temp_tail_leaf),
       size_node(pv_().size_node), head_node(pv_().heaf_node),
       tail_node(pv_().tail_node), temp_tail_node(pv_().temp_tail_node),
-      root_(pv_().root), root_2(pv_().root_2), totalGrowth_(pv_().totalGrowth), //zzzz_(pv_().zzzz), zzzz2_(pv_().zzzz2),
+      root_2(pv_().root_2), totalGrowth_(pv_().totalGrowth), //zzzz_(pv_().zzzz), zzzz2_(pv_().zzzz2),
       write_lock(manager_in, sync_in),
       leaf_manager(emptylist_leaf, tail_leaf, pv_().m_size_leaf, pv_().tmp_size_leaf),
       node_manager(emptylist_node, tail_node, pv_().m_size_node, pv_().tmp_size_node),
@@ -83,7 +83,7 @@ Foam::parallelISAT<T, T2>::parallelISAT(SUPstream::mpi_manager &manager_in, labe
     //tail_node = nmem_node_ - 1;
     //temp_tail_node = nmem_node_ - 1;
 
-    root_ = -1;
+    //root_ = -1;
     root_2.offset = -1;
     totalGrowth_ = 0;
     if (manager_.rank == 0)
@@ -499,7 +499,9 @@ bool Foam::parallelISAT<T, T2>::retrieve(const scalarField &x, scalarField &y)
     }
     if (pleaf->inEOA(x))
     {
+        //std::cout << this->manager_.rank << "here:502" << std::endl;
         pleaf->retrieve(x, y);
+        //std::cout << this->manager_.rank << "here:504" << std::endl;
         nRetrieved_++;
         return true;
     }
@@ -1583,9 +1585,7 @@ void Foam::parallelISAT<T, T2>::deleteAllNode(SharedPointer<Node> subTreeRoot)
     {
         deleteAllNode(subTreeRoot->nodeLeft_2);
         deleteAllNode(subTreeRoot->nodeRight_2);
-        //std::cout << "1058 CCCCCCCCCCCCCCCCCC " << subTreeRoot.offset << std::endl;
         node_manager.Delete(subTreeRoot);
-        //std::cout << "Here:1016" << std::endl;
         size_node--;
         //deleteDemandDrivenData(subTreeRoot);
     }
@@ -1744,6 +1744,37 @@ void Foam::parallelISAT<T, T2>::insertNode(
     FatalErrorInFunction
         << "trying to insert a node with a wrong pointer to a chemPoint"
         << exit(FatalError);
+}
+
+template <typename T, typename T2>
+void Foam::parallelISAT<T, T2>::valid()
+{
+    SharedPointer<Leaf> x = this->treeMin();
+    List<SharedPointer<Leaf>> chemPoints(this->size_leaf_);
+
+    label chPi = 0;
+
+    while (x != -1)
+    {
+        if (x->phi().size_ < 1)
+        {
+            FatalErrorInFunction
+                << ",size=" << x->phi().size_
+                << abort(FatalError);
+        }
+        chemPoints[chPi++].offset = x.offset;
+        //const typename DataType::inputType &phij = x->phi();
+        x = this->treeSuccessor(x);
+    }
+    if (chPi != this->size_leaf_)
+        FatalErrorInFunction
+            << "size=" << chPi << " " << this->size_leaf_
+            << abort(FatalError);
+    /*     forAll(chemPoints, j)
+    {
+        const typename DataType::inputType &phij = chemPoints[j]->phi();
+        std::cout << chPi << "ccx =" << j << " " << phij.size_ << std::endl;
+    } */
 }
 /*
 template <typename T, typename T2>

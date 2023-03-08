@@ -349,7 +349,7 @@ namespace Foam
         label &tail_node;
         label &temp_tail_node;
 
-        label &root_;
+        //label &root_;
         SharedPointer<Node> &root_2;
         label &totalGrowth_;
 
@@ -434,7 +434,7 @@ namespace Foam
         void report()
         {
             std::cout << "----------------------- report " << size_leaf_ << std::endl;
-            pslab->d_report();
+            pslab->report();
             leaf_manager.report();
             node_manager.report();
             std::cout << "-----------------------  " << std::endl;
@@ -465,6 +465,8 @@ namespace Foam
             size_node = 0;
             root_2.offset = -1;
         }
+
+        inline void valid();
         //serial function
         SharedPointer<Leaf> treeMin(SharedPointer<Node> subTreeRoot);
 

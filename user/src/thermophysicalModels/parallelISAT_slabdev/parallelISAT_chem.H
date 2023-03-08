@@ -76,6 +76,8 @@ namespace Foam
             {
                 if (x >= size_)
                     FatalErrorInFunction
+                        << "x=" << x
+                        << ",size=" << size_
                         << abort(FatalError);
                 assert(x < size_);
                 return v_()[x];
@@ -233,7 +235,7 @@ namespace Foam
                 //void set(const inputType& x);
 
                 void set(const scalarField &x, const scalarField &y, const scalar rhoi, const scalar dt);
-                void set(const inputType_old &x, const outputType_old &y, const scalar rhoi, const scalar dt);
+
                 //template<typename ...Args>
                 //static void computeA(const inputType& x, const outputType& y, gradientType& A, Args ...args);
                 /* void init(const leafData &x)
@@ -279,15 +281,6 @@ namespace Foam
                 }
 
                 static void computeA(
-                    const inputType_old &phiq,
-                    const outputType_old &Rphiq,
-                    gradientType &A_out,
-                    //gradientType_old &A_old_out,
-                    scalarSquareMatrix &A,
-                    const scalar rhoi,
-                    const scalar dt);
-
-                static void computeA(
                     const scalarField &phiq,
                     const scalarField &Rphiq,
                     gradientType &A_out,
@@ -314,22 +307,14 @@ namespace Foam
                     label n);
 
                 bool checkSolution(
-                    const inputType_old &phiq,
-                    const outputType_old &Rphiq);
-
-                bool checkSolution(
                     const scalarField &phiq,
                     const scalarField &Rphiq);
 
                 bool grow(const scalarField &x);
-                bool grow(const inputType &x);
-                bool grow(const inputType_old &x);
                 static outputType func(const inputType &x);
                 static gradientType gradFunc(const inputType &x);
                 //bool collide(const inputType& x) { return x == phi_; }
                 void retrieve(const scalarField &x, scalarField &y);
-                void retrieve(const inputType &x, outputType &y);
-                void retrieve(const inputType_old &x, outputType_old &y);
                 void Delete()
                 {
                     phi_.Delete();
@@ -351,8 +336,8 @@ namespace Foam
                     scaleFactor_.init(size_in);
                 }
                 bool inEOA(const scalarField &x);
-                bool inEOA(const inputType &x);
-                bool inEOA(const inputType_old &x);
+                //bool inEOA(const inputType &x);
+
                 void computeLT(scalarSquareMatrix &A);
                 label simplifiedToCompleteIndex(const label i);
                 inline const scalar &timeTag() { return timeTag_; }
@@ -478,6 +463,8 @@ namespace Foam
             autoPtr<OFstream> sizeFile_;
             autoPtr<OFstream> totalGrowthFile_;
 
+            SUPstream::mpi_mutex test_lock;
+
             // Private Member Functions
 
             //- Disallow default bitwise copy construct
@@ -535,6 +522,9 @@ namespace Foam
                 this->sync_.sync();
                 if (this->manager_.rank == 0)
                 {
+                    //std::cout << this->manager_.rank << "here:525" << std::endl;
+                    //this->valid();
+                    //std::cout << this->manager_.rank << "here:527" << std::endl;
                     parallelISAT<ISAT_chem<CompType, ThermoType>, emptyClass>::update();
                     //if (!this->treeCheck())
                     //{
@@ -545,11 +535,17 @@ namespace Foam
                     //}
 
                     ret = cleanAndBalance();
+                    //std::cout << this->manager_.rank << "here:538" << std::endl;
+                    ////this->valid();
+                    //std::cout << this->manager_.rank << "here:540" << std::endl;
                     if (this->isFull())
                     {
                         this->clear();
                         ret = true;
                     }
+/*                     //std::cout << this->manager_.rank << "here:546" << std::endl;
+                    //this->valid();
+                    //std::cout << this->manager_.rank << "here:548" << std::endl; */
                     parallelISAT<ISAT_chem<CompType, ThermoType>, emptyClass>::update();
                     //if (!this->treeCheck())
                     //{
@@ -557,6 +553,9 @@ namespace Foam
                     //        << "broken tree 2"
                     //        << abort(FatalError);
                     //}
+/*                     //std::cout << this->manager_.rank << "here:556" << std::endl;
+                    //this->valid();
+                    //std::cout << this->manager_.rank << "here:558" << std::endl; */
                 }
                 this->sync_.sync();
                 return ret;
@@ -602,6 +601,7 @@ namespace Foam
                 const scalarField &phiQ,
                 scalarField &RphiQ)
             {
+                //test_lock.lock();
                 /*if (!this->treeCheck())
                 {
                     FatalErrorInFunction
@@ -623,7 +623,13 @@ namespace Foam
                 //{
                 //    phiQ_fixed[i] = phiQ[i];
                 //}
+                //std::cout << this->manager_.rank << "here:614" << std::endl;
+                //this->valid();
+                //std::cout << this->manager_.rank << "here:616" << std::endl;
                 bool flag = parallelISAT<ISAT_chem<CompType, ThermoType>, emptyClass>::retrieve(phiQ, RphiQ);
+                //std::cout << this->manager_.rank << "here:618" << std::endl;
+                //this->valid();
+                //std::cout << this->manager_.rank << "here:620" << std::endl;
                 //for (label i = 0; i < Datasize; i++)
                 //{
                 //    RphiQ[i] = RphiQ_fixed[i];
@@ -639,6 +645,7 @@ namespace Foam
                         << "out = " << DataType::out
                         << abort(FatalError);
                 }*/
+                //test_lock.unlock();
                 return flag;
             };
 
@@ -648,6 +655,7 @@ namespace Foam
                 const scalar rho,
                 const scalar deltaT)
             {
+                //test_lock.lock();
 
                 /*if (!this->treeCheck())
                 {
@@ -664,7 +672,12 @@ namespace Foam
                     RphiQ_fixed[i] = RphiQ[i];
                 }
 */
+                //std::cout << this->manager_.rank << "here:654" << std::endl;
+                //this->valid();
                 label ret = parallelISAT<ISAT_chem<CompType, ThermoType>, emptyClass>::add(phiQ, RphiQ, rho, deltaT);
+                //std::cout << this->manager_.rank << "here:657" << std::endl;
+                //this->valid();
+                //std::cout << this->manager_.rank << "here:659" << std::endl;
                 /*if (!this->treeCheck())
                 {
                     FatalErrorInFunction
@@ -672,6 +685,7 @@ namespace Foam
                         << "out = " << DataType::out
                         << abort(FatalError);
                 }*/
+                //test_lock.unlock();
                 return ret;
             };
 

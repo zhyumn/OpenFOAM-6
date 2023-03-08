@@ -53,7 +53,7 @@ int main(int argc, char *argv[])
     {
         SUPstream::node_init();
         //Foam::Slab slab(SUPstream::node_manager, 1000, 100000);
-        pslab = new Foam::Slab(SUPstream::node_manager, 60000, 60000 * 2500);
+        pslab = new Foam::Slab(SUPstream::node_manager, 60000, 60000 * 5000);
     }/*
     {
         if (SUPstream::node_manager.rank == 0)
