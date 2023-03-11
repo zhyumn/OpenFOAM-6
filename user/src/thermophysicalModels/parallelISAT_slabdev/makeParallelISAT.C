@@ -50,7 +50,6 @@ License
         add##chemistryTabulationMethods##parallelISAT_chem##Comp##Thermo##ConstructorToTable_;
 namespace Foam
 {
-
     makeParallelISATMethod
     (
         psiReactionThermo,

@@ -68,7 +68,11 @@ namespace Foam
         }
         bool isNULL()
         {
-            return offset == -1;
+            return offset == sptr_NULL;
+        }
+        bool notNULL()
+        {
+            return offset != sptr_NULL;
         }
     };
 

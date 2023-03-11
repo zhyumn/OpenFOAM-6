@@ -19,6 +19,7 @@
 #include "create_memory.H"
 #include <time.h>
 
+#define CLOG2(s) (64 - (size_t)__builtin_clzll((s)-1))
 #define HY_DEBUG
 
 namespace Foam
@@ -71,7 +72,7 @@ namespace Foam
         Foam::SUPstream::shared_data<slab_chain> s;
         Slab(Foam::SUPstream::mpi_manager &manager_in, size_t maximum_size, size_t memsize) : mempool(manager_in, memsize),
                                                                                               manager_(manager_in),
-                                                                                              nslab_chain(ceil(log2(maximum_size))),
+                                                                                              nslab_chain(CLOG2(maximum_size)),
                                                                                               s(manager_in, nslab_chain + 1)
         {
             MemStart<0>::start = (size_t)mempool.memory;
@@ -114,20 +115,22 @@ namespace Foam
         }
         SHAREDPOINTER alloc(size_t size)
         {
-            //std::cout << "alloc size= !!!!!!!!!!!!!!!!!!!!!!!!!!!"<<size<<std::endl;
-            size_t index = ceil(log2(size));
-            //std::cout << "alloc index= !!!!!!!!!!!!!!!!!!!!!!!!!!!"<<index<<std::endl;
-            //std::cout << "alloc nslab_chain= !!!!!!!!!!!!!!!!!!!!!!!!!!!"<<nslab_chain<<std::endl;
-            assert(index <= nslab_chain);
+            size_t index = CLOG2(size);
+            //size_t index = ceil(log2(size));
+            //size_t index2 = CLOG2(size);
+            //std::cout << index << "," << index2 << " ," << size << std::endl;
+            //assert(index == index2);
+            //assert(index <= nslab_chain);
             SHAREDPOINTER ret = s[index].alloc(mempool);
-            assert(ret != sptr_NULL);
+            //assert(ret != sptr_NULL);
             return ret;
         }
         void free(size_t size, SHAREDPOINTER addr)
         {
-            size_t index = ceil(log2(size));
-            //std::cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!free index= " << index << "," << size << std::endl;
-            assert(index <= nslab_chain);
+            size_t index = CLOG2(size);
+            //size_t index = ceil(log2(size));
+
+            //assert(index <= nslab_chain);
             s[index].free(addr, mempool);
         }
         ~Slab()

@@ -94,8 +94,7 @@ Foam::chemistryTabulationMethods::parallelISAT_chem<CompType, ThermoType>::paral
       maxDepthFactor_(
           this->coeffsDict_.lookupOrDefault(
               "maxDepthFactor",
-              (this->maxNLeafs_ - 1) / (log(scalar(this->maxNLeafs_)) / log(2.0)))),
-      test_lock(SUPstream::node_manager, SUPstream::Sync)
+              (this->maxNLeafs_ - 1) / (log(scalar(this->maxNLeafs_)) / log(2.0))))
 {
     //this->maxNLeafs_ = readLabel(this->coeffsDict_.lookup("maxNLeafs"));
 
@@ -190,7 +189,6 @@ void Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData
     Rphi_ = y;
 
     computeA(x, y, A_, A, rhoi, dt);
-    //computeA(x, y, A_old, A, rhoi, dt);
     computeLT(A);
     timeTag_ = pISAT->chemistry_.timeSteps();
     nGrowth_ = 0;
@@ -311,7 +309,6 @@ void Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData
     // Inverse of (I-dt*J(psi(t0+dt)))
     LUscalarMatrix LUA(A);
     LUA.inv(A);
-    //Pout << "done!!!2" << endl;
 
     // After inversion, lines of p and T are set to 0 except diagonal.  This
     // avoid skewness of the ellipsoid of accuracy and potential issues in the
@@ -549,7 +546,8 @@ bool Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData
 
     scalar epsTemp = 0;
     List<scalar> propEps(completeSpaceSize, scalar(0));
-    gradientType &LT_ref = LT_;
+    //gradientType &LT_ref = LT_;
+    FSSquareMatrix<scalar> LT_ref(LT_);
 
     for (label i = 0; i < completeSpaceSize - nAdditionalEqns_; i++)
     {
@@ -646,20 +644,6 @@ bool Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData
 
     if (sqrt(epsTemp) > 1 + tolerance_)
     {
-        /*
-                if (out0 == 1500)
-                {
-                    FatalErrorInFunction
-                        << "FFFFFFFFFFFF"
-                        << "out0=" << out0
-                        << "\nepsTemp=" << epsTemp
-                        << "\nepsTemp0=" << epsTemp0
-                        << "\nepsTemp1=" << epsTemp1
-                        << "\nepsTemp2=" << epsTemp2
-                        << "\nepsTemp3=" << epsTemp3
-                        << "\nsqrt(epsTemp) > 1 + tolerance_=" << zz
-                        << abort(FatalError);
-                }*/
         if (printProportion_)
         {
             scalar max = -1;
@@ -731,8 +715,11 @@ bool Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData
     label initNActiveSpecies(nActiveSpecies_);
     bool isMechRedActive = pISAT->chemistry_.mechRed()->active();
 
-    gradientType &LT_ref = LT_;
-    gradientType &A_ref = A_;
+    //gradientType &LT_ref = LT_;
+    //gradientType &A_ref = A_;
+
+    FSSquareMatrix<scalar> LT_ref(LT_);
+    FSSquareMatrix<scalar> A_ref(A_);
 
     if (isMechRedActive)
     {
@@ -817,14 +804,14 @@ bool Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData
                     LT_ref(i, j) = 0;
                 }
             }
-            LT_.setSize(nActiveSpecies_ + nAdditionalEqns_);
-            A_.setSize(nActiveSpecies_ + nAdditionalEqns_);
+            LT_ref.setSize(nActiveSpecies_ + nAdditionalEqns_);
+            A_ref.setSize(nActiveSpecies_ + nAdditionalEqns_);
             for (label i = 0; i < LT_.size_; i++)
             {
                 for (label j = 0; j < LT_.size_; j++)
                 {
-                    A_(i, j) = 0;
-                    LT_(i, j) = 0;
+                    A_ref(i, j) = 0;
+                    LT_ref(i, j) = 0;
                 }
             }
 
@@ -1027,6 +1014,7 @@ void Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData
     const scalarField &x,
     scalarField &Rphiq)
 {
+    timeTag_ = pISAT->chemistry_.timeSteps();
     const label &nAdditionalEqns_ = pISAT->nAdditionalEqns_;
     label nEqns = pISAT->chemistry_.nEqns(); // Species, T, p
     bool mechRedActive = pISAT->chemistry_.mechRed()->active();
@@ -1037,7 +1025,8 @@ void Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData
         dphi[i] = x[i] - phi_[i];
     }
 
-    const gradientType &gradientsMatrix = A_;
+    //const gradientType &gradientsMatrix = A_;
+    FSSquareMatrix<scalar> gradientsMatrix(A_);
 
     inputType &completeToSimplified = completeToSimplifiedIndex_;
 
@@ -1108,8 +1097,7 @@ bool Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData
     const label &nAdditionalEqns_ = pISAT->nAdditionalEqns_;
     scalarField dR(phiq.size());
     scalarField dphi(phiq.size());
-    //scalarField dR(Rphiq - Rphi());
-    //scalarField dphi(phiq - phi());
+
     for (label i = 0; i < phiq.size(); i++)
     {
         dR[i] = Rphiq[i] - Rphi_[i];
@@ -1117,7 +1105,8 @@ bool Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData
     }
 
     const outputType &scaleFactorV = scaleFactor_;
-    const gradientType &Avar = A_;
+    //const gradientType &Avar = A_;
+    FSSquareMatrix<scalar> Avar(A_);
     bool isMechRedActive = pISAT->chemistry_.mechRed()->active();
     scalar dRl = 0;
     label dim = completeSpaceSize - 2;
@@ -1166,14 +1155,7 @@ bool Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::leafData
     }
 
     eps2 = sqrt(eps2);
-    /*if (out == 20)
-    {
-        FatalErrorInFunction
-            << "eps2=" << eps2
-            << "\ntolerance_=" << tolerance_
-            << "DR=" << dR
-            << exit(FatalError);
-    }*/
+
     if (eps2 > tolerance_)
     {
         return false;
@@ -1194,7 +1176,8 @@ void Foam::chemistryTabulationMethods::ISAT_chem<CompType, ThermoType>::nodeData
     const label &nAdditionalEqns_ = pISAT->nAdditionalEqns_;
     // LT is the transpose of the L matrix
     //gradientType_old &LT = elementLeft.LT_old;
-    gradientType &LT = elementLeft.LT_;
+    //gradientType &LT = elementLeft.LT_;
+    FSSquareMatrix<scalar> LT(elementLeft.LT_);
     bool mechReductionActive = pISAT->chemistry_.mechRed()->active();
 
     // Difference of composition in the full species domain
@@ -1319,18 +1302,13 @@ void Foam::chemistryTabulationMethods::parallelISAT_chem<CompType, ThermoType>::
         mean[i] /= this->size_leaf_;
     }
     //mean /= size_;
-    //this->valid();
     //3) compute the variance for each space direction
     List<scalar> variance(completeSpaceSize_, 0.0);
     forAll(chemPoints, j)
     {
         const typename DataType::inputType &phij = chemPoints[j]->phi();
-        //std::cout << "j =" << j << "zz=" << phij.size_ << std::endl;
         forAll(variance, vi)
         {
-            //scalar aa = phij[vi] * 1.0;
-            //scalar ab = mean[vi] * 1.0;
-            //scalar ac = variance[vi];
             variance[vi] += sqr(phij[vi] - mean[vi]);
         }
     }
@@ -1417,16 +1395,11 @@ void Foam::chemistryTabulationMethods::parallelISAT_chem<CompType, ThermoType>::
         phi0->node_2.offset = nodeToAdd.offset;
         chemPoints[phiMaxDir.indices()[cpi]]->node_2 = nodeToAdd;
     }
-    //this->valid();
 }
 
 template <class CompType, class ThermoType>
 bool Foam::chemistryTabulationMethods::parallelISAT_chem<CompType, ThermoType>::cleanAndBalance()
 {
-    //std::cout << this->manager_.rank << "here:1425" << std::endl;
-    //this->valid();
-    //std::cout << this->manager_.rank << "here:1427" << std::endl;
-
     if (this->size_leaf_ < 1)
     {
         return false;
@@ -1455,24 +1428,17 @@ bool Foam::chemistryTabulationMethods::parallelISAT_chem<CompType, ThermoType>::
     }
 
     //MRUList_.clear();
-    //std::cout << this->manager_.rank << "here:1457" << std::endl;
-    //this->valid();
-    //std::cout << this->manager_.rank << "here:1459" << std::endl;
 
     // Check if the tree should be balanced according to criterion:
     //  -the depth of the tree bigger than a*log2(size), log2(size) being the
     //      ideal depth (e.g. 4 leafs can be stored in a tree of depth 2)
     if (
         size() > minBalanceThreshold_ && this->depth() >
-                                             maxDepthFactor_ * log(scalar(size())) / log(2.0))
+                                             maxDepthFactor_ * log2(scalar(size())))
     {
-
         balance();
         treeModified = true;
     }
-    //std::cout << this->manager_.rank << "here:1472" << std::endl;
-    //this->valid();
-    //std::cout << this->manager_.rank << "here:1474" << std::endl;
 
     // Return a bool to specify if the tree structure has been modified and is
     // now below the user specified limit (true if not full)
