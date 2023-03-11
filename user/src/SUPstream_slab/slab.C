@@ -64,8 +64,8 @@ namespace Foam
 
             for (slab = heads[head]; slab != sptr_NULL; slab = slab->next)
             {
-                if (prev == sptr_NULL)
-                    assert(slab->prev == sptr_NULL);
+                if (prev.isNULL())
+                    assert(slab->prev.isNULL());
                 else
                     assert(slab->prev == prev);
 
@@ -202,7 +202,7 @@ namespace Foam
 
             this->partial = mempool.get_page(this->pages_per_alloc);
 
-            if (UNLIKELY(this->partial == sptr_NULL))
+            if (UNLIKELY(this->partial.isNULL()))
             {
                 //assert(is_valid());
                 return perror("get_page failed"), this->partial = sptr_NULL;
@@ -419,7 +419,7 @@ namespace Foam
                     SharedPointer_SLAB page = slab;
                     slab = slab->next;
 
-                    if (UNLIKELY(pages_head == sptr_NULL))
+                    if (UNLIKELY(pages_head.isNULL()))
                         pages_head = page;
                     else
                         pages_tail->next = page;
@@ -597,12 +597,12 @@ namespace Foam
             total_used_slots = 0,
             total_free_slots = 0;
 
-        float occupancy;
+        //float occupancy;
 
         SharedPointer_SLAB heads[] =
             {this->partial, this->empty, this->full};
 
-        const char *labels[] = {"Partial", "Empty", "Full"};
+        //const char *labels[] = {"Partial", "Empty", "Full"};
         //std::cout<< "itemsize:" << this->itemsize<<std::endl;
         //std::cout<< "Slabs Used Free Occupancy" <<std::endl;
         //fprintf(out, "%8s %17s %17s %17s %17s\n", "",
@@ -620,7 +620,7 @@ namespace Foam
                 free_slots += FREE_SLOTS(slab->slots);
             }
 
-            occupancy = used_slots + free_slots ? 100 * (float)used_slots / (used_slots + free_slots) : 0.0;
+            //occupancy = used_slots + free_slots ? 100 * (float)used_slots / (used_slots + free_slots) : 0.0;
 
             //std::cout<< labels[i]<< " " << nr_slabs<< " " << used_slots<< " " << free_slots<< " " << occupancy <<std::endl;
             //fprintf(out, "%8s %17llu %17llu %17llu %16.2f%%\n",
@@ -633,7 +633,7 @@ namespace Foam
         total += total_nr_slabs * this->pages_per_alloc;
         used += total_used_slots * this->itemsize;
         free_ += total_free_slots * this->itemsize;
-        occupancy = total_used_slots + total_free_slots ? 100 * (float)total_used_slots / (total_used_slots + total_free_slots) : 0.0;
+        //occupancy = total_used_slots + total_free_slots ? 100 * (float)total_used_slots / (total_used_slots + total_free_slots) : 0.0;
         //std::cout<<  "Total"<< " " << total_nr_slabs<< " " <<  total_used_slots<< " " << total_free_slots<< " " << occupancy <<std::endl;
         //std::cout<< std::endl;
         //fprintf(out, "%8s %17llu %17llu %17llu %16.2f%%\n", "Total",

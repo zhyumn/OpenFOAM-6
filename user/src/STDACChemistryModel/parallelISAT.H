@@ -92,35 +92,33 @@ namespace Foam
             void init(const Leaf &x)
             {
                 T::leafData::init(x);
-                node_2.offset = x.node_2.offset;
+                node_2 = x.node_2;
             }
             void init(int x)
             {
                 T::leafData::init(x);
             }
-
         };
         struct Node : public T::nodeData
         {
 
-            SharedPointer<Leaf> leafLeft_2;
+            SharedPointer<Leaf> leafLeft_;
 
             //- Element on the right
-            SharedPointer<Leaf> leafRight_2;
+            SharedPointer<Leaf> leafRight_;
 
             //- Node which follows on the left
 
             //first check node
-            SharedPointer<Node> nodeLeft_2;
+            SharedPointer<Node> nodeLeft_;
 
             //- Node which follows on the right
-            SharedPointer<Node> nodeRight_2;
+            SharedPointer<Node> nodeRight_;
 
             //- Parent node  Only for write
-            SharedPointer<Node> parent_2;
+            SharedPointer<Node> parent_;
 
             //- Number of equations in addition to the species eqs.
-
         };
 
         SUPstream::shared_data<label> emptylist_leaf;
@@ -129,11 +127,10 @@ namespace Foam
         template <class Type>
         class Mem_manager
         {
-
-            label &size_;
-            label &tmp_size_;
             SUPstream::shared_data<label> &emptylist_;
             label &tail_;
+            label &size_;
+            label &tmp_size_;
 
         public:
             Mem_manager(SUPstream::shared_data<label> &emptylist_in, label &tail_in, label &size_in, label &tmp_size_in) : emptylist_(emptylist_in), tail_(tail_in), size_(size_in), tmp_size_(tmp_size_in) { tail_ = 0; }
@@ -191,7 +188,7 @@ namespace Foam
             label m_size_node;
 
             label root;
-            SharedPointer<Node> root_2;
+            SharedPointer<Node> root_;
 
             label totalGrowth;
         };
@@ -207,13 +204,12 @@ namespace Foam
         label &tail_node;
         label &temp_tail_node;
 
-        SharedPointer<Node> &root_2;
+        SharedPointer<Node> &root_;
         label &totalGrowth_;
 
         SUPstream::mpi_mutex write_lock;
-
-        Mem_manager<Node> node_manager;
         Mem_manager<Leaf> leaf_manager;
+        Mem_manager<Node> node_manager;
 
         label nRetrieved_;
         label nGrowth_;
@@ -275,7 +271,6 @@ namespace Foam
         bool grow(const scalarField &x, SharedPointer<Leaf> &pleaf);
         bool grow(const inputType &value);
 
-
         template <typename... Args>
         label add(const scalarField &x, const scalarField &y, Args... args);
         label add(const inputType &x);
@@ -303,7 +298,7 @@ namespace Foam
             size_leaf_ = 0;
 
             size_node = 0;
-            root_2.offset = -1;
+            root_.setNULL();
         }
 
         inline void valid();
@@ -312,7 +307,7 @@ namespace Foam
 
         inline SharedPointer<Leaf> treeMin()
         {
-            return treeMin(root_2);
+            return treeMin(root_);
         }
 
         SharedPointer<Leaf> treeSuccessor(SharedPointer<Leaf> x);
@@ -328,7 +323,7 @@ namespace Foam
 
         inline label depth()
         {
-            return depth(root_2);
+            return depth(root_);
         }
 
         void deleteLeaf(SharedPointer<Leaf> index_phi0);
@@ -337,7 +332,7 @@ namespace Foam
 
         inline void deleteAllNode()
         {
-            deleteAllNode(root_2);
+            deleteAllNode(root_);
             //node_manager.update();
         }
 
@@ -345,7 +340,7 @@ namespace Foam
 
         inline void deleteAll()
         {
-            deleteAll(root_2);
+            deleteAll(root_);
             //node_manager.update();
         }
 
@@ -357,7 +352,7 @@ namespace Foam
         {
             if (size_leaf_ == 0)
             {
-                if (root_2.isNULL())
+                if (root_.isNULL())
                     return true;
                 else
                 {
@@ -370,19 +365,19 @@ namespace Foam
             if (size_leaf_ == 1)
             {
                 bool ret;
-                if (root_2.isNULL())
+                if (root_.isNULL())
                 {
                     FatalErrorInFunction
                         << "p1 ";
                     // << abort(FatalError);
                     return false;
                 }
-                ret = (!root_2->leafLeft_2.isNUL());
-                ret = ret && (root_2->nodeLeft_.isNUL());
-                ret = ret && (root_2->nodeRight_.isNUL());
-                ret = ret && (root_2->leafRight_.isNUL());
-                ret = ret && (root_2->parent_.isNUL());
-                ret = ret && (root_2->leafLeft_2->node_2.offset == root_2.offset);
+                ret = (!root_->leafLeft_.isNUL());
+                ret = ret && (root_->nodeLeft_.isNUL());
+                ret = ret && (root_->nodeRight_.isNUL());
+                ret = ret && (root_->leafRight_.isNUL());
+                ret = ret && (root_->parent_.isNUL());
+                ret = ret && (root_->leafLeft_->node_2 == root_);
                 if (ret == false)
                 {
                     FatalErrorInFunction
@@ -391,7 +386,7 @@ namespace Foam
                 }
                 return ret;
             }
-            if (!root_2->parent_2.isNULL())
+            if (root_->parent_.notNULL())
             {
                 FatalErrorInFunction
                     << "p3 ";
@@ -399,7 +394,7 @@ namespace Foam
                 return false;
             }
 
-            return treeCheck(root_2);
+            return treeCheck(root_);
         }
         /* virtual label add
          (

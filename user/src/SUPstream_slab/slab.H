@@ -18,8 +18,8 @@
 #include <assert.h>
 #include "create_memory.H"
 #include <time.h>
-
-#define CLOG2(s) (64 - (size_t)__builtin_clzll((s)-1))
+//#define CLOG2(s) (64 - (size_t)__builtin_clzll((s)-1))
+#define CLOG2(s) (64 - __builtin_clzll((s)-1))
 #define HY_DEBUG
 
 namespace Foam
@@ -75,7 +75,8 @@ namespace Foam
                                                                                               nslab_chain(CLOG2(maximum_size)),
                                                                                               s(manager_in, nslab_chain + 1)
         {
-            MemStart<0>::start = (size_t)mempool.memory;
+            //MemStart<0>::start = (size_t)mempool.memory;
+            MemStart<0>::start = reinterpret_cast<size_t>(mempool.memory);
             //nslab_chain = ceil(log2(maximum_size));
             //s = new slab_chain[nslab_chain + 1];
             if (manager_in.rank == 0)

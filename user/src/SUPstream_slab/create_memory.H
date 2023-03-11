@@ -26,53 +26,66 @@ namespace Foam
     {
         SHAREDPOINTER offset;
         SharedPointer() : offset(sptr_NULL){};
-        SharedPointer(T *ptr) : offset((size_t)ptr - MemStart<I>::start){};
+        //SharedPointer(T *ptr) : offset((size_t)ptr - MemStart<I>::start){};
+        SharedPointer(T *ptr) : offset(reinterpret_cast<size_t>(ptr) - MemStart<I>::start){};
         SharedPointer(SHAREDPOINTER offset_in) : offset(offset_in){};
         SharedPointer(SharedPointer<T, I> &sptr) : offset(sptr.offset){};
-        T &operator*() const
+        inline T &operator*() const
         {
-            return *((T *)(MemStart<I>::start + offset));
+            return *reinterpret_cast<T *>(MemStart<I>::start + offset);
+            //return *((T *)(MemStart<I>::start + offset));
         }
-        T *operator->()
+        inline T *operator->()
         {
-            return (T *)(MemStart<I>::start + offset);
+            return reinterpret_cast<T *>(MemStart<I>::start + offset);
+            //return (T *)(MemStart<I>::start + offset);
         }
-        T *operator()()
+        inline T *operator()()
         {
-            return (T *)(MemStart<I>::start + offset);
+            return reinterpret_cast<T *>(MemStart<I>::start + offset);
+            //return (T *)(MemStart<I>::start + offset);
         }
 
-        const T *operator()() const
+        inline const T *operator()() const
         {
-            return (const T *)(MemStart<I>::start + offset);
+            return reinterpret_cast<const T *>(MemStart<I>::start + offset);
+            //return (const T *)(MemStart<I>::start + offset);
         }
-        operator SHAREDPOINTER()
+        inline operator SHAREDPOINTER()
         {
             return offset;
         }
-        SHAREDPOINTER operator=(SHAREDPOINTER &a)
+        inline SHAREDPOINTER operator=(SHAREDPOINTER &a)
         {
             return offset = a;
         }
-        SHAREDPOINTER operator=(const SHAREDPOINTER &a)
+        inline SHAREDPOINTER operator=(const SHAREDPOINTER &a)
         {
             return offset = a;
         }
-        SHAREDPOINTER operator=(SharedPointer<T, I> &a)
+        inline SHAREDPOINTER operator=(const SharedPointer<T, I> &a)
         {
             return offset = a.offset;
         }
-        SHAREDPOINTER operator+(const SHAREDPOINTER &a)
+        inline SHAREDPOINTER operator+(const SHAREDPOINTER &a)
         {
             return offset + a;
         }
-        bool isNULL()
+        inline bool operator==(const SharedPointer<T, I> &a)
+        {
+            return this->offset == a.offset;
+        }
+        inline bool isNULL()
         {
             return offset == sptr_NULL;
         }
-        bool notNULL()
+        inline bool notNULL()
         {
             return offset != sptr_NULL;
+        }
+        inline void setNULL()
+        {
+            offset = sptr_NULL;
         }
     };
 

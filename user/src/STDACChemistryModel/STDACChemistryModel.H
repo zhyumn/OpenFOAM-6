@@ -69,6 +69,10 @@ SourceFiles
 #include "chemistryTabulationMethodS.H"
 #include "OFstream.H"
 
+#define DateSize1 53
+#define DateSize2 56
+#define Batch_Size 100 
+
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 namespace Foam
@@ -237,6 +241,66 @@ public:
                 scalar& deltaT,
                 scalar& subDeltaT
             ) const = 0;
+
+            struct jobdata
+            {
+                scalar rho;
+                scalar p;
+                scalar T;
+                FixedList<scalar, DateSize1> c;
+                FixedList<scalar, DateSize1> c0; 
+                FixedList<scalar, DateSize2> phiq;
+                FixedList<scalar, DateSize2> Rphiq;
+                scalar deltaTChem_; 
+                scalar deltaT;
+                label growOrAdd; 
+                label celli;
+                FixedList<scalar, DateSize1> RR;
+            };
+
+            struct jobInput
+            {
+                scalar rho;
+                scalar p;
+                scalar T;
+                FixedList<scalar, DateSize1> c;
+                FixedList<scalar, DateSize1> c0; 
+                FixedList<scalar, DateSize2> phiq;
+                FixedList<scalar, DateSize2> Rphiq;
+                scalar deltaTChem_; 
+                scalar deltaT;
+                label growOrAdd; 
+                //label celli;
+                FixedList<scalar, DateSize1> RR;
+            };
+
+            struct jobArray
+            {
+                label first_i;
+                label last_i;
+                jobInput jobs[Batch_Size];
+                //label celli;
+            };
+
+            scalar solve
+            (
+                const scalar rho,
+                scalar p, 
+                scalar T,
+                scalarField &c,
+                scalarField &c0, 
+                scalarField &phiq,
+                scalarField &Rphiq,
+                scalar &deltaTChem_, 
+                const scalar &deltaT, 
+                label &growOrAdd, 
+                label &celli, 
+                scalarField &RR
+            );
+            scalar solve
+            (
+                jobdata& in
+            );
 
 
         // Mechanism reduction access functions

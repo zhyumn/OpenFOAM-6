@@ -46,12 +46,12 @@ template <typename T, typename T2>
 template <typename... Args>
 Foam::parallelISAT<T, T2>::parallelISAT(SUPstream::mpi_manager &manager_in, label nmem, label maxNleafs, SUPstream::mpi_sync &sync_in, Args... args)
     : T2(args...), manager_(manager_in), sync_(sync_in), maxNLeafs_(maxNleafs), nmem_leaf_(nmem), nmem_node_(nmem),
-      pv_(manager_in), emptylist_leaf(manager_in, 100000), emptylist_node(manager_in, 100000),
+      emptylist_leaf(manager_in, 100000), emptylist_node(manager_in, 100000), pv_(manager_in),
       size_leaf_(pv_().size_leaf), head_leaf(pv_().head_leaf),
       tail_leaf(pv_().tail_leaf), temp_tail_leaf(pv_().temp_tail_leaf),
       size_node(pv_().size_node), head_node(pv_().heaf_node),
       tail_node(pv_().tail_node), temp_tail_node(pv_().temp_tail_node),
-      root_2(pv_().root_2), totalGrowth_(pv_().totalGrowth),
+      root_(pv_().root_), totalGrowth_(pv_().totalGrowth),
       write_lock(manager_in, sync_in),
       leaf_manager(emptylist_leaf, tail_leaf, pv_().m_size_leaf, pv_().tmp_size_leaf),
       node_manager(emptylist_node, tail_node, pv_().m_size_node, pv_().tmp_size_node),
@@ -69,7 +69,7 @@ Foam::parallelISAT<T, T2>::parallelISAT(SUPstream::mpi_manager &manager_in, labe
     pv_().m_size_node = 0;
     size_node = 0;
 
-    root_2.offset = -1;
+    root_.setNULL();
     totalGrowth_ = 0;
 }
 
@@ -85,7 +85,7 @@ Foam::parallelISAT<T, T2>::~parallelISAT()
 template <typename T, typename T2>
 Foam::SharedPointer<typename Foam::parallelISAT<T, T2>::Leaf> Foam::parallelISAT<T, T2>::binaryTreeSearch(const scalarField &value)
 {
-    auto ret = binaryTreeSearch(value, root_2);
+    auto ret = binaryTreeSearch(value, root_);
     return ret;
 }
 
@@ -99,36 +99,36 @@ Foam::SharedPointer<typename Foam::parallelISAT<T, T2>::Leaf> Foam::parallelISAT
 
         if (node_ptr->goLeft(value))
         {
-            if (!node_ptr->nodeLeft_2.isNULL())
+            if (node_ptr->nodeLeft_.notNULL())
             {
-                return binaryTreeSearch(value, node_ptr->nodeLeft_2);
+                return binaryTreeSearch(value, node_ptr->nodeLeft_);
             }
             else
             {
-                return node_ptr->leafLeft_2;
+                return node_ptr->leafLeft_;
             }
         }
         else
         {
-            if (!node_ptr->nodeRight_2.isNULL())
+            if (node_ptr->nodeRight_.notNULL())
             {
-                return binaryTreeSearch(value, node_ptr->nodeRight_2);
+                return binaryTreeSearch(value, node_ptr->nodeRight_);
             }
             else
             {
-                return node_ptr->leafRight_2;
+                return node_ptr->leafRight_;
             }
         }
     }
     // only one point stored (left element of the root)
     else if (size_leaf_ == 1)
     {
-        return root_2->leafLeft_2;
+        return root_->leafLeft_;
     }
     else // no point stored
     {
         SharedPointer<Leaf> ret;
-        ret.offset = -1;
+        ret.setNULL();
         return ret;
     }
 }
@@ -143,36 +143,36 @@ Foam::SharedPointer<typename Foam::parallelISAT<T, T2>::Leaf> Foam::parallelISAT
     {
         if (node_ptr->goLeft(value))
         {
-            if (!node_ptr->nodeLeft_2.isNULL())
+            if (node_ptr->nodeLeft_.notNULL())
             {
-                return binaryTreeSearch(value, node_ptr->nodeLeft_2);
+                return binaryTreeSearch(value, node_ptr->nodeLeft_);
             }
             else
             {
-                return node_ptr->leafLeft_2;
+                return node_ptr->leafLeft_;
             }
         }
         else
         {
-            if (!node_ptr->nodeRight_2.isNULL())
+            if (node_ptr->nodeRight_.notNULL())
             {
-                return binaryTreeSearch(value, node_ptr->nodeRight_2);
+                return binaryTreeSearch(value, node_ptr->nodeRight_);
             }
             else
             {
-                return node_ptr->leafRight_2;
+                return node_ptr->leafRight_;
             }
         }
     }
     // only one point stored (left element of the root)
     else if (size_leaf_ == 1)
     {
-        return root_2->leafLeft_2;
+        return root_->leafLeft_;
     }
     else // no point stored
     {
         SharedPointer<Leaf> ret;
-        ret.offset = -1;
+        ret.setNULL();
         return ret;
     }
 }
@@ -195,13 +195,13 @@ bool Foam::parallelISAT<T, T2>::grow(const inputType &x)
                 *pleaf_new = *pleaf;
                 pleaf_new->grow(x);
 
-                if (pleaf->node_2->leafLeft_2.offset == pleaf.offset)
+                if (pleaf->node_2->leafLeft_ == pleaf)
                 {
-                    pleaf->node_2->leafLeft_2.offset = pleaf_new.offset;
+                    pleaf->node_2->leafLeft_ = pleaf_new;
                 }
                 else
                 {
-                    pleaf->node_2->leafRight_2.offset = pleaf_new.offset;
+                    pleaf->node_2->leafRight_ = pleaf_new;
                 }
                 leaf_manager.Delete(pleaf);
                 success = true;
@@ -218,20 +218,20 @@ bool Foam::parallelISAT<T, T2>::grow(const scalarField &x, SharedPointer<Leaf> &
 
     SharedPointer<Leaf> pleaf_new = leaf_manager.New(*pleaf);
 
-    if (!pleaf_new.isNULL())
+    if (pleaf_new.notNULL())
     {
 
-        pleaf_new->node_2.offset = pleaf->node_2.offset;
+        pleaf_new->node_2 = pleaf->node_2;
         success = pleaf_new->grow(x);
         if (success)
         {
-            if (pleaf->node_2->leafLeft_2.offset == pleaf.offset)
+            if (pleaf->node_2->leafLeft_ == pleaf)
             {
-                pleaf->node_2->leafLeft_2.offset = pleaf_new.offset;
+                pleaf->node_2->leafLeft_ = pleaf_new;
             }
             else
             {
-                pleaf->node_2->leafRight_2.offset = pleaf_new.offset;
+                pleaf->node_2->leafRight_ = pleaf_new;
             }
             leaf_manager.Delete(pleaf);
         }
@@ -307,16 +307,16 @@ Foam::label Foam::parallelISAT<T, T2>::add(
             return growthOrAddFlag;
         }
 
-        pnode->parent_2.offset = -1;
-        pnode->nodeLeft_2.offset = -1;
-        pnode->nodeRight_2.offset = -1;
-        pnode->leafLeft_2.offset = pleaf.offset;
-        pnode->leafRight_2.offset = -1;
+        pnode->parent_.setNULL();
+        pnode->nodeLeft_.setNULL();
+        pnode->nodeRight_.setNULL();
+        pnode->leafLeft_ = pleaf;
+        pnode->leafRight_.setNULL();
         pnode->set();
 
-        pleaf->node_2.offset = pnode.offset;
+        pleaf->node_2 = pnode;
         pleaf->set(x, y, args...);
-        root_2.offset = pnode.offset;
+        root_ = pnode;
         size_leaf_++;
         size_node++;
         nAdd_++;
@@ -348,7 +348,7 @@ Foam::label Foam::parallelISAT<T, T2>::add(
     }
 
     //Todo  leaf_index can be obtain by arg
-    SharedPointer<Leaf> pleaf2 = binaryTreeSearch(x, root_2);
+    SharedPointer<Leaf> pleaf2 = binaryTreeSearch(x, root_);
 
     if (pleaf2->inEOA(x))
     {
@@ -379,37 +379,37 @@ Foam::label Foam::parallelISAT<T, T2>::add(
     }
 
     pleaf_new->set(x, y, args...);
-    pleaf_new->node_2.offset = pnode_new.offset;
-    pleaf2->node_2.offset = pnode_new.offset;
+    pleaf_new->node_2 = pnode_new;
+    pleaf2->node_2 = pnode_new;
 
-    pnode_new->parent_2.offset = -1;
-    pnode_new->nodeLeft_2.offset = -1;
-    pnode_new->nodeRight_2.offset = -1;
+    pnode_new->parent_.setNULL();
+    pnode_new->nodeLeft_.setNULL();
+    pnode_new->nodeRight_.setNULL();
     pnode_new->set(*pleaf_new, *pleaf2); //v = (leafmem[new_leaf_index].v + leafmem[leaf_index].v) / 2;
 
     if (pnode_new->goLeft(*pleaf_new))
     {
-        pnode_new->leafLeft_2.offset = pleaf_new.offset;
-        pnode_new->leafRight_2.offset = pleaf2.offset;
+        pnode_new->leafLeft_ = pleaf_new;
+        pnode_new->leafRight_ = pleaf2;
     }
     else
     {
-        pnode_new->leafLeft_2.offset = pleaf2.offset;
-        pnode_new->leafRight_2.offset = pleaf_new.offset;
+        pnode_new->leafLeft_ = pleaf2;
+        pnode_new->leafRight_ = pleaf_new;
     }
 
     if (size_leaf_ > 1)
     {
-        pnode_new->parent_2.offset = parentNode.offset;
-        if (parentNode->leafLeft_2.offset == pleaf2.offset)
+        pnode_new->parent_ = parentNode;
+        if (parentNode->leafLeft_ == pleaf2)
         {
-            parentNode->nodeLeft_2.offset = pnode_new.offset;
-            parentNode->leafLeft_2.offset = -1;
+            parentNode->nodeLeft_ = pnode_new;
+            parentNode->leafLeft_.setNULL();
         }
         else
         {
-            parentNode->nodeRight_2.offset = pnode_new.offset;
-            parentNode->leafRight_2.offset = -1;
+            parentNode->nodeRight_ = pnode_new;
+            parentNode->leafRight_.setNULL();
         }
         size_leaf_++;
         size_node++;
@@ -420,7 +420,7 @@ Foam::label Foam::parallelISAT<T, T2>::add(
     }
     else
     {
-        root_2.offset = pnode_new.offset;
+        root_ = pnode_new;
 
         node_manager.Delete(parentNode);
 
@@ -437,20 +437,20 @@ template <typename T, typename T2>
 Foam::SharedPointer<typename Foam::parallelISAT<T, T2>::Leaf> Foam::parallelISAT<T, T2>::treeMin(SharedPointer<Node> subTreeRoot)
 {
 
-    if (!subTreeRoot.isNULL())
+    if (subTreeRoot.notNULL())
     {
         SharedPointer<Node> ret;
-        ret.offset = subTreeRoot.offset;
-        while (!ret->nodeLeft_2.isNULL())
+        ret = subTreeRoot;
+        while (ret->nodeLeft_.notNULL())
         {
-            ret.offset = ret->nodeLeft_2.offset;
+            ret = ret->nodeLeft_;
         }
-        return ret->leafLeft_2;
+        return ret->leafLeft_;
     }
     else
     {
         SharedPointer<Leaf> ret;
-        ret.offset = -1;
+        ret.setNULL();
         return ret;
     }
 }
@@ -459,39 +459,39 @@ template <typename T, typename T2>
 Foam::SharedPointer<typename Foam::parallelISAT<T, T2>::Leaf> Foam::parallelISAT<T, T2>::treeSuccessor(SharedPointer<Leaf> x)
 {
     SharedPointer<Leaf> ret;
-    ret.offset = -1;
+    ret.setNULL();
     if (size_leaf_ > 1)
     {
 
-        if (x.offset == x->node_2->leafLeft_2.offset)
+        if (x == x->node_2->leafLeft_)
         {
-            if (x->node_2->nodeRight_2.offset == -1)
+            if (x->node_2->nodeRight_.isNULL())
             {
-                return x->node_2->leafRight_2;
+                return x->node_2->leafRight_;
             }
             else
             {
-                return treeMin(x->node_2->nodeRight_2);
+                return treeMin(x->node_2->nodeRight_);
             }
         }
-        else if (x.offset == x->node_2->leafRight_2.offset)
+        else if (x == x->node_2->leafRight_)
         {
             SharedPointer<Node> y;
-            y.offset = x->node_2.offset;
-            while (!y->parent_2.isNULL())
+            y = x->node_2;
+            while (y->parent_.notNULL())
             {
-                if (y.offset == y->parent_2->nodeLeft_2.offset)
+                if (y == y->parent_->nodeLeft_)
                 {
-                    if (y->parent_2->nodeRight_2.isNULL())
+                    if (y->parent_->nodeRight_.isNULL())
                     {
-                        return y->parent_2->leafRight_2;
+                        return y->parent_->leafRight_;
                     }
                     else
                     {
-                        return treeMin(y->parent_2->nodeRight_2);
+                        return treeMin(y->parent_->nodeRight_);
                     }
                 }
-                y.offset = y->parent_2.offset;
+                y = y->parent_;
             }
             // when we reach this point, y points to the root and
             // never entered in the if loop (coming from the right)
@@ -514,16 +514,16 @@ Foam::SharedPointer<typename Foam::parallelISAT<T, T2>::Leaf> Foam::parallelISAT
 {
     if (size_leaf_ > 1)
     {
-        if (x.offset == x->node_2->leafLeft_2.offset)
+        if (x == x->node_2->leafLeft_)
         {
             // x is on the left, return right side
             // might return nullptr if the right side is a node
-            return x->node_2->leafRight_2;
+            return x->node_2->leafRight_;
         }
-        else if (x.offset == x->node_2->leafRight_2.offset)
+        else if (x == x->node_2->leafRight_)
         {
             // x is on the right, return left side
-            return x->node_2->leafLeft_2;
+            return x->node_2->leafLeft_;
         }
         else
         {
@@ -531,29 +531,29 @@ Foam::SharedPointer<typename Foam::parallelISAT<T, T2>::Leaf> Foam::parallelISAT
                 << "wrong addressing of the initial leaf"
                 << exit(FatalError);
             SharedPointer<Leaf> ret;
-            ret.offset = -1;
+            ret.setNULL();
             return ret;
         }
     }
     // there is only one leaf attached to the root_, no sibling
     SharedPointer<Leaf> ret;
-    ret.offset = -1;
+    ret.setNULL();
     return ret;
 }
 
 template <typename T, typename T2>
 Foam::SharedPointer<typename Foam::parallelISAT<T, T2>::Node> Foam::parallelISAT<T, T2>::nodeSibling_node(SharedPointer<Node> y)
 {
-    if (!y->parent_2.isNULL())
+    if (y->parent_.notNULL())
     {
-        if (y.offset == y->parent_2->nodeLeft_2.offset)
+        if (y == y->parent_->nodeLeft_)
         {
             // y is on the left, return right side
-            return y->parent_2->nodeRight_2;
+            return y->parent_->nodeRight_;
         }
-        else if (y.offset == y->parent_2->nodeRight_2.offset)
+        else if (y == y->parent_->nodeRight_)
         {
-            return y->parent_2->nodeLeft_2;
+            return y->parent_->nodeLeft_;
         }
         else
         {
@@ -561,12 +561,12 @@ Foam::SharedPointer<typename Foam::parallelISAT<T, T2>::Node> Foam::parallelISAT
                 << "wrong addressing of the initial node"
                 << exit(FatalError);
             SharedPointer<Node> ret;
-            ret.offset = -1;
+            ret.setNULL();
             return ret;
         }
     }
     SharedPointer<Node> ret;
-    ret.offset = -1;
+    ret.setNULL();
     return ret;
 }
 
@@ -575,15 +575,15 @@ Foam::SharedPointer<typename Foam::parallelISAT<T, T2>::Node> Foam::parallelISAT
 {
     if (size_leaf_ > 1)
     {
-        if (x.offset == x->node_2->leafLeft_2.offset)
+        if (x == x->node_2->leafLeft_)
         {
             // x is on the left, return right side
-            return x->node_2->nodeRight_2;
+            return x->node_2->nodeRight_;
         }
-        else if (x.offset == x->node_2->leafRight_2.offset)
+        else if (x == x->node_2->leafRight_)
         {
             // x is on the right, return left side
-            return x->node_2->nodeLeft_2;
+            return x->node_2->nodeLeft_;
         }
         else
         {
@@ -592,12 +592,12 @@ Foam::SharedPointer<typename Foam::parallelISAT<T, T2>::Node> Foam::parallelISAT
                 << exit(FatalError);
 
             SharedPointer<Node> ret;
-            ret.offset = -1;
+            ret.setNULL();
             return ret;
         }
     }
     SharedPointer<Node> ret;
-    ret.offset = -1;
+    ret.setNULL();
     return ret;
 }
 
@@ -607,19 +607,19 @@ void Foam::parallelISAT<T, T2>::transplant(SharedPointer<Node> u, SharedPointer<
     if (v.notNULL())
     {
         // u is root_
-        if (u->parent_2.isNULL())
+        if (u->parent_.isNULL())
         {
-            root_2.offset = v.offset;
+            root_ = v;
         }
         // u is on the left of its parent
-        else if (u.offset == u->parent_2->nodeLeft_2.offset)
+        else if (u == u->parent_->nodeLeft_)
         {
-            u->parent_2->nodeLeft_2.offset = v.offset;
+            u->parent_->nodeLeft_ = v;
         }
         // u is ont the right of its parent
-        else if (u.offset == u->parent_2->nodeRight_2.offset)
+        else if (u == u->parent_->nodeRight_)
         {
-            u->parent_2->nodeRight_2.offset = v.offset;
+            u->parent_->nodeRight_ = v;
         }
         else
         {
@@ -627,7 +627,7 @@ void Foam::parallelISAT<T, T2>::transplant(SharedPointer<Node> u, SharedPointer<
                 << "wrong addressing of the initial node"
                 << exit(FatalError);
         }
-        v->parent_2.offset = u->parent_2.offset;
+        v->parent_ = u->parent_;
     }
     else
     {
@@ -643,8 +643,8 @@ void Foam::parallelISAT<T, T2>::deleteLeaf(SharedPointer<Leaf> index_phi0)
     if (size_leaf_ == 1) // only one point is stored
     {
         leaf_manager.Delete(index_phi0);
-        node_manager.Delete(root_2);
-        root_2.offset = -1;
+        node_manager.Delete(root_);
+        root_.setNULL();
         size_node--;
         //deleteDemandDrivenData(phi0);
         //deleteDemandDrivenData(root_);
@@ -652,43 +652,41 @@ void Foam::parallelISAT<T, T2>::deleteLeaf(SharedPointer<Leaf> index_phi0)
     else if (size_leaf_ > 1)
     {
         SharedPointer<Node> z = index_phi0->node_2;
-        label x;
+        //label x;
         SharedPointer<Leaf> siblingPhi0 = leafPSibling(index_phi0);
 
-        if (!siblingPhi0.isNULL()) // the sibling of phi0 is a chemPoint
+        if (siblingPhi0.notNULL()) // the sibling of phi0 is a chemPoint
         {
             // z was root (only two chemPoints in the tree)
-            if (z->parent_2.isNULL())
+            if (z->parent_.isNULL())
             {
-                root_2 = node_manager.New(siblingPhi0->phi().size_);
+                root_ = node_manager.New(siblingPhi0->phi().size_);
 
-                if (root_2.isNULL())
+                if (root_.isNULL())
                 {
                     FatalErrorInFunction
                         << "run out of memory"
                         << exit(FatalError);
                 }
                 size_node++;
-                root_2->nodeRight_2.offset = -1;
-                root_2->leafRight_2.offset = -1;
-                root_2->nodeLeft_2.offset = -1;
-                root_2->leafLeft_2.offset = siblingPhi0.offset;
-                root_2->parent_2.offset = -1;
-                siblingPhi0->node_2.offset = root_2.offset;
+                root_->nodeRight_.setNULL();
+                root_->leafRight_.setNULL();
+                root_->nodeLeft_.setNULL();
+                root_->leafLeft_ = siblingPhi0;
+                root_->parent_.setNULL();
+                siblingPhi0->node_2 = root_;
             }
-            else if (z.offset == z->parent_2->nodeLeft_2.offset)
+            else if (z == z->parent_->nodeLeft_)
             {
-                z->parent_2->leafLeft_2.offset = siblingPhi0.offset;
-                z->parent_2->nodeLeft_2.offset = -1;
-                siblingPhi0->node_2.offset = z->parent_2.offset;
-
+                z->parent_->leafLeft_ = siblingPhi0;
+                z->parent_->nodeLeft_.setNULL();
+                siblingPhi0->node_2 = z->parent_;
             }
-            else if (z.offset == z->parent_2->nodeRight_2.offset)
+            else if (z == z->parent_->nodeRight_)
             {
-                z->parent_2->leafRight_2.offset = siblingPhi0.offset;
-                z->parent_2->nodeRight_2.offset = -1;
-                siblingPhi0->node_2.offset = z->parent_2.offset;
-
+                z->parent_->leafRight_ = siblingPhi0;
+                z->parent_->nodeRight_.setNULL();
+                siblingPhi0->node_2 = z->parent_;
             }
             else
             {
@@ -700,7 +698,7 @@ void Foam::parallelISAT<T, T2>::deleteLeaf(SharedPointer<Leaf> index_phi0)
         else
         {
             SharedPointer<Node> x = nodeSibling_leaf(index_phi0);
-            if (!x.isNULL())
+            if (x.notNULL())
             {
                 transplant(z, x);
             }
@@ -724,10 +722,10 @@ void Foam::parallelISAT<T, T2>::deleteLeaf(SharedPointer<Leaf> index_phi0)
 template <typename T, typename T2>
 void Foam::parallelISAT<T, T2>::deleteAllNode(SharedPointer<Node> subTreeRoot)
 {
-    if (!subTreeRoot.isNULL())
+    if (subTreeRoot.notNULL())
     {
-        deleteAllNode(subTreeRoot->nodeLeft_2);
-        deleteAllNode(subTreeRoot->nodeRight_2);
+        deleteAllNode(subTreeRoot->nodeLeft_);
+        deleteAllNode(subTreeRoot->nodeRight_);
         node_manager.Delete(subTreeRoot);
         size_node--;
         //deleteDemandDrivenData(subTreeRoot);
@@ -737,19 +735,19 @@ void Foam::parallelISAT<T, T2>::deleteAllNode(SharedPointer<Node> subTreeRoot)
 template <typename T, typename T2>
 void Foam::parallelISAT<T, T2>::deleteAll(SharedPointer<Node> subTreeRoot)
 {
-    if (!subTreeRoot.isNULL())
+    if (subTreeRoot.notNULL())
     {
-        deleteAll(subTreeRoot->nodeLeft_2);
-        deleteAll(subTreeRoot->nodeRight_2);
-        if (!subTreeRoot->leafLeft_2.isNULL())
+        deleteAll(subTreeRoot->nodeLeft_);
+        deleteAll(subTreeRoot->nodeRight_);
+        if (subTreeRoot->leafLeft_.notNULL())
         {
-            leaf_manager.Delete(subTreeRoot->leafLeft_2);
+            leaf_manager.Delete(subTreeRoot->leafLeft_);
             size_leaf_--;
         }
 
-        if (!subTreeRoot->leafRight_2.isNULL())
+        if (subTreeRoot->leafRight_.notNULL())
         {
-            leaf_manager.Delete(subTreeRoot->leafRight_2);
+            leaf_manager.Delete(subTreeRoot->leafRight_);
             size_leaf_--;
         }
         node_manager.Delete(subTreeRoot);
@@ -769,15 +767,15 @@ Foam::label Foam::parallelISAT<T, T2>::depth(SharedPointer<Node> subTreeRoot)
     else
     {
         return 1 + max(
-                       depth(subTreeRoot->nodeLeft_2),
-                       depth(subTreeRoot->nodeRight_2));
+                       depth(subTreeRoot->nodeLeft_),
+                       depth(subTreeRoot->nodeRight_));
     }
 }
 template <typename T, typename T2>
 bool Foam::parallelISAT<T, T2>::treeCheck(SharedPointer<Node> index)
 {
-    bool leftnode = (!index->nodeLeft_2.isNULL());
-    bool leftleaf = (!index->leafLeft_2.isNULL());
+    bool leftnode = (index->nodeLeft_.notNULL());
+    bool leftleaf = (index->leafLeft_.notNULL());
     if ((leftnode && leftleaf) || ((!leftnode) && (!leftleaf)))
     {
         FatalErrorInFunction
@@ -785,8 +783,8 @@ bool Foam::parallelISAT<T, T2>::treeCheck(SharedPointer<Node> index)
         //<< abort(FatalError);
         return false;
     }
-    bool rightnode = (!index->nodeRight_2.isNULL());
-    bool rightleaf = (!index->leafRight_2.isNULL());
+    bool rightnode = (index->nodeRight_.notNULL());
+    bool rightleaf = (index->leafRight_.notNULL());
     if ((rightnode && rightleaf) || ((!rightnode) && (!rightleaf)))
     {
         FatalErrorInFunction
@@ -796,7 +794,7 @@ bool Foam::parallelISAT<T, T2>::treeCheck(SharedPointer<Node> index)
     }
     if (leftnode)
     {
-        if (index->nodeLeft_2->parent_2.offset != index.offset)
+        if (index->nodeLeft_->parent_ != index)
         {
             FatalErrorInFunction
                 << "p6 ";
@@ -807,7 +805,7 @@ bool Foam::parallelISAT<T, T2>::treeCheck(SharedPointer<Node> index)
     }
     else
     {
-        if (index->leafLeft_2->node_2.offset != index.offset)
+        if (index->leafLeft_->node_2 != index)
 
         {
             FatalErrorInFunction
@@ -818,7 +816,7 @@ bool Foam::parallelISAT<T, T2>::treeCheck(SharedPointer<Node> index)
     }
     if (rightnode)
     {
-        if (index->nodeRight_2->parent_2.offset != index.offset)
+        if (index->nodeRight_->parent_ != index)
         {
             FatalErrorInFunction
                 << "p8 ";
@@ -828,7 +826,7 @@ bool Foam::parallelISAT<T, T2>::treeCheck(SharedPointer<Node> index)
     }
     else
     {
-        if (index->leafRight_2->node_2.offset != index.offset)
+        if (index->leafRight_->node_2 != index)
         {
             FatalErrorInFunction
                 << "p9 ";
@@ -864,17 +862,17 @@ void Foam::parallelISAT<T, T2>::insertNode(
     SharedPointer<Leaf> phi0,
     SharedPointer<Node> newNode)
 {
-    if (phi0.offset == phi0->node_2->leafRight_2.offset) // phi0 is on the right
+    if (phi0 == phi0->node_2->leafRight_) // phi0 is on the right
     {
-        phi0->node_2->leafRight_2.offset = -1;
-        phi0->node_2->nodeRight_2.offset = newNode.offset;
+        phi0->node_2->leafRight_.setNULL();
+        phi0->node_2->nodeRight_ = newNode;
 
         return;
     }
-    else if (phi0.offset == phi0->node_2->leafLeft_2.offset) // phi0 is on the left
+    else if (phi0 == phi0->node_2->leafLeft_) // phi0 is on the left
     {
-        phi0->node_2->leafLeft_2.offset = -1;
-        phi0->node_2->nodeLeft_2.offset = newNode.offset;
+        phi0->node_2->leafLeft_.setNULL();
+        phi0->node_2->nodeLeft_ = newNode;
 
         return;
     }
@@ -893,7 +891,7 @@ void Foam::parallelISAT<T, T2>::valid()
 
     label chPi = 0;
 
-    while (x != -1)
+    while (x.notNULL())
     {
         if (x->phi().size_ < 1)
         {
@@ -901,7 +899,7 @@ void Foam::parallelISAT<T, T2>::valid()
                 << ",size=" << x->phi().size_
                 << abort(FatalError);
         }
-        chemPoints[chPi++].offset = x.offset;
+        chemPoints[chPi++] = x;
         //const typename DataType::inputType &phij = x->phi();
         x = this->treeSuccessor(x);
     }
@@ -909,7 +907,6 @@ void Foam::parallelISAT<T, T2>::valid()
         FatalErrorInFunction
             << "size=" << chPi << " " << this->size_leaf_
             << abort(FatalError);
-
 }
 /*
 template <typename T, typename T2>

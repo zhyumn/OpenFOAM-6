@@ -87,7 +87,6 @@ Foam::chemistryTabulationMethodSs::parallelISAT_chem<CompType, ThermoType>::para
       chPMaxLifeTime_(
           this->coeffsDict_.lookupOrDefault("chPMaxLifeTime", INT_MAX)),
       maxGrowth_(this->coeffsDict_.lookupOrDefault("maxGrowth", INT_MAX)),
-
       minBalanceThreshold_(
           this->coeffsDict_.lookupOrDefault(
               "minBalanceThreshold", 0.1 * this->maxNLeafs_)),
@@ -1285,7 +1284,7 @@ void Foam::chemistryTabulationMethodSs::parallelISAT_chem<CompType, ThermoType>:
     label chPi = 0;
 
     //2) compute the mean composition
-    while (x != -1)
+    while (x.notNULL())
     {
         const typename DataType::inputType &phij = x->phi();
         for (int i = 0; i < phij.size_; i++)
@@ -1293,7 +1292,7 @@ void Foam::chemistryTabulationMethodSs::parallelISAT_chem<CompType, ThermoType>:
             mean[i] += phij[i];
         }
 
-        chemPoints[chPi++].offset = x.offset;
+        chemPoints[chPi++] = x;
         x = this->treeSuccessor(x);
     }
     x = chemPoints[0];
@@ -1338,22 +1337,23 @@ void Foam::chemistryTabulationMethodSs::parallelISAT_chem<CompType, ThermoType>:
     phiMaxDir.sort();
     // delete reference to all node since the tree is reshaped
     this->deleteAllNode();
-    this->root_2 = -1;
+    this->root_.setNULL();
 
     // add the node for the two extremum
     SharedPointer<typename parallelISAT<ISAT_chem<CompType, ThermoType>, emptyClass>::Node> newNode = this->node_manager.New(completeSpaceSize_);
-    if (newNode.offset == -1)
+    if (newNode.isNULL())
     {
         FatalErrorInFunction
             << "run out of memory"
             << exit(FatalError);
     }
     newNode->set(*chemPoints[phiMaxDir.indices()[0]], *chemPoints[phiMaxDir.indices()[phiMaxDir.size() - 1]]);
-    newNode->parent_2.offset = -1;
-    newNode->leafLeft_2.offset = chemPoints[phiMaxDir.indices()[0]].offset;
-    newNode->leafRight_2.offset = chemPoints[phiMaxDir.indices()[phiMaxDir.size() - 1]].offset;
-    newNode->nodeLeft_2.offset = -1;
-    newNode->nodeRight_2.offset = -1;
+    //newNode->parent_.offset = -1;
+    newNode->parent_.setNULL();
+    newNode->leafLeft_ = chemPoints[phiMaxDir.indices()[0]];
+    newNode->leafRight_ = chemPoints[phiMaxDir.indices()[phiMaxDir.size() - 1]];
+    newNode->nodeLeft_.setNULL();
+    newNode->nodeRight_.setNULL();
 
     /*label newNode = new bn
     (
@@ -1361,10 +1361,10 @@ void Foam::chemistryTabulationMethodSs::parallelISAT_chem<CompType, ThermoType>:
         chemPoints[phiMaxDir.indices()[phiMaxDir.size() - 1]],
         nullptr
     );*/
-    this->root_2.offset = newNode.offset;
+    this->root_ = newNode;
 
-    chemPoints[phiMaxDir.indices()[0]]->node_2.offset = newNode.offset;
-    chemPoints[phiMaxDir.indices()[phiMaxDir.size() - 1]]->node_2.offset = newNode.offset;
+    chemPoints[phiMaxDir.indices()[0]]->node_2 = newNode;
+    chemPoints[phiMaxDir.indices()[phiMaxDir.size() - 1]]->node_2 = newNode;
 
     for (label cpi = 1; cpi < chemPoints.size() - 1; cpi++)
     {
@@ -1372,7 +1372,7 @@ void Foam::chemistryTabulationMethodSs::parallelISAT_chem<CompType, ThermoType>:
 
         phi0 = this->binaryTreeSearch(
             chemPoints[phiMaxDir.indices()[cpi]]->phi(),
-            this->root_2);
+            this->root_);
 
         // add the chemPoint
         SharedPointer<typename parallelISAT<ISAT_chem<CompType, ThermoType>, emptyClass>::Node> nodeToAdd = this->node_manager.New(completeSpaceSize_);
@@ -1384,15 +1384,15 @@ void Foam::chemistryTabulationMethodSs::parallelISAT_chem<CompType, ThermoType>:
                 << exit(FatalError);
         }
         nodeToAdd->set(*phi0, *chemPoints[phiMaxDir.indices()[cpi]]);
-        nodeToAdd->parent_2.offset = phi0->node_2.offset;
-        nodeToAdd->leafLeft_2.offset = phi0.offset;
-        nodeToAdd->leafRight_2.offset = chemPoints[phiMaxDir.indices()[cpi]].offset;
-        nodeToAdd->nodeLeft_2.offset = -1;
-        nodeToAdd->nodeRight_2.offset = -1;
+        nodeToAdd->parent_ = phi0->node_2;
+        nodeToAdd->leafLeft_ = phi0;
+        nodeToAdd->leafRight_ = chemPoints[phiMaxDir.indices()[cpi]];
+        nodeToAdd->nodeLeft_.setNULL();
+        nodeToAdd->nodeRight_.setNULL();
         //new bn(phi0, chemPoints[phiMaxDir.indices()[cpi]], phi0->node());
         // make the parent of phi0 point to the newly created node
         this->insertNode(phi0, nodeToAdd);
-        phi0->node_2.offset = nodeToAdd.offset;
+        phi0->node_2 = nodeToAdd;
         chemPoints[phiMaxDir.indices()[cpi]]->node_2 = nodeToAdd;
     }
 }
@@ -1410,7 +1410,7 @@ bool Foam::chemistryTabulationMethodSs::parallelISAT_chem<CompType, ThermoType>:
     // according to the ellapsed time and number of growths
     SharedPointer<typename parallelISAT<ISAT_chem<CompType, ThermoType>, emptyClass>::Leaf> x = this->treeMin();
 
-    while (!x.isNULL())
+    while (x.notNULL())
     {
 
         SharedPointer<typename parallelISAT<ISAT_chem<CompType, ThermoType>, emptyClass>::Leaf> xtmp = this->treeSuccessor(x);

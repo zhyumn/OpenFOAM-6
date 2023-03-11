@@ -41,6 +41,10 @@ SourceFiles
 //#include "FixedSquareMatrix.H"
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 #define Datasize 56
+
+#define DateSize1 53
+#define DateSize2 56
+
 namespace Foam
 {
     namespace chemistryTabulationMethodSs
@@ -187,9 +191,10 @@ namespace Foam
         template <class Type>
         struct FSSquareMatrix
         {
+            Type *v_;
             int size_;
             int total_size_;
-            Type *v_;
+
             SSquareMatrix<Type> *p;
             FSSquareMatrix(SSquareMatrix<Type> &a) : v_(a.v_()), size_(a.size_), total_size_(a.total_size_), p(&a) {}
             inline Type &operator()(int x, int y)
@@ -539,8 +544,29 @@ namespace Foam
                 const scalarField &phiQ,
                 scalarField &RphiQ)
             {
-                bool flag = parallelISAT<ISAT_chem<CompType, ThermoType>, emptyClass>::retrieve(phiQ, RphiQ);
-                return flag;
+                //bool flag = parallelISAT<ISAT_chem<CompType, ThermoType>, emptyClass>::retrieve(phiQ, RphiQ);
+                return parallelISAT<ISAT_chem<CompType, ThermoType>, emptyClass>::retrieve(phiQ, RphiQ);
+            };
+
+            bool retrieve(
+                const FixedList<scalar, DateSize2> &phiQ,
+                FixedList<scalar, DateSize2> &RphiQ)
+            {
+                scalarField phiQ_2(phiQ.size()), RphiQ_2(phiQ.size());
+                for (label i = 0; i < phiQ.size(); i++)
+                {
+                    phiQ_2[i] = phiQ[i];
+                    RphiQ_2[i] = RphiQ[i];
+                }
+                bool ret = parallelISAT<ISAT_chem<CompType, ThermoType>, emptyClass>::retrieve(phiQ_2, RphiQ_2);
+
+                for (label i = 0; i < phiQ.size(); i++)
+                {
+                    phiQ[i] = phiQ_2[i];
+                    RphiQ[i] = RphiQ_2[i];
+                }
+                //bool flag = parallelISAT<ISAT_chem<CompType, ThermoType>, emptyClass>::retrieve(phiQ, RphiQ);
+                return ret;
             };
 
             label add(
@@ -549,7 +575,30 @@ namespace Foam
                 const scalar rho,
                 const scalar deltaT)
             {
-                label ret = parallelISAT<ISAT_chem<CompType, ThermoType>, emptyClass>::add(phiQ, RphiQ, rho, deltaT);
+                //label ret = parallelISAT<ISAT_chem<CompType, ThermoType>, emptyClass>::add(phiQ, RphiQ, rho, deltaT);
+                return parallelISAT<ISAT_chem<CompType, ThermoType>, emptyClass>::add(phiQ, RphiQ, rho, deltaT);
+            };
+
+            label add(
+                const FixedList<scalar, DateSize2> &phiQ,
+                const FixedList<scalar, DateSize2> &RphiQ,
+                const scalar rho,
+                const scalar deltaT)
+            {
+                //label ret = parallelISAT<ISAT_chem<CompType, ThermoType>, emptyClass>::add
+                scalarField phiQ_2(phiQ.size()), RphiQ_2(phiQ.size());
+                for (label i = 0; i < phiQ.size(); i++)
+                {
+                    phiQ_2[i] = phiQ[i];
+                    RphiQ_2[i] = RphiQ[i];
+                }
+                bool ret = parallelISAT<ISAT_chem<CompType, ThermoType>, emptyClass>::add(phiQ_2, RphiQ_2, rho, deltaT);
+                for (label i = 0; i < phiQ.size(); i++)
+                {
+                    phiQ[i] = phiQ_2[i];
+                    RphiQ[i] = RphiQ_2[i];
+                }
+
                 return ret;
             };
 

@@ -11,11 +11,12 @@ namespace Foam
     //size_t SharedPointer<void*, 0>::start = 0;
 
     //MemPool(size_t size) :memory(NULL), page_info(NULL), npage(0), memsize(0) { create_memory(size); }
-    MemPool::MemPool(Foam::SUPstream::mpi_manager &manager_in, size_t size) : npage(ceil(size / (float)pagesize)),
-                                                                              memsize(npage * pagesize),
-                                                                              memory_MPI(manager_in, memsize),
-                                                                              page_info(manager_in, npage),
-                                                                              memory(memory_MPI.ptr())
+    MemPool::MemPool(Foam::SUPstream::mpi_manager &manager_in, size_t size)
+        : npage(ceil(size / (float)pagesize)),
+          memsize(npage * pagesize),
+          memory_MPI(manager_in, memsize),
+          page_info(manager_in, npage),
+          memory(memory_MPI.ptr())
     {
     }
 
