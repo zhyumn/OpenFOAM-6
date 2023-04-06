@@ -54,8 +54,15 @@ Foam::STDACChemistryModel<ReactionThermo, ThermoType>::STDACChemistryModel(
               IOobject::NO_READ,
               IOobject::AUTO_WRITE),
           this->mesh(),
-          scalar(0))
+          scalar(0)),
+      sja_(SUPstream::node_manager), ja(sja_()), l_receiver(SUPstream::node_manager, SUPstream::Sync), l_sender(SUPstream::node_manager, SUPstream::Sync)
 {
+    SUPstream::Sync();
+    if (SUPstream::node_manager.rank == 0)
+    {
+        l_receiver.lock();
+    }
+    SUPstream::Sync();
     Info << "STDACChemistryModel!!!! variableTimeStep_=" << variableTimeStep_ << endl;
     basicSpecieMixture &composition = this->thermo().composition();
 
@@ -771,11 +778,164 @@ Foam::scalar Foam::STDACChemistryModel<ReactionThermo, ThermoType>::solve(
     }
     return deltaTMin;
 }
+
+
+template <class ReactionThermo, class ThermoType>
+Foam::scalar Foam::STDACChemistryModel<ReactionThermo, ThermoType>::solve(
+    jobInput &in)
+{
+    scalar &rho = in.rho;
+    scalar &p = in.p;
+    scalar &T = in.T;
+    //FixedList<scalar, DateSize1> &c = in.c;
+    FixedList<scalar, DateSize1> &c0 = in.c0;
+    //FixedList<scalar, DateSize2> &phiq = in.phiq;
+    //FixedList<scalar, DateSize2> &Rphiq = in.Rphiq;
+
+    scalarField phiq(in.phiq.size()), Rphiq(in.phiq.size());
+    scalarField c(in.c.size());
+    for (label i = 0; i < phiq.size(); i++)
+    {
+        phiq[i] = in.phiq[i];
+        Rphiq[i] = in.Rphiq[i];
+    }
+    for (label i = 0; i < c.size(); i++)
+    {
+        c[i] = in.c[i];
+    }
+
+    scalar &deltaTChem_ = in.deltaTChem_;
+    scalar &deltaT = in.deltaT;
+    label &growOrAdd = in.growOrAdd;
+    //label &celli = in.celli;
+    FixedList<scalar, DateSize1> &RR = in.RR;
+
+    const bool reduced = mechRed_->active();
+    scalar timeLeft = deltaT;
+    scalar deltaTMin = great;
+    // When tabulation is active (short-circuit evaluation for retrieve)
+    // It first tries to retrieve the solution of the system with the
+    // information stored through the tabulation method
+    if (tabulation_->retrieve(phiq, Rphiq))
+    {
+        // Retrieved solution stored in Rphiq
+        for (label i = 0; i < this->nSpecie(); i++)
+        {
+            c[i] = rho * Rphiq[i] / this->specieThermo_[i].W();
+        }
+
+        //searchISATCpuTime_ += clockTime_.timeIncrement();
+    }
+    // This position is reached when tabulation is not used OR
+    // if the solution is not retrieved.
+    // In the latter case, it adds the information to the tabulation
+    // (it will either expand the current data or add a new stored point).
+    else
+    {
+        // Store total time waiting to attribute to add or grow
+        //scalar timeTmp = clockTime_.timeIncrement();
+
+        if (reduced)
+        {
+            // Reduce mechanism change the number of species (only active)
+            mechRed_->reduceMechanism(c, T, p);
+            //nActiveSpecies += mechRed_->NsSimp();
+            //nAvg++;
+            //scalar timeIncr = clockTime_.timeIncrement();
+            //reduceMechCpuTime_ += timeIncr;
+            //timeTmp += timeIncr;
+        }
+
+        // Calculate the chemical source terms
+        while (timeLeft > small)
+        {
+            scalar dt = timeLeft;
+            if (reduced)
+            {
+                // completeC_ used in the overridden ODE methods
+                // to update only the active species
+                completeC_ = c;
+
+                // Solve the reduced set of ODE
+                this->solve(
+                    simplifiedC_, T, p, dt, deltaTChem_);
+
+                for (label i = 0; i < NsDAC_; i++)
+                {
+                    c[simplifiedToCompleteIndex_[i]] = simplifiedC_[i];
+                }
+            }
+            else
+            {
+                this->solve(c, T, p, dt, deltaTChem_);
+            }
+            timeLeft -= dt;
+        }
+
+        {
+            //scalar timeIncr = clockTime_.timeIncrement();
+            //solveChemistryCpuTime_ += timeIncr;
+            //timeTmp += timeIncr;
+        }
+
+        // If tabulation is used, we add the information computed here to
+        // the stored points (either expand or add)
+
+        forAll(c, i)
+        {
+            Rphiq[i] = c[i] / rho * this->specieThermo_[i].W();
+        }
+        if (tabulation_->variableTimeStep())
+        {
+            Rphiq[Rphiq.size() - 3] = T;
+            Rphiq[Rphiq.size() - 2] = p;
+            Rphiq[Rphiq.size() - 1] = deltaT;
+        }
+        else
+        {
+            Rphiq[Rphiq.size() - 2] = T;
+            Rphiq[Rphiq.size() - 1] = p;
+        }
+        growOrAdd =
+            tabulation_->add(phiq, Rphiq, rho, deltaT);
+        //if (growOrAdd)
+        //{
+        //    this->setTabulationResultsAdd(celli);
+        //addNewLeafCpuTime_ += clockTime_.timeIncrement() + timeTmp;
+        // }
+        //else
+        //{
+        //    this->setTabulationResultsGrow(celli);
+        //growCpuTime_ += clockTime_.timeIncrement() + timeTmp;
+        //}
+
+        // When operations are done and if mechanism reduction is active,
+        // the number of species (which also affects nEqns) is set back
+        // to the total number of species (stored in the mechRed object)
+        if (reduced)
+        {
+            this->nSpecie_ = mechRed_->nSpecie();
+        }
+        deltaTMin = deltaTChem_;
+        //deltaTMin = min(deltaTChem_, deltaTMin);
+
+        deltaTChem_ = min(deltaTChem_, this->deltaTChemMax_);
+    }
+
+    // Set the RR vector (used in the solver)
+    for (label i = 0; i < this->nSpecie_; i++)
+    {
+        RR[i] =
+            (c[i] - c0[i]) * this->specieThermo_[i].W() / deltaT;
+    }
+    return deltaTMin;
+}
 template <class ReactionThermo, class ThermoType>
 template <class DeltaTType>
 Foam::scalar Foam::STDACChemistryModel<ReactionThermo, ThermoType>::solve(
     const DeltaTType &deltaT)
 {
+    //std::cout << "xxxxxxzzhi!!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
     // Increment counter of time-step
     timeSteps_++;
 
@@ -826,7 +986,7 @@ Foam::scalar Foam::STDACChemistryModel<ReactionThermo, ThermoType>::solve(
     scalarField c0(this->nSpecie_);
     scalarField RR(this->nSpecie_);
 
-    jobdata tmp;
+    //jobdata tmp;
     //tmp.c.setSize(this->nSpecie_);
     //tmp.c0.setSize(this->nSpecie_);
     //tmp.RR.setSize(this->nSpecie_);
@@ -841,90 +1001,292 @@ Foam::scalar Foam::STDACChemistryModel<ReactionThermo, ThermoType>::solve(
     /*     FatalErrorInFunction << "nSpecie_=" << this->nSpecie_
                          << " ,this->nEqns() + nAdditionalEqn= " << this->nEqns() + nAdditionalEqn
                          << abort(FatalError); */
+//std::cout << "xxxxxxhi!!!!!!!!!!!!!!!!!!!!!!!!!!!" << rho.size() << std::endl;
     if (tabulation_->active())
     {
-        int batch_size = Batch_Size;
-        int nloop = rho.size() / batch_size;
-        int last_size = rho.size() % batch_size;
-        if (last_size != 0)
+        if (SUPstream::node_manager.rank == 0)
         {
-            nloop++;
-            last_size = batch_size;
-        }
-        for (int i = 0; i < nloop; i++)
-        {
-            int size_i = batch_size;
-            int last_i = (i + 1) * batch_size;
-            if (i == nloop - 1)
+
+            //std::cout << "xxhi!!!!!!!!!!!!!!!!!!!!!!!!!!!" << rho.size() << std::endl;
+
+            int batch_size = Batch_Size;
+            int nloop = rho.size() / batch_size;
+            int last_size = rho.size() % batch_size;
+            if (last_size != 0)
             {
-                last_i = i * batch_size + last_size;
-                size_i = last_size;
+                nloop++;
+                last_size = batch_size;
             }
-            int first_i = i * batch_size;
-
-            for (int celli = i * batch_size; celli < last_i; celli++)
+            for (int i = 0; i < nloop; i++)
             {
-                tmp.celli = celli;
-                tmp.rho = rho[celli];
-                tmp.p = p[celli];
-                tmp.T = T[celli];
-                tmp.deltaT = deltaT[celli];
-                //const scalar rhoi = rho[celli];
-                //scalar pi = p[celli];
-                //scalar Ti = T[celli];
-
-                for (label i = 0; i < this->nSpecie_; i++)
+                int size_i = batch_size;
+                //int last_i = (i + 1) * batch_size;
+                if (i == nloop - 1)
                 {
-                    //c[i] = rhoi * this->Y_[i][celli] / this->specieThermo_[i].W();
-                    tmp.c[i] = tmp.rho * this->Y_[i][celli] / this->specieThermo_[i].W();
-                    tmp.c0[i] = tmp.c[i];
-                    tmp.phiq[i] = this->Y()[i][celli];
+                    //last_i = i * batch_size + last_size;
+                    size_i = last_size;
                 }
-                //phiq[this->nSpecie()] = Ti;
-                //phiq[this->nSpecie() + 1] = pi;
-                tmp.phiq[this->nSpecie()] = tmp.T;
-                tmp.phiq[this->nSpecie() + 1] = tmp.p;
-                if (tabulation_->variableTimeStep())
+                int first_i = i * batch_size;
+
+                ja.first_i = first_i;
+                ja.size_i = size_i;
+                //ja.last_i = last_i;
+
+                for (int j = 0; j < ja.size_i; j++)
                 {
-                    tmp.phiq[this->nSpecie() + 2] = deltaT[celli];
+
+                    ja.jobs[j].rho = rho[j + ja.first_i];
+                    ja.jobs[j].p = p[j + ja.first_i];
+                    ja.jobs[j].T = T[j + ja.first_i];
+                    ja.jobs[j].deltaT = deltaT[j + ja.first_i];
+
+                    //tmp.celli = celli;
+                    //tmp.rho = rho[celli];
+                    //tmp.p = p[celli];
+                    //tmp.T = T[celli];
+                    //tmp.deltaT = deltaT[celli];
+
+                    //const scalar rhoi = rho[celli];
+                    //scalar pi = p[celli];
+                    //scalar Ti = T[celli];
+
+                    for (label k = 0; k < this->nSpecie_; k++)
+                    {
+                        //c[i] = rhoi * this->Y_[i][celli] / this->specieThermo_[i].W();
+
+                        //tmp.c[i] = tmp.rho * this->Y_[i][celli] / this->specieThermo_[i].W();
+                        //tmp.c0[i] = tmp.c[i];
+                        //tmp.phiq[i] = this->Y()[i][celli];
+
+                        ja.jobs[j].c[k] = ja.jobs[j].rho * this->Y_[k][j + ja.first_i] / this->specieThermo_[k].W();
+                        ja.jobs[j].c0[k] = ja.jobs[j].c[k];
+                        ja.jobs[j].phiq[k] = this->Y()[k][j + ja.first_i];
+                    }
+                    //phiq[this->nSpecie()] = Ti;
+                    //phiq[this->nSpecie() + 1] = pi;
+
+                    //tmp.phiq[this->nSpecie()] = tmp.T;
+                    //tmp.phiq[this->nSpecie() + 1] = tmp.p;
+                    //if (tabulation_->variableTimeStep())
+                    //{
+                    //    tmp.phiq[this->nSpecie() + 2] = deltaT[celli];
+                    //}
+
+                    ja.jobs[j].phiq[this->nSpecie()] = ja.jobs[j].T;
+                    ja.jobs[j].phiq[this->nSpecie() + 1] = ja.jobs[j].p;
+                    if (tabulation_->variableTimeStep())
+                    {
+                        ja.jobs[j].phiq[this->nSpecie() + 2] = deltaT[j + ja.first_i];
+                    }
+
+                    // Initialise time progress
+                    //scalar timeLeft = deltaT[j + ja.first_i];
+
+                    // Not sure if this is necessary
+                    //tmp.Rphiq = Zero;
+                    ja.jobs[j].Rphiq = Zero;
+
+                    clockTime_.timeIncrement();
+
+                    //label growOrAdd;
+                    ja.jobs[j].deltaTChem_ = this->deltaTChem_[j + ja.first_i];
                 }
 
-                // Initialise time progress
-                scalar timeLeft = deltaT[celli];
-
-                // Not sure if this is necessary
-                tmp.Rphiq = Zero;
-
-                clockTime_.timeIncrement();
-
-                label growOrAdd;
-                tmp.deltaTChem_ = this->deltaTChem_[celli];
-                //deltaTMin = min(solve(rhoi, pi, Ti, c, c0, phiq, Rphiq, this->deltaTChem_[celli], deltaT[celli], growOrAdd, celli, RR), deltaTMin);
-                deltaTMin = min(solve(tmp), deltaTMin);
-                this->deltaTChem_[celli] = tmp.deltaTChem_;
-                if (tmp.growOrAdd)
+                for (int j = 0; j < ja.size_i; j++)
                 {
-                    this->setTabulationResultsAdd(celli);
+                    //deltaTMin = min(solve(rhoi, pi, Ti, c, c0, phiq, Rphiq, this->deltaTChem_[celli], deltaT[celli], growOrAdd, celli, RR), deltaTMin);
+                    deltaTMin = min(solve(ja.jobs[j]), deltaTMin);
+                    this->deltaTChem_[j + ja.first_i] = ja.jobs[j].deltaTChem_;
+                    if (ja.jobs[j].growOrAdd)
+                    {
+                        this->setTabulationResultsAdd(j + ja.first_i);
+                    }
+                    else
+                    {
+                        this->setTabulationResultsGrow(j + ja.first_i);
+                    }
+
+                    /*                     this->deltaTChem_[celli] =
+                        min(this->deltaTChem_[celli], this->deltaTChemMax_); */
+
+                    // Set the RR vector (used in the solver)
+                    for (label k = 0; k < this->nSpecie_; k++)
+                    {
+                        this->RR_[k][j + ja.first_i] = ja.jobs[j].RR[k];
+                    }
+                }
+            }
+            SUPstream::Sync();
+            while (1)
+            {
+                l_receiver.lock();
+                if (!ja.finished)
+                {
+                    for (int j = 0; j < ja.size_i; j++)
+                    {
+                        //deltaTMin = min(solve(rhoi, pi, Ti, c, c0, phiq, Rphiq, this->deltaTChem_[celli], deltaT[celli], growOrAdd, celli, RR), deltaTMin);
+                        deltaTMin = min(solve(ja.jobs[j]), deltaTMin);
+                    }
+                    l_sender.unlock();
                 }
                 else
                 {
-                    this->setTabulationResultsGrow(celli);
+                    l_sender.unlock();
+                    break;
+                }
+                //l_sender.unlock();
+            }
+        }
+        //l_receiver.lock();
+
+        else
+        {
+            SUPstream::Sync();
+            int batch_size = Batch_Size;
+            int nloop = rho.size() / batch_size;
+            int last_size = rho.size() % batch_size;
+            if (last_size != 0)
+            {
+                nloop++;
+                last_size = batch_size;
+            }
+
+            for (int i = 0; i < nloop; i++)
+            {
+                l_sender.lock();
+                int size_i = batch_size;
+                //int last_i = (i + 1) * batch_size;
+                if (i == nloop - 1)
+                {
+                    //last_i = i * batch_size + last_size;
+                    size_i = last_size;
+                }
+                int first_i = i * batch_size;
+
+                ja.first_i = first_i;
+                ja.size_i = size_i;
+                //ja.last_i = last_i;
+                if (i != 0)
+                {
+                    //std::cout << "hi!!!!!!!!!!!!!!!!!!!!!!!!!!!" << rho.size() << std::endl;
+                    for (int j = 0; j < ja.size_i; j++)
+                    {
+                        //deltaTMin = min(solve(rhoi, pi, Ti, c, c0, phiq, Rphiq, this->deltaTChem_[celli], deltaT[celli], growOrAdd, celli, RR), deltaTMin);
+                        //deltaTMin = min(solve(ja.jobs[j]), deltaTMin);
+                        this->deltaTChem_[j + ja.first_i] = ja.jobs[j].deltaTChem_;
+                        if (ja.jobs[j].growOrAdd)
+                        {
+                            this->setTabulationResultsAdd(j + ja.first_i);
+                        }
+                        else
+                        {
+                            this->setTabulationResultsGrow(j + ja.first_i);
+                        }
+
+                        /*                     this->deltaTChem_[celli] =
+                        min(this->deltaTChem_[celli], this->deltaTChemMax_); */
+
+                        // Set the RR vector (used in the solver)
+                        for (label k = 0; k < this->nSpecie_; k++)
+                        {
+                            this->RR_[k][j + ja.first_i] = ja.jobs[j].RR[k];
+                        }
+                    }
+                }
+
+                for (int j = 0; j < ja.size_i; j++)
+                {
+                    ja.finished = false;
+                    ja.jobs[j].rho = rho[j + ja.first_i];
+                    ja.jobs[j].p = p[j + ja.first_i];
+                    ja.jobs[j].T = T[j + ja.first_i];
+                    ja.jobs[j].deltaT = deltaT[j + ja.first_i];
+
+                    //tmp.celli = celli;
+                    //tmp.rho = rho[celli];
+                    //tmp.p = p[celli];
+                    //tmp.T = T[celli];
+                    //tmp.deltaT = deltaT[celli];
+
+                    //const scalar rhoi = rho[celli];
+                    //scalar pi = p[celli];
+                    //scalar Ti = T[celli];
+
+                    for (label k = 0; k < this->nSpecie_; k++)
+                    {
+                        //c[i] = rhoi * this->Y_[i][celli] / this->specieThermo_[i].W();
+
+                        //tmp.c[i] = tmp.rho * this->Y_[i][celli] / this->specieThermo_[i].W();
+                        //tmp.c0[i] = tmp.c[i];
+                        //tmp.phiq[i] = this->Y()[i][celli];
+
+                        ja.jobs[j].c[k] = ja.jobs[j].rho * this->Y_[k][j + ja.first_i] / this->specieThermo_[k].W();
+                        ja.jobs[j].c0[k] = ja.jobs[j].c[k];
+                        ja.jobs[j].phiq[k] = this->Y()[k][j + ja.first_i];
+                    }
+                    //phiq[this->nSpecie()] = Ti;
+                    //phiq[this->nSpecie() + 1] = pi;
+
+                    //tmp.phiq[this->nSpecie()] = tmp.T;
+                    //tmp.phiq[this->nSpecie() + 1] = tmp.p;
+                    //if (tabulation_->variableTimeStep())
+                    //{
+                    //    tmp.phiq[this->nSpecie() + 2] = deltaT[celli];
+                    //}
+
+                    ja.jobs[j].phiq[this->nSpecie()] = ja.jobs[j].T;
+                    ja.jobs[j].phiq[this->nSpecie() + 1] = ja.jobs[j].p;
+                    if (tabulation_->variableTimeStep())
+                    {
+                        ja.jobs[j].phiq[this->nSpecie() + 2] = deltaT[j + ja.first_i];
+                    }
+
+                    // Initialise time progress
+                    //scalar timeLeft = deltaT[j + ja.first_i];
+
+                    // Not sure if this is necessary
+                    //tmp.Rphiq = Zero;
+                    ja.jobs[j].Rphiq = Zero;
+
+                    clockTime_.timeIncrement();
+
+                    //label growOrAdd;
+                    ja.jobs[j].deltaTChem_ = this->deltaTChem_[j + ja.first_i];
+                }
+                l_receiver.unlock();
+            }
+
+            l_sender.lock();
+            for (int j = 0; j < ja.size_i; j++)
+            {
+                //deltaTMin = min(solve(rhoi, pi, Ti, c, c0, phiq, Rphiq, this->deltaTChem_[celli], deltaT[celli], growOrAdd, celli, RR), deltaTMin);
+                //deltaTMin = min(solve(ja.jobs[j]), deltaTMin);
+                this->deltaTChem_[j + ja.first_i] = ja.jobs[j].deltaTChem_;
+                if (ja.jobs[j].growOrAdd)
+                {
+                    this->setTabulationResultsAdd(j + ja.first_i);
+                }
+                else
+                {
+                    this->setTabulationResultsGrow(j + ja.first_i);
                 }
 
                 /*                     this->deltaTChem_[celli] =
                         min(this->deltaTChem_[celli], this->deltaTChemMax_); */
 
                 // Set the RR vector (used in the solver)
-                for (label i = 0; i < this->nSpecie_; i++)
+                for (label k = 0; k < this->nSpecie_; k++)
                 {
-                    this->RR_[i][celli] = tmp.RR[i];
+                    this->RR_[k][j + ja.first_i] = ja.jobs[j].RR[k];
                 }
             }
+            ja.finished = true;
+            l_receiver.unlock();
         }
     }
     else
     {
-
+            //std::cout << "xzxhi!!!!!!!!!!!!!!!!!!!!!!!!!!!" << rho.size() << std::endl;
         forAll(rho, celli)
         {
             const scalar rhoi = rho[celli];

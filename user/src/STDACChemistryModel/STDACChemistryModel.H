@@ -68,6 +68,7 @@ SourceFiles
 #include "chemistryReductionMethodS.H"
 #include "chemistryTabulationMethodS.H"
 #include "OFstream.H"
+#include "SUPstream.H"
 
 #define DateSize1 53
 #define DateSize2 56
@@ -276,12 +277,19 @@ public:
 
             struct jobArray
             {
+                bool finished;
                 label first_i;
-                label last_i;
+                //label last_i;
+                label size_i;
                 jobInput jobs[Batch_Size];
                 //label celli;
             };
 
+            SUPstream::shared_data<jobArray> sja_;
+            jobArray &ja;
+            //jobArray ja;
+            SUPstream::mpi_mutex l_receiver;
+            SUPstream::mpi_mutex l_sender;
             scalar solve
             (
                 const scalar rho,
@@ -300,6 +308,11 @@ public:
             scalar solve
             (
                 jobdata& in
+            );
+
+            scalar solve
+            (
+                jobInput& in
             );
 
 
