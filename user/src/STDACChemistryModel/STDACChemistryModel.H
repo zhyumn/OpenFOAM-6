@@ -278,15 +278,37 @@ public:
             struct jobArray
             {
                 bool finished;
+                bool filled;
+                label rank;
+                label next;
                 label first_i;
                 //label last_i;
                 label size_i;
                 jobInput jobs[Batch_Size];
                 //label celli;
             };
-
+            label n_block;
             SUPstream::shared_data<jobArray> sja_;
-            jobArray &ja;
+            jobArray *ja;
+            label ja_size;
+            jobArray ja_loc;
+            SUPstream::shared_data<std::atomic<int>> sspare_cpu;
+            std::atomic<int> &spare_cpu;
+            SUPstream::shared_data<int> sempty_head,sempty_tail;
+            int & empty_head, & empty_tail;
+            SUPstream::shared_data<int> sfilled_head, sfilled_tail;
+            int &filled_head, &filled_tail;
+            SUPstream::shared_data<int>  sfinished_head;
+            int *finished_head;
+            int & rank;
+
+            SUPstream::mpi_mutex l_empty;
+            SUPstream::mpi_mutex l_filled;
+            SUPstream::mpi_mutex l_finished;
+
+            bool spare;
+            label n_cpu;
+            //SUPstream::shared_data<jobArray> sja_;
             //jobArray ja;
             SUPstream::mpi_mutex l_receiver;
             SUPstream::mpi_mutex l_sender;
