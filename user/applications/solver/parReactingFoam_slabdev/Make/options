@@ -1,4 +1,8 @@
+sinclude $(GENERAL_RULES)/mplib$(WM_MPLIB)
+sinclude $(RULES)/mplib$(WM_MPLIB)
+
 EXE_INC = \
+    $(PFLAGS) $(PINC) \
     -I$(LIB_SRC)/finiteVolume/lnInclude \
     -I$(LIB_SRC)/meshTools/lnInclude \
     -I$(LIB_SRC)/sampling/lnInclude \
@@ -14,6 +18,7 @@ EXE_INC = \
     -I$(FOAM_USER_SRC)/SUPstream_slab/lnInclude 
 
 EXE_LIBS = \
+    $(PLIBS) \
     -lfiniteVolume \
     -lfvOptions \
     -lmeshTools \

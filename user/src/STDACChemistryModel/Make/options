@@ -1,4 +1,8 @@
+sinclude $(GENERAL_RULES)/mplib$(WM_MPLIB)
+sinclude $(RULES)/mplib$(WM_MPLIB)
+
 EXE_INC = \
+    $(PFLAGS) $(PINC) \
     -I$(LIB_SRC)/transportModels/compressible/lnInclude \
     -I$(LIB_SRC)/thermophysicalModels/reactionThermo/lnInclude \
     -I$(LIB_SRC)/thermophysicalModels/basic/lnInclude \
@@ -11,6 +15,7 @@ EXE_INC = \
     -I$(LIB_SRC)/thermophysicalModels/chemistryModel/lnInclude
 
 LIB_LIBS = \
+    $(PLIBS) \
     -L$(FOAM_USER_LIBBIN) \
     -lcompressibleTransportModels \
     -lfluidThermophysicalModels \
