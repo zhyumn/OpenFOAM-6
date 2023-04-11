@@ -72,7 +72,7 @@ SourceFiles
 
 #define DateSize1 53
 #define DateSize2 56
-#define Batch_Size 100 
+//#define Batch_Size 100 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -124,6 +124,8 @@ class STDACChemistryModel
         //- Log file for the average time spent retrieving tabulated data
         autoPtr<OFstream> cpuRetrieveFile_;
 
+        autoPtr<OFstream> cpuTotalFile_;
+
         //- Log file for average time spent solving the chemistry
         autoPtr<OFstream> cpuSolveFile_;
 
@@ -147,6 +149,9 @@ class STDACChemistryModel
         //  Variable number of species added
         template<class DeltaTType>
         scalar solve(const DeltaTType& deltaT);
+
+        template<class DeltaTType>
+        scalar solve2(const DeltaTType& deltaT);
 
 
 public:
@@ -277,21 +282,41 @@ public:
 
             struct jobArray
             {
-                bool finished;
-                bool filled;
+                //bool finished;
+                //bool filled;
                 label rank;
                 label next;
                 label first_i;
                 //label last_i;
                 label size_i;
-                jobInput jobs[Batch_Size];
+                //jobInput jobs[Batch_Size];
+                jobInput jobs[1];
+                //label celli;
+            };
+
+            struct jobArray2
+            {
+                //bool finished;
+                //bool filled;
+                label rank;
+                label next;
+                label first_i;
+                //label last_i;
+                label size_i;
+                //jobInput jobs[Batch_Size];
+                jobInput *jobs;
+
+                 jobArray2(int size){jobs=new jobInput[size];}
+                 ~jobArray2(){delete[] jobs;}
                 //label celli;
             };
             label n_block;
-            SUPstream::shared_data<jobArray> sja_;
-            jobArray *ja;
+            int  Batch_Size;
+            //SUPstream::shared_data<jobArray> sja_;
+            SUPstream::shared_data2<jobArray> ja;
+            //jobArray *ja;
             label ja_size;
-            jobArray ja_loc;
+            jobArray2 ja_loc;
             SUPstream::shared_data<std::atomic<int>> sspare_cpu;
             std::atomic<int> &spare_cpu;
             SUPstream::shared_data<int> sempty_head,sempty_tail;
@@ -301,6 +326,8 @@ public:
             SUPstream::shared_data<int>  sfinished_head;
             int *finished_head;
             int & rank;
+            int nfinished_block ;
+            bool loadBalance_;
 
             SUPstream::mpi_mutex l_empty;
             SUPstream::mpi_mutex l_filled;

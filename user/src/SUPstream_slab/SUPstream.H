@@ -119,8 +119,9 @@ namespace Foam
                 : sync_(0), sync_r_(0), manager(manager_in) {}
             void sync()
             {
-                MPI_Reduce(&sync_, &sync_r_, 1, MPI_INT, MPI_MAX, 0, manager.comm);
-                MPI_Barrier(MPI_COMM_WORLD);
+                //MPI_Reduce(&sync_, &sync_r_, 1, MPI_INT, MPI_MAX, 0, manager.comm);
+                //MPI_Barrier(MPI_COMM_WORLD);
+                MPI_Barrier(manager.comm);
             }
             void operator()()
             {
@@ -211,7 +212,7 @@ namespace Foam
                 MPI_Aint winsize;
                 if (manager.rank == 0)
                     localsize = size;
-                MPI_Win_allocate_shared(localsize * sizeof(Datatype), sizeof(Datatype), MPI_INFO_NULL, manager.comm, &table, &wintable);
+                MPI_Win_allocate_shared(localsize * (sizeof(Datatype)), sizeof(Datatype), MPI_INFO_NULL, manager.comm, &table, &wintable);
                 if (manager.rank != 0)
                 {
                     MPI_Win_shared_query(wintable, 0, &winsize, &windisp, &table);
@@ -221,6 +222,35 @@ namespace Foam
             Datatype &operator[](int n) { return table[n]; }
             Datatype *ptr() { return table; }
             ~shared_data() { MPI_Win_free(&wintable); }
+        };
+        template <typename Datatype>
+        class shared_data2
+        {
+            char *table;
+
+            MPI_Win wintable;
+            mpi_manager &manager;
+            int size;
+            size_t data_size_;
+
+        public:
+            shared_data2(mpi_manager &manager_in, int size_in, size_t data_size)
+                : manager(manager_in), size(size_in), data_size_(data_size)
+            {
+                int localsize = 0, windisp;
+                MPI_Aint winsize;
+                if (manager.rank == 0)
+                    localsize = size;
+                MPI_Win_allocate_shared(localsize * (data_size_), data_size_, MPI_INFO_NULL, manager.comm, &table, &wintable);
+                if (manager.rank != 0)
+                {
+                    MPI_Win_shared_query(wintable, 0, &winsize, &windisp, &table);
+                }
+            }
+            Datatype &operator()() { return *table; }
+            Datatype &operator[](int n) { return *reinterpret_cast<Datatype *>(table + n * data_size_); }
+            Datatype *ptr() { return table; }
+            ~shared_data2() { MPI_Win_free(&wintable); }
         };
         class mpi_mutex
         {

@@ -501,7 +501,7 @@ namespace Foam
                 if (this->manager_.rank == 0)
                 {
                     //parallelISAT<ISAT_chem<CompType, ThermoType>, emptyClass>::update();
-                    if (this->chemistry_.timeSteps() % 10 == 0)
+                    if (this->chemistry_.timeSteps() % 20 == 0)
                         ret = cleanAndBalance();
                     if (this->isFull())
                     {
