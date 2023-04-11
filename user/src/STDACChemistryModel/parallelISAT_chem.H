@@ -623,9 +623,12 @@ namespace Foam
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-#ifdef NoRepository
-#include "parallelISAT_chem.C"
-#endif
+//#ifdef NoRepository
+//#include "parallelISAT_chem.C"
+//#endif
+
+
+#include "parallelISAT_chemI.H"
 //#include "parallelISAT_chemI.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
