@@ -155,7 +155,7 @@ Foam::chemistryTabulationMethodSs::parallelISAT_chem<CompType, ThermoType>::para
 // * * * * * * * * * * * * * * * * Selectors * * * * * * * * * * * * * * * * //
 
 // * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
-template <class CompType, class ThermoType>
+/* template <class CompType, class ThermoType>
 Foam::chemistryTabulationMethodSs::parallelISAT_chem<CompType, ThermoType>::~parallelISAT_chem()
 {
 }
@@ -171,7 +171,7 @@ template <class CompType, class ThermoType>
 typename Foam::chemistryTabulationMethodSs::ISAT_chem<CompType, ThermoType>::gradientType Foam::chemistryTabulationMethodSs::ISAT_chem<CompType, ThermoType>::leafData::gradFunc(const inputType &x)
 {
     return 1;
-}
+} */
 /*
 template<class CompType, class ThermoType>
 void Foam::chemistryTabulationMethodSs::ISAT_chem<CompType, ThermoType>::leafData::set(const inputType& x)
