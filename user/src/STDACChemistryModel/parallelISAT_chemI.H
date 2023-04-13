@@ -155,7 +155,7 @@ Foam::chemistryTabulationMethodSs::parallelISAT_chem<CompType, ThermoType>::para
 // * * * * * * * * * * * * * * * * Selectors * * * * * * * * * * * * * * * * //
 
 // * * * * * * * * * * * * * * * * Destructor  * * * * * * * * * * * * * * * //
- template <class CompType, class ThermoType>
+template <class CompType, class ThermoType>
 Foam::chemistryTabulationMethodSs::parallelISAT_chem<CompType, ThermoType>::~parallelISAT_chem()
 {
 }
@@ -757,7 +757,6 @@ bool Foam::chemistryTabulationMethodSs::ISAT_chem<CompType, ThermoType>::leafDat
         }
 
         // if the number of added dimension is too large, growth fail
-
         if (activeAdded > pISAT->maxNumNewDim_)
         {
             return false;
@@ -1027,7 +1026,7 @@ void Foam::chemistryTabulationMethodSs::ISAT_chem<CompType, ThermoType>::leafDat
     //const gradientType &gradientsMatrix = A_;
     FSSquareMatrix<scalar> gradientsMatrix(A_);
 
-    inputType &completeToSimplified = completeToSimplifiedIndex_;
+    inputType_label &completeToSimplified = completeToSimplifiedIndex_;
 
     // Rphiq[i]=Rphi0[i]+A(i, j)dphi[j]
     // where Aij is dRi/dphi_j

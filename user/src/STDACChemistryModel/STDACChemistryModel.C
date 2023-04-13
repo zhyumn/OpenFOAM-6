@@ -61,7 +61,7 @@ Foam::STDACChemistryModel<ReactionThermo, ThermoType>::STDACChemistryModel(
       Batch_Size(this->subDict("tabulation").lookupOrDefault("batchSize", 100)),
       ja(SUPstream::node_manager, n_block, sizeof(jobArray) + sizeof(jobInput) * (Batch_Size - 1)),
       ja_loc(Batch_Size),
-      sspare_cpu(SUPstream::node_manager), spare_cpu(sspare_cpu()),
+      sspare_cpu(SUPstream::node_manager), spare_cpu(sspare_cpu().var),
       sempty_head(SUPstream::node_manager), sempty_tail(SUPstream::node_manager),
       empty_head(sempty_head()), empty_tail(sempty_tail()),
       sfilled_head(SUPstream::node_manager), sfilled_tail(SUPstream::node_manager),

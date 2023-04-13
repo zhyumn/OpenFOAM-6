@@ -317,7 +317,13 @@ public:
             //jobArray *ja;
             label ja_size;
             jobArray2 ja_loc;
-            SUPstream::shared_data<std::atomic<int>> sspare_cpu;
+            template<typename T>
+            struct padded_atomic
+            {
+                std::atomic<T> var;
+                char m_pad[CacheLineSize - sizeof(std::atomic<T>)];
+            };
+            SUPstream::shared_data<padded_atomic<int>> sspare_cpu;
             std::atomic<int> &spare_cpu;
             SUPstream::shared_data<int> sempty_head,sempty_tail;
             int & empty_head, & empty_tail;

@@ -51,7 +51,7 @@ Foam::parallelISAT<T, T2>::parallelISAT(SUPstream::mpi_manager &manager_in, labe
       tail_leaf(pv_().tail_leaf), temp_tail_leaf(pv_().temp_tail_leaf),
       size_node(pv_().size_node), head_node(pv_().heaf_node),
       tail_node(pv_().tail_node), temp_tail_node(pv_().temp_tail_node),
-      root_(pv_().root_), totalGrowth_(pv_().totalGrowth),
+      root_(pv_().root_), totalGrowth_(pv_().totalGrowth), //,root_atomic((std::atomic<long unsigned int>*)&pv_().root_.offset)
       write_lock(manager_in, sync_in),
       leaf_manager(emptylist_leaf, tail_leaf, pv_().m_size_leaf, pv_().tmp_size_leaf),
       node_manager(emptylist_node, tail_node, pv_().m_size_node, pv_().tmp_size_node),
@@ -225,14 +225,22 @@ bool Foam::parallelISAT<T, T2>::grow(const scalarField &x, SharedPointer<Leaf> &
         success = pleaf_new->grow(x);
         if (success)
         {
+            SharedPointer<Leaf> *leaf;
             if (pleaf->node_2->leafLeft_ == pleaf)
             {
-                pleaf->node_2->leafLeft_ = pleaf_new;
+                leaf = &pleaf->node_2->leafLeft_;
+                //pleaf->node_2->leafLeft_ = pleaf_new;
             }
             else
             {
-                pleaf->node_2->leafRight_ = pleaf_new;
+                leaf = &pleaf->node_2->leafRight_;
+                //pleaf->node_2->leafRight_ = pleaf_new;
             }
+
+            //std::atomic<size_t> *leaf_atomic = reinterpret_cast<std::atomic<long unsigned int> *>(&leaf->offset);
+            std::atomic<size_t> *leaf_atomic = (std::atomic<long unsigned int> *)(&leaf->offset);
+            leaf_atomic->store(pleaf_new.offset, std::memory_order_release);
+
             leaf_manager.Delete(pleaf);
         }
         else
@@ -316,7 +324,11 @@ Foam::label Foam::parallelISAT<T, T2>::add(
 
         pleaf->node_2 = pnode;
         pleaf->set(x, y, args...);
-        root_ = pnode;
+
+        //root_ = pnode;
+        //((std::atomic<size_t>)root_.offset).store(pnode.offset, std::memory_order_release);
+        std::atomic<size_t> *root_atomic = reinterpret_cast<std::atomic<long unsigned int> *>(&root_.offset);
+        root_atomic->store(pnode.offset, std::memory_order_release);
         size_leaf_++;
         size_node++;
         nAdd_++;
@@ -401,16 +413,37 @@ Foam::label Foam::parallelISAT<T, T2>::add(
     if (size_leaf_ > 1)
     {
         pnode_new->parent_ = parentNode;
+        SharedPointer<Leaf> *leaf;
+        SharedPointer<Node> *node;
         if (parentNode->leafLeft_ == pleaf2)
         {
-            parentNode->nodeLeft_ = pnode_new;
-            parentNode->leafLeft_.setNULL();
+            //parentNode->nodeLeft_ = pnode_new;
+            // parentNode->leafLeft_.setNULL();
+            leaf = &parentNode->leafLeft_;
+            node = &parentNode->nodeLeft_;
         }
         else
         {
-            parentNode->nodeRight_ = pnode_new;
-            parentNode->leafRight_.setNULL();
+            //parentNode->nodeRight_ = pnode_new;
+            //parentNode->leafRight_.setNULL();
+            leaf = &parentNode->leafRight_;
+            node = &parentNode->nodeRight_;
         }
+        //node->offset = pnode_new.offset;
+        //leaf->offset = sptr_NULL;
+
+        //std::atomic<size_t> *node_atomic = reinterpret_cast<std::atomic<long unsigned int> *>(&node->offset);
+        //std::atomic<size_t> *leaf_atomic = reinterpret_cast<std::atomic<long unsigned int> *>(&leaf->offset);
+
+        std::atomic<size_t> *node_atomic = (std::atomic<long unsigned int> *)(&node->offset);
+        std::atomic<size_t> *leaf_atomic = (std::atomic<long unsigned int> *)(&leaf->offset);
+
+        node_atomic->store(pnode_new.offset, std::memory_order_release);
+        leaf_atomic->store(sptr_NULL, std::memory_order_release);
+
+        //((std::atomic<size_t>)node->offset).store(pnode_new.offset, std::memory_order_release);
+        //((std::atomic<size_t>)leaf->offset).store(sptr_NULL, std::memory_order_release);
+
         size_leaf_++;
         size_node++;
         nAdd_++;
@@ -420,7 +453,12 @@ Foam::label Foam::parallelISAT<T, T2>::add(
     }
     else
     {
-        root_ = pnode_new;
+        //std::atomic<size_t> *root_atomic = reinterpret_cast<std::atomic<long unsigned int> *>(&root_.offset);
+        std::atomic<size_t> *root_atomic = (std::atomic<long unsigned int> *)(&root_.offset);
+
+        root_atomic->store(pnode_new.offset, std::memory_order_release);
+        //root_ = pnode_new;
+        //((std::atomic<size_t>)root_.offset).store(pnode_new.offset, std::memory_order_release);
 
         node_manager.Delete(parentNode);
 

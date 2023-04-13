@@ -42,7 +42,7 @@ SourceFiles
 #include <mpi.h>
 #include <atomic>
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
+const size_t CacheLineSize = 64;
 namespace Foam
 {
     // Forward declaration of classes
@@ -202,16 +202,18 @@ namespace Foam
             Datatype *table;
             MPI_Win wintable;
             mpi_manager &manager;
-            int size;
+            size_t size;
 
         public:
-            shared_data(mpi_manager &manager_in, int size_in = 1)
+            shared_data(mpi_manager &manager_in, size_t size_in = 1)
                 : manager(manager_in), size(size_in)
             {
-                int localsize = 0, windisp;
+                int  windisp;
+                size_t localsize = 0;
                 MPI_Aint winsize;
                 if (manager.rank == 0)
                     localsize = size;
+                //std::cout << size << "," << sizeof(Datatype) << std::endl;
                 MPI_Win_allocate_shared(localsize * (sizeof(Datatype)), sizeof(Datatype), MPI_INFO_NULL, manager.comm, &table, &wintable);
                 if (manager.rank != 0)
                 {
@@ -238,9 +240,11 @@ namespace Foam
                 : manager(manager_in), size(size_in), data_size_(data_size)
             {
                 int localsize = 0, windisp;
+
                 MPI_Aint winsize;
                 if (manager.rank == 0)
                     localsize = size;
+                //std::cout << size << "," << sizeof(Datatype) << std::endl;
                 MPI_Win_allocate_shared(localsize * (data_size_), data_size_, MPI_INFO_NULL, manager.comm, &table, &wintable);
                 if (manager.rank != 0)
                 {
@@ -252,14 +256,19 @@ namespace Foam
             Datatype *ptr() { return table; }
             ~shared_data2() { MPI_Win_free(&wintable); }
         };
+        struct padded_atomic_flag
+        {
+            std::atomic_flag var;
+            char m_pad[CacheLineSize - sizeof(std::atomic_flag)];
+        };
         class mpi_mutex
         {
-            shared_data<std::atomic_flag> flag_shared;
+            shared_data<padded_atomic_flag> flag_shared;
             my_mutex mutex_;
 
         public:
             mpi_mutex(mpi_manager &manager_in, mpi_sync &sync_in)
-                : flag_shared(manager_in), mutex_(flag_shared.ptr(), sync_in) {}
+                : flag_shared(manager_in), mutex_(&(flag_shared().var), sync_in) {}
             void lock() { mutex_.lock(); }
             void unlock() { mutex_.unlock(); }
             bool try_lock() { return mutex_.try_lock(); }

@@ -5,6 +5,22 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Python: 当前文件",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "Python: 当前文件",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
             "name": "Python C++ Debug",
             "type": "pythoncpp",
             "request": "launch",
@@ -92,13 +108,13 @@
             ]
         },
         {
-            "name": "(gdb) rhoCentralRealgasFoam_dev2 启动",
+            "name": "(gdb) rhoCentralRealgasFoam 启动",
             "type": "cppdbg",
             "request": "launch",
-            "program": "/home/zhy/new_drive/OpenFOAM-6/user/platforms/linux64GccDPInt32Debug/bin/rhoCentralRealgasFoam_dev2",
+            "program": "/home/zhy/new_drive/OpenFOAM-6/user/platforms/linux64GccDPInt32Debug/bin/rhoCentralRealgasFoam",
             "args": [],
             "stopAtEntry": false,
-            "cwd": "/home/zhy/new_drive/OpenFOAM-6/user/run/shockdrop_interaction/shockppdrop/newshockrun2_new_dev",
+            "cwd": "/home/zhy/new_drive/OpenFOAM-6/user/run/Nike/TemporalMixingLayer",
             "environment": [],
             "externalConsole": false,
             "MIMode": "gdb",
@@ -106,6 +122,243 @@
                 {
                     "description": "为 gdb 启用整齐打印",
                     "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "name": "(gdb) rhoCentralRealgasDyMFoam 启动",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "/home/zhy/new_drive/OpenFOAM-6/user/platforms/linux64GccDPInt32Debug/bin/rhoCentralRealgasDyMFoam",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "/home/zhy/new_drive/OpenFOAM-6/user/run/Nike/shockDroplet_codestream_longerDyM_2",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "为 gdb 启用整齐打印",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "name": "(gdb) rhoCentralRealgasFoam T启动",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "/home/zhy/new_drive/OpenFOAM-6/user/platforms/linux64GccDPInt32Debug/bin/rhoCentralRealgasFoam",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "/home/zhy/new_drive/OpenFOAM-6/user/run/Nike/tt3.2_395_293_ISAT_time_opt",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "为 gdb 启用整齐打印",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "name": "(gdb) rhoCentralRealgasFoam T2启动",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "/home/zhy/new_drive/OpenFOAM-6/user/platforms/linux64GccDPInt32Debug/bin/rhoCentralRealgasFoam",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "/home/zhy/new_drive/OpenFOAM-6/user/run/Nike/tt3.2_395_293_ISAT_time_opt_NoRxn",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "为 gdb 启用整齐打印",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "name": "(gdb) rhoCentralRealgasFoam T3启动",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "/home/zhy/new_drive/OpenFOAM-6/user/platforms/linux64GccDPInt32Debug/bin/rhoCentralRealgasFoam",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "/home/zhy/new_drive/OpenFOAM-6/user/run/Nike/ISAT_paper_case/shockDroplet_codestream_longer_C12test_M_1D",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "为 gdb 启用整齐打印",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "name": "(gdb) 启动",
+            "type": "cppdbg",
+            // "request": "launch", 
+            "request":"attach", // 修改"request"的值为"attach"即附加到进程中去
+            "processId": "${command:pickProcess}", // !添加"processId"配置项
+            // "program": "输入程序名称，例如 ${workspaceFolder}/a.out",
+            //修改为可执行程序所在位置
+            "program": "/home/zhy/new_drive/OpenFOAM-6/platforms/linux64GccDPInt32Opt/bin/parReactingFoamSlab", 
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "/home/zhy/new_drive/OpenFOAM-6/user/run/parISAT/counterFlowFlame2D_GRI_TDAC",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "为 gdb 启用整齐打印",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        }
+        ,
+
+        {
+            "name": "(gdb) rhoCentralRealgasFoam T4启动",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "/home/zhy/new_drive/OpenFOAM-6/user/platforms/linux64GccDPInt32Debug/bin/rhoCentralRealgasFoam",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "/home/zhy/new_drive/OpenFOAM-6/user/run/Nike/ISAT_paper_case/TML_3D/tt3.2_595_293",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "为 gdb 启用整齐打印",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "name": "(gdb) rhoCentralRealgasFoam2  启动",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "/home/zhy/new_drive/OpenFOAM-6/user/platforms/linux64GccDPInt32Debug/bin/rhoCentralRealgasFoam",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "/home/zhy/new_drive/OpenFOAM-6/user/run/Nike/sprayA_2d",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "为 gdb 启用整齐打印",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "name": "(gdb) rhoPimpleRealgasFoam  启动",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "/home/zhy/new_drive/OpenFOAM-6/user/platforms/linux64GccDPInt32Debug/bin/rhoPimpleRealgasFoam",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "/home/zhy/new_drive/OpenFOAM-6/user/run/Nike/shockDroplet_codestream_longer_pimple_1d",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "为 gdb 启用整齐打印",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "name": "(gdb) rhoPimpleRealgasFoam2  启动",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "/home/zhy/new_drive/OpenFOAM-6/user/platforms/linux64GccDPInt32Debug/bin/rhoPimpleRealgasFoam",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "/home/zhy/new_drive/OpenFOAM-6/user/run/Nike/shockTube_",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "为 gdb 启用整齐打印",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+
+        {
+            "name": "(gdb) rhoReactingFoam  启动",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "/home/zhy/new_drive/OpenFOAM-6/platforms/linux64GccDPInt32Debug/bin/rhoReactingFoam",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "/home/zhy/new_drive/OpenFOAM-6/user/run/Nike/shockTube_",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "为 gdb 启用整齐打印",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+
+        {
+            "name": "(gdb) test chemreader 启动",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "/home/zhy/new_drive/OpenFOAM-6/platforms/linux64GccDPInt32Debug/bin/reactingFoam",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "/home/zhy/new_drive/OpenFOAM-6/user/run/chemReadertest/counterFlowFlame2D",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "为 gdb 启用整齐打印",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "name": "(gdb) test 启动",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "/home/zhy/new_drive/OpenFOAM-6/test.exe",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "/home/zhy/new_drive/OpenFOAM-6",
+            "coreDumpPath": "/home/zhy/new_drive/OpenFOAM-6/core.85722",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "为 gdb 启用整齐打印",
+                    "text": "-exec",
                     "ignoreFailures": true
                 }
             ]
@@ -147,8 +400,7 @@
                     "ignoreFailures": true
                 }
             ]
-        }
-        ,
+        },
         {
             "name": "(gdb) slab2 启动",
             "type": "cppdbg",

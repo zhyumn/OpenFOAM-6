@@ -44,7 +44,8 @@ SourceFiles
 
 #define DateSize1 53
 #define DateSize2 56
-
+#define LIKELY(exp) __builtin_expect(exp, 1)
+#define UNLIKELY(exp) __builtin_expect(exp, 0)
 namespace Foam
 {
     namespace chemistryTabulationMethodSs
@@ -109,8 +110,20 @@ namespace Foam
             }
             inline void setSize(int size_in)
             {
-                Delete();
-                init(size_in);
+                SharedPointer<Type> tmp;
+                /*if (UNLIKELY(size_in > size_))
+                {
+                    tmp = pslab->alloc(sizeof(Type) * size_in);
+                    size_t ms = min(size_in, size_);
+                    memcpy(tmp(), v_(), ms * sizeof(Type));
+                    //for (size_t i = 0; i < ms; i++)
+                    //    tmp()[i] = v_()[i];
+                    Delete();
+
+                    size_ = size_in;
+                    v_ = tmp;
+                }*/
+                //init(size_in);
             }
             const int &size() const
             {
@@ -229,6 +242,7 @@ namespace Foam
         struct ISAT_chem
         {
             typedef SList<scalar> inputType;
+            typedef SList<label> inputType_label;
             typedef SList<scalar> outputType;
             typedef SSquareMatrix<scalar> gradientType;
 
@@ -244,8 +258,8 @@ namespace Foam
                 gradientType A_; //gradient
                 gradientType LT_;
 
-                inputType simplifiedToCompleteIndex_;
-                inputType completeToSimplifiedIndex_;
+                inputType_label simplifiedToCompleteIndex_;
+                inputType_label completeToSimplifiedIndex_;
 
                 label nActiveSpecies_;
                 outputType scaleFactor_;
@@ -626,7 +640,6 @@ namespace Foam
 //#ifdef NoRepository
 //#include "parallelISAT_chem.C"
 //#endif
-
 
 #include "parallelISAT_chemI.H"
 //#include "parallelISAT_chemI.H"

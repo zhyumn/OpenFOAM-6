@@ -189,6 +189,7 @@ namespace Foam
 
             label root;
             SharedPointer<Node> root_;
+            //std::atomic<size_t> root_;
 
             label totalGrowth;
         };
@@ -205,6 +206,7 @@ namespace Foam
         label &temp_tail_node;
 
         SharedPointer<Node> &root_;
+        //std::atomic<size_t> *root_atomic;
         label &totalGrowth_;
 
         SUPstream::mpi_mutex write_lock;
