@@ -1,0 +1,2 @@
+g++ -I/scratch.nike/srini237/tensorflow/tensorflow_api/include -L/scratch.nike/srini237/tensorflow/tensorflow_api/lib VLE_NN_Capi.cpp -ltensorflow -o VLE_NN_Capi.o
+time ./VLE_NN_Capi.o
