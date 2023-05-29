@@ -33,7 +33,8 @@ Foam::SUPstream::mpi_sync Foam::SUPstream::Sync(Foam::SUPstream::node_manager);
 namespace Foam
 {
     //const dataType Foam::ISAT::staticData();
-    MPI_Shared::Slab* pslab = NULL;
+    
+    //MPI_Shared::Slab* pslab = NULL;
 }
 // * * * * * * * * * * * * * Static Member Functions * * * * * * * * * * * * //
 

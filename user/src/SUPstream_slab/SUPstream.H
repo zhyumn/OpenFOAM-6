@@ -42,7 +42,7 @@ SourceFiles
 #include <mpi.h>
 #include <atomic>
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
+const size_t CacheLineSize = 64;
 namespace Foam
 {
     // Forward declaration of classes
@@ -51,12 +51,12 @@ namespace Foam
 
     // Forward declaration of friend functions and operators
     class SUPstream;
-    Istream& operator>>(Istream&, SUPstream&);
-    Ostream& operator<<(Ostream&, const SUPstream&);
-    
+    Istream &operator>>(Istream &, SUPstream &);
+    Ostream &operator<<(Ostream &, const SUPstream &);
+
     class Slab;
-    
-    extern Slab* pslab;
+
+    extern Slab *pslab;
 
     /*---------------------------------------------------------------------------*\
                          Class SUPstream Declaration
@@ -73,10 +73,10 @@ namespace Foam
         // Private Member Functions
 
         //- Disallow default bitwise copy construct
-        SUPstream(const SUPstream&);
+        SUPstream(const SUPstream &);
 
         //- Disallow default bitwise assignment
-        void operator=(const SUPstream&);
+        void operator=(const SUPstream &);
 
     public:
         // Public classes
@@ -98,7 +98,7 @@ namespace Foam
                 MPI_Comm_size(comm, &size);
                 MPI_Comm_rank(comm, &rank);
             }
-            mpi_node_manager() {};
+            mpi_node_manager(){};
             void init(MPI_Comm allcomm)
             {
                 int rank_t = 0;
@@ -114,13 +114,14 @@ namespace Foam
             int sync_, sync_r_;
 
         public:
-            mpi_manager& manager;
-            mpi_sync(mpi_manager& manager_in)
+            mpi_manager &manager;
+            mpi_sync(mpi_manager &manager_in)
                 : sync_(0), sync_r_(0), manager(manager_in) {}
             void sync()
             {
-                MPI_Reduce(&sync_, &sync_r_, 1, MPI_INT, MPI_MAX, 0, manager.comm);
-                MPI_Barrier(MPI_COMM_WORLD);
+                //MPI_Reduce(&sync_, &sync_r_, 1, MPI_INT, MPI_MAX, 0, manager.comm);
+                //MPI_Barrier(MPI_COMM_WORLD);
+                MPI_Barrier(manager.comm);
             }
             void operator()()
             {
@@ -129,10 +130,10 @@ namespace Foam
         };
         class my_mutex
         {
-            std::atomic_flag& flag;
+            std::atomic_flag &flag;
 
         public:
-            my_mutex(std::atomic_flag* ptr, mpi_sync& sync_in)
+            my_mutex(std::atomic_flag *ptr, mpi_sync &sync_in)
                 : flag(*ptr)
             {
                 if (sync_in.manager.rank == 0)
@@ -144,17 +145,20 @@ namespace Foam
                 while (flag.test_and_set(std::memory_order_acquire))
                     ;
             }
+            bool try_lock()
+            {
+                return !flag.test_and_set(std::memory_order_acquire);
+            }
             void unlock() { flag.clear(std::memory_order_release); }
         };
 
-
         class my_room
         {
-            std::atomic_flag& flag;
-            std::atomic<int>& p_in_room;
+            std::atomic_flag &flag;
+            std::atomic<int> &p_in_room;
 
         public:
-            my_room(std::atomic_flag* ptr, std::atomic<int>* ptr2, mpi_sync& sync_in)
+            my_room(std::atomic_flag *ptr, std::atomic<int> *ptr2, mpi_sync &sync_in)
                 : flag(*ptr), p_in_room(*ptr2)
             {
                 if (sync_in.manager.rank == 0)
@@ -195,40 +199,79 @@ namespace Foam
         template <typename Datatype>
         class shared_data
         {
-            Datatype* table;
+            Datatype *table;
             MPI_Win wintable;
-            mpi_manager& manager;
-            int size;
+            mpi_manager &manager;
+            size_t size;
 
         public:
-            shared_data(mpi_manager& manager_in, int size_in = 1)
+            shared_data(mpi_manager &manager_in, size_t size_in = 1)
                 : manager(manager_in), size(size_in)
             {
-                int localsize = 0, windisp;
+                int  windisp;
+                size_t localsize = 0;
                 MPI_Aint winsize;
                 if (manager.rank == 0)
                     localsize = size;
-                MPI_Win_allocate_shared(localsize * sizeof(Datatype), sizeof(Datatype), MPI_INFO_NULL, manager.comm, &table, &wintable);
+                //std::cout << size << "," << sizeof(Datatype) << std::endl;
+                MPI_Win_allocate_shared(localsize * (sizeof(Datatype)), sizeof(Datatype), MPI_INFO_NULL, manager.comm, &table, &wintable);
                 if (manager.rank != 0)
                 {
                     MPI_Win_shared_query(wintable, 0, &winsize, &windisp, &table);
                 }
             }
-            Datatype& operator()() { return *table; }
-            Datatype& operator[](int n) { return table[n]; }
-            Datatype* ptr() { return table; }
+            Datatype &operator()() { return *table; }
+            Datatype &operator[](int n) { return table[n]; }
+            Datatype *ptr() { return table; }
             ~shared_data() { MPI_Win_free(&wintable); }
+        };
+        template <typename Datatype>
+        class shared_data2
+        {
+            char *table;
+
+            MPI_Win wintable;
+            mpi_manager &manager;
+            int size;
+            size_t data_size_;
+
+        public:
+            shared_data2(mpi_manager &manager_in, int size_in, size_t data_size)
+                : manager(manager_in), size(size_in), data_size_(data_size)
+            {
+                int localsize = 0, windisp;
+
+                MPI_Aint winsize;
+                if (manager.rank == 0)
+                    localsize = size;
+                //std::cout << size << "," << sizeof(Datatype) << std::endl;
+                MPI_Win_allocate_shared(localsize * (data_size_), data_size_, MPI_INFO_NULL, manager.comm, &table, &wintable);
+                if (manager.rank != 0)
+                {
+                    MPI_Win_shared_query(wintable, 0, &winsize, &windisp, &table);
+                }
+            }
+            Datatype &operator()() { return *table; }
+            Datatype &operator[](int n) { return *reinterpret_cast<Datatype *>(table + n * data_size_); }
+            Datatype *ptr() { return table; }
+            ~shared_data2() { MPI_Win_free(&wintable); }
+        };
+        struct padded_atomic_flag
+        {
+            std::atomic_flag var;
+            char m_pad[CacheLineSize - sizeof(std::atomic_flag)];
         };
         class mpi_mutex
         {
-            shared_data<std::atomic_flag> flag_shared;
+            shared_data<padded_atomic_flag> flag_shared;
             my_mutex mutex_;
 
         public:
-            mpi_mutex(mpi_manager& manager_in, mpi_sync& sync_in)
-                : flag_shared(manager_in), mutex_(flag_shared.ptr(), sync_in) {}
+            mpi_mutex(mpi_manager &manager_in, mpi_sync &sync_in)
+                : flag_shared(manager_in), mutex_(&(flag_shared().var), sync_in) {}
             void lock() { mutex_.lock(); }
             void unlock() { mutex_.unlock(); }
+            bool try_lock() { return mutex_.try_lock(); }
         };
 
         class mpi_room
@@ -238,7 +281,7 @@ namespace Foam
 
         public:
             my_room room_;
-            mpi_room(mpi_manager& manager_in, mpi_sync& sync_in)
+            mpi_room(mpi_manager &manager_in, mpi_sync &sync_in)
                 : flag_shared(manager_in), a_int_shared(manager_in), room_(flag_shared.ptr(), a_int_shared.ptr(), sync_in) {}
             void lock() { room_.lock(); }
             void unlock() { room_.unlock(); }
@@ -287,13 +330,13 @@ namespace Foam
 
         // IOstream Operators
 
-        friend Istream& operator>>(Istream&, SUPstream&);
-        friend Ostream& operator<<(Ostream&, const SUPstream&);
+        friend Istream &operator>>(Istream &, SUPstream &);
+        friend Ostream &operator<<(Ostream &, const SUPstream &);
     };
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-}  // End namespace Foam
+} // End namespace Foam
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

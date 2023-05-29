@@ -1,0 +1,95 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  6
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volScalarField;
+    location    "0";
+    object      T;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+dimensions      [0 0 0 1 0 0 0];
+
+internalField   #codeStream
+{
+    
+        codeInclude
+        #{
+            #include "fvCFD.H"
+        #};
+        codeOptions
+        #{
+            -I$(LIB_SRC)/finiteVolume/lnInclude \
+            -I$(LIB_SRC)/meshTools/lnInclude
+        #};  
+        codeLibs
+        #{
+            -lmeshTools \
+            -lfiniteVolume
+        #};
+        code
+        #{
+            const IOdictionary & d = static_cast<const IOdictionary&>(dict);
+            const fvMesh& mesh = refCast<const fvMesh>(d.db());
+
+            double r = 5e-6;
+            double x_center = 0;
+            double y_center = 0;
+            double thickness = 10e-6/15;
+            double omega = 0.01*10e-6;
+            double Tlow=620;
+            double Thigh=1600;
+
+            scalarField T(mesh.nCells(), Thigh);
+            forAll(T, i)
+            {
+                const scalar x = mesh.C()[i][0];
+                const scalar y = mesh.C()[i][1];
+                //const scalar z = mesh.C()[i][2];
+                scalar r_tmp=sqrt(sqr(y - y_center)+sqr(x-x_center));
+                if (r_tmp < r-thickness/2)
+                {
+                    T[i] = Tlow;
+                }
+                else if (r_tmp < r+thickness/2)
+                {
+                    T[i] =0.5*(Thigh+Tlow)+0.5*(-Tlow+Thigh)*tanh((r_tmp-r)/omega);
+                }
+            }
+            T.writeEntry( "", os);
+        #};
+};
+
+boundaryField
+{
+    wall
+    {
+        type            zeroGradient;       
+    }
+        top
+    {
+        type            zeroGradient;
+    }
+    bottom
+    {
+        type            zeroGradient;
+    }
+    inlet
+    {
+        type            zeroGradient;
+    }
+    outlet
+    {
+        type            zeroGradient;
+    }
+}
+
+
+// ************************************************************************* //

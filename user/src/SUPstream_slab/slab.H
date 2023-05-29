@@ -1,7 +1,7 @@
 /* ref: https://github.com/bbu/userland-slab-allocator */
 
 #ifndef __GNUC__
-# error Can be compiled only with GCC.
+#error Can be compiled only with GCC.
 #endif
 
 #pragma once
@@ -18,13 +18,17 @@
 #include <assert.h>
 #include "create_memory.H"
 #include <time.h>
+//#define CLOG2(s) (64 - (size_t)__builtin_clzll((s)-1))
+#define CLOG2(s) (64 - __builtin_clzll((s)-1))
+#define HY_DEBUG
 
 namespace Foam
 {
     struct slab_header;
     typedef SharedPointer<slab_header, 0> SharedPointer_SLAB;
 
-    struct slab_header {
+    struct slab_header
+    {
         SharedPointer_SLAB prev, next;
         uint64_t slots;
         uintptr_t refcount;
@@ -39,20 +43,23 @@ namespace Foam
         uint64_t initial_slotmask, empty_slotmask;
         uintptr_t alignment_mask;
         SharedPointer_SLAB partial, empty, full;
+
     public:
         //MemPool* pmempool;
         void init(size_t);
-        SHAREDPOINTER alloc(MemPool&);
-        void free(SHAREDPOINTER, MemPool&);
-        void traverse(void (*)(const void*));
-        void destroy(MemPool&);
+        SHAREDPOINTER alloc(MemPool &);
+        void free(SHAREDPOINTER, MemPool &);
+        void traverse(void (*)(const void *));
+        void destroy(MemPool &);
 
 #ifndef NDEBUG
         int is_valid();
 #endif
-        void stats(FILE* const out);
-        void dump(FILE* const out);
-        void props(FILE* const out);
+        void report();
+        void report(int &a, int &b, int &c);
+        void stats(FILE *const out);
+        void dump(FILE *const out);
+        void props(FILE *const out);
     };
 
     class Slab
@@ -60,47 +67,80 @@ namespace Foam
     public:
         MemPool mempool;
         //slab_chain* s;
-        Foam::SUPstream::mpi_manager& manager_;
+        Foam::SUPstream::mpi_manager &manager_;
         size_t nslab_chain;
         Foam::SUPstream::shared_data<slab_chain> s;
-        Slab(Foam::SUPstream::mpi_manager& manager_in, size_t maximum_size, size_t memsize) :
-            mempool(manager_in, memsize),
-            manager_(manager_in),
-            nslab_chain(ceil(log2(maximum_size))),
-            s(manager_in, nslab_chain + 1)
+        Slab(Foam::SUPstream::mpi_manager &manager_in, size_t maximum_size, size_t memsize) : mempool(manager_in, memsize),
+                                                                                              manager_(manager_in),
+                                                                                              nslab_chain(CLOG2(maximum_size)),
+                                                                                              s(manager_in, nslab_chain + 1)
         {
-            MemStart<0>::start = (size_t)mempool.memory;
+            //MemStart<0>::start = (size_t)mempool.memory;
+            MemStart<0>::start = reinterpret_cast<size_t>(mempool.memory);
             //nslab_chain = ceil(log2(maximum_size));
             //s = new slab_chain[nslab_chain + 1];
-            size_t isize = 1;
-            for (size_t i = 0;i <= nslab_chain;i++)
+            if (manager_in.rank == 0)
             {
-                //s[i].pmempool = &mempool;
-                if (manager_in.rank == 0)
+                size_t isize = 1;
+                for (size_t i = 0; i <= nslab_chain; i++)
+                {
+                    //s[i].pmempool = &mempool;
+                    //std::cout << "isize= !!!!!!!!!!!!!!!!!!!!!!!!!!!"<<isize<<std::endl;
                     s[i].init(isize);
-                isize *= 2;
+                    isize *= 2;
+                }
             }
+        }
+        void d_report()
+        {
+            mempool.report();
+            int to = 0, us = 0, fr = 0;
+            for (size_t i = 0; i <= nslab_chain; i++)
+            {
+                s[i].report();
+                s[i].report(to, us, fr);
+            }
+            std::cout << "Slab" << std::endl;
+            std::cout << "Total:" << to << " Used:" << us << " Free:" << fr << std::endl;
+        }
+        void report()
+        {
+            mempool.report();
+            int to = 0, us = 0, fr = 0;
+            for (size_t i = 0; i <= nslab_chain; i++)
+            {
+                s[i].report(to, us, fr);
+            }
+            std::cout << "Slab" << std::endl;
+            std::cout << "Total:" << to << " Used:" << us << " Free:" << fr << std::endl;
         }
         SHAREDPOINTER alloc(size_t size)
         {
-            size_t index = ceil(log2(size));
-            assert(index <= nslab_chain);
-            return s[index].alloc(mempool);
+            size_t index = CLOG2(size);
+            //size_t index = ceil(log2(size));
+            //size_t index2 = CLOG2(size);
+            //std::cout << index << "," << index2 << " ," << size << std::endl;
+            //assert(index == index2);
+            //assert(index <= nslab_chain);
+            SHAREDPOINTER ret = s[index].alloc(mempool);
+            //assert(ret != sptr_NULL);
+            return ret;
         }
         void free(size_t size, SHAREDPOINTER addr)
         {
-            size_t index = ceil(log2(size));
-            assert(index <= nslab_chain);
+            size_t index = CLOG2(size);
+            //size_t index = ceil(log2(size));
+
+            //assert(index <= nslab_chain);
             s[index].free(addr, mempool);
         }
         ~Slab()
         {
             if (manager_.rank == 0)
-                for (size_t i = 0;i <= nslab_chain;i++)
+                for (size_t i = 0; i <= nslab_chain; i++)
                 {
                     s[i].destroy(mempool);
                 }
         }
-
     };
 }
