@@ -211,7 +211,9 @@ Foam::basicThermo::basicThermo
     ),
 
     dpdt_(lookupOrDefault<Switch>("dpdt", true))
-{}
+{
+    Info<<"Temperature 1 Initialized \n";
+}
 
 
 Foam::basicThermo::basicThermo
@@ -269,7 +271,9 @@ Foam::basicThermo::basicThermo
             Zero
         )
     )
-{}
+{
+    Info<<"Temperature 2 Initialized \n";
+}
 
 
 // * * * * * * * * * * * * * * * * Selectors * * * * * * * * * * * * * * * * //
@@ -279,7 +283,8 @@ Foam::autoPtr<Foam::basicThermo> Foam::basicThermo::New
     const fvMesh& mesh,
     const word& phaseName
 )
-{
+{   
+    Info<<"Basic Thermo new \n";
     return New<basicThermo>(mesh, phaseName);
 }
 

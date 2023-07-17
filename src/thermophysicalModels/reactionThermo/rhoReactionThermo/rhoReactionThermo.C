@@ -53,7 +53,8 @@ Foam::autoPtr<Foam::rhoReactionThermo> Foam::rhoReactionThermo::New
     const fvMesh& mesh,
     const word& phaseName
 )
-{
+{   
+    Info<<"Inside Rho Reaction New \n";
     return basicThermo::New<rhoReactionThermo>(mesh, phaseName);
 }
 

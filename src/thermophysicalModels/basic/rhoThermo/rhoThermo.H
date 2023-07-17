@@ -72,6 +72,9 @@ protected:
         //- Construct as copy (not implemented)
         rhoThermo(const rhoThermo&);
 
+        //zero grad rho BC
+        void rhoBoundaryCorrection(volScalarField& rho);
+
 
 public:
 
