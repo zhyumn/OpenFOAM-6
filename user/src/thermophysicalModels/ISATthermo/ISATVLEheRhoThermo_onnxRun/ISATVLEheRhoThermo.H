@@ -115,7 +115,8 @@ namespace Foam
         Ort::AllocatorWithDefaultOptions allocator;
         // const char* model_dir = "/scratch.nike/srini237/OpenFOAM/temp/OpenFOAM-6/user/tutorials/python/UVFlash/ANN/OnnxModel.onnx";
         //Ort::Session session{nullptr}; //(Ort::Env env, model_dir, session_options);
-        Ort::Session session{env,"/scratch.nike/srini237/OpenFOAM/temp/OpenFOAM-6/user/tutorials/python/UVFlash/ANN/OnnxModel2.onnx",Ort::SessionOptions{nullptr}};
+        Ort::Session session_UVX{env,"/scratch.nike/srini237/OpenFOAM/temp/OpenFOAM-6/user/tutorials/python/UVFlash/ANN/OnnxModel2.onnx",Ort::SessionOptions{nullptr}};
+        Ort::Session session_TPX{env,"/scratch.nike/srini237/OpenFOAM/temp/OpenFOAM-6/user/tutorials/python/UVFlash/ANN/TPX.onnx",Ort::SessionOptions{nullptr}};
         // auto* inputname = "input";
         // auto* outputname0 = "T";//session.GetOutputName(0,env);
         // auto* outputname1 = "p";//session.GetOutputName(1);
@@ -152,6 +153,7 @@ namespace Foam
 
         Ort::Session ANN_load();
         std::tuple<scalar,scalar,scalar,scalar> ANN_predict(float u, float v, float x1, float x2);
+        std::tuple<scalar,scalar,scalar,scalar> ANN_predict_TPX(float T, float p, float x1, float x2);
 
         // void ANN_load_BC(char* saved_model_dir_BC, char* tags_BC,int ntags_BC);
         // std::tuple<scalar,scalar,scalar,scalar> ANN_predict_BC(float T, float p, float x1, float x2);

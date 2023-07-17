@@ -31,6 +31,7 @@ template <class BasicPsiThermo, class MixtureType>
 void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate_init()
 {
     //const scalarField &hCells = this->he_;
+    Info<<"Inside constructor ISAT VLE \n";
     scalarField &hCells = this->he_;
     scalarField &pCells = this->p_;
 
@@ -76,6 +77,10 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate_init()
 
         // hCells[celli] = hCells[celli]/Wmix;
         // rhoCells[celli] = Wmix/rhoCells[celli];
+
+        // std::tie(hCells[celli], rhoCells[celli], vaporfracCells[celli], soundspeedCells[celli]) = ANN_predict_TPX(TCells[celli],pCells[celli],Xcelli[0],Xcelli[1]);
+        //     hCells[celli] = hCells[celli]/Wmix;
+        //     rhoCells[celli] = rhoCells[celli]*Wmix;
 
         std::tie(TCells[celli], pCells[celli], vaporfracCells[celli], soundspeedCells[celli]) = ANN_predict(hCells[celli]*Wmix,Wmix/rhoCells[celli],Xcelli[0],Xcelli[1]);
         psiCells[celli] = rhoCells[celli] / pCells[celli];
@@ -179,7 +184,9 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate_init()
             Xcelli = mixture_.X();
             Wmix = mixture_.W(Xcelli);
 
-            //std::tie(phe[facei], prho[facei], pvaporfrac[facei], psoundspeed[facei]) = ANN_predict_BC(pT[facei],pp[facei],Xcelli[0],Xcelli[1]);
+            // std::tie(phe[facei], prho[facei], pvaporfrac[facei], psoundspeed[facei]) = ANN_predict_TPX(pT[facei],pp[facei],Xcelli[0],Xcelli[1]);
+            // phe[facei] = phe[facei]/Wmix;
+            // prho[facei] = prho[facei]*Wmix;
             std::tie(pT[facei], pp[facei], pvaporfrac[facei], psoundspeed[facei]) = ANN_predict(phe[facei]*Wmix,Wmix/prho[facei],Xcelli[0],Xcelli[1]);
             //Info<<patchi<<"\t"<<facei<<"\t"<<pT[facei]<<"\t"<<pp[facei]<<"\t"<<phe[facei]<<"\t"<<prho[facei]<<"\t"<<Xcelli[0]<<"\t"<<Xcelli[1]<<"\t"<<Wmix<<endl;
             ppsi[facei] = prho[facei] / pp[facei];
@@ -360,8 +367,12 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
                 Xcelli = mixture_.X();
                 Wmix = mixture_.W(Xcelli);
 
+                //Info<<"inside domain \t"<<Xcelli[0]<<"\t"<<Xcelli[1]<<"\t"<<Wmix<<endl;
+
                 std::tie(TCells[celli], pCells[celli], vaporfracCells[celli], soundspeedCells[celli]) = ANN_predict(hCells[celli]*Wmix,Wmix/rhoCells[celli],Xcelli[0],Xcelli[1]);
                 psiCells[celli] = rhoCells[celli] / pCells[celli];
+
+                // Info<<"inside domain \t"<<hCells[celli]<<"\t"<<rhoCells[celli]<<"\t"<<TCells[celli]<<"\t"<<pCells[celli]<<"\t"<<Xcelli[0]<<"\t"<<Xcelli[1]<<"\t"<<Wmix<<endl;
 
                 // if (ISATlog_)
                 // {
@@ -501,7 +512,13 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
                     //std::tie(phe[facei], prho[facei], pvaporfrac[facei], psoundspeed[facei]) = ANN_predict_BC(pT[facei],pp[facei],Xcelli[0],Xcelli[1]);
                     // phe[facei] = phe[facei]/Wmix;
                     // prho[facei] = Wmix/prho[facei];
+
+                    // std::tie(phe[facei], prho[facei], pvaporfrac[facei], psoundspeed[facei]) = ANN_predict_TPX(pT[facei],pp[facei],Xcelli[0],Xcelli[1]);
+                    // phe[facei] = phe[facei]/Wmix;
+                    // prho[facei] = prho[facei]*Wmix;
+
                     std::tie(pT[facei], pp[facei], pvaporfrac[facei], psoundspeed[facei]) = ANN_predict(phe[facei]*Wmix,Wmix/prho[facei],Xcelli[0],Xcelli[1]);
+                    // Info<<"inside BC \t"<<patchi<<"\t"<<phe[facei]<<"\t"<<prho[facei]<<"\t"<<pT[facei]<<"\t"<<pp[facei]<<"\t"<<Xcelli[0]<<"\t"<<Xcelli[1]<<"\t"<<Wmix<<endl;
                     //Info<<patchi<<"\t"<<facei<<"\t"<<pT[facei]<<"\t"<<pp[facei]<<"\t"<<phe[facei]<<"\t"<<prho[facei]<<"\t"<<Xcelli[0]<<"\t"<<Xcelli[1]<<"\t"<<Wmix<<endl;
                     ppsi[facei] = prho[facei] / pp[facei];
                 }
@@ -530,15 +547,15 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
             //         ppsi[facei] = prho[facei] / pp[facei];
             //     }
 
-            //     // forAll(pT, facei)
-            //     // {
-            //     //     const typename MixtureType::thermoType &mixture_ =
-            //     //         this->patchFaceMixture(patchi, facei);
+                // forAll(pT, facei)
+                // {
+                //     const typename MixtureType::thermoType &mixture_ =
+                //         this->patchFaceMixture(patchi, facei);
 
-            //     //     std::tie(phe[facei], prho[facei], pvaporfrac[facei], psoundspeed[facei]) = mixture_.Erhovfc_XPT(pp[facei], pT[facei]);
+                //     std::tie(phe[facei], prho[facei], pvaporfrac[facei], psoundspeed[facei]) = mixture_.Erhovfc_XPT(pp[facei], pT[facei]);
 
-            //     //     ppsi[facei] = prho[facei] / pp[facei];
-            //     // }
+                //     ppsi[facei] = prho[facei] / pp[facei];
+                // }
             // }
 
             if (!inviscid_)

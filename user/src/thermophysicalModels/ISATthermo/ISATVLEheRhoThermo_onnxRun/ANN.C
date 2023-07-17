@@ -32,7 +32,7 @@ std::tuple<scalar,scalar,scalar,scalar> Foam::ISATVLEheRhoThermo<BasicPsiThermo,
     //const char* model_dir = "/scratch.nike/srini237/OpenFOAM/temp/OpenFOAM-6/user/tutorials/python/UVFlash/ANN/OnnxModel.onnx";
     //std::cout<<"here inside predict"<<std::endl;
     //Ort::Session session(env, "/scratch.nike/srini237/OpenFOAM/temp/OpenFOAM-6/user/tutorials/python/UVFlash/ANN/OnnxModel.onnx", session_options);
-    auto inputshape = session.GetInputTypeInfo(0).GetTensorTypeAndShapeInfo().GetShape();
+    auto inputshape = session_UVX.GetInputTypeInfo(0).GetTensorTypeAndShapeInfo().GetShape();
     std::vector<float> inputValues = {u,v,x1,x2};
     int batchsize = 1;
     inputshape[0] = batchsize;
@@ -41,7 +41,7 @@ std::tuple<scalar,scalar,scalar,scalar> Foam::ISATVLEheRhoThermo<BasicPsiThermo,
     const char* inputNames[] = {"input"};
     const char* outputNames[] = {"T","P","phi","c"};
     //std::cout<<"here before run"<<std::endl;
-    auto outputValues = session.Run(Ort::RunOptions(nullptr),inputNames,&inputOnnxTensor,1,outputNames,4);
+    auto outputValues = session_UVX.Run(Ort::RunOptions(nullptr),inputNames,&inputOnnxTensor,1,outputNames,4);
     auto& T = outputValues[0];
     auto& P = outputValues[1];
     auto& phi = outputValues[2];
@@ -55,6 +55,36 @@ std::tuple<scalar,scalar,scalar,scalar> Foam::ISATVLEheRhoThermo<BasicPsiThermo,
     // std::cout<<*floatT<<"\t"<<*floatP<<"\t"<<*floatphi<<"\t"<<*floatc<<std::endl;
 
     return std::make_tuple(*floatT,*floatP,*floatphi,*floatc);
+}
+
+template <class BasicPsiThermo, class MixtureType>
+std::tuple<scalar,scalar,scalar,scalar> Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::ANN_predict_TPX(float T, float p, float x1, float x2){
+    //const char* model_dir = "/scratch.nike/srini237/OpenFOAM/temp/OpenFOAM-6/user/tutorials/python/UVFlash/ANN/OnnxModel.onnx";
+    //std::cout<<"here inside predict"<<std::endl;
+    //Ort::Session session(env, "/scratch.nike/srini237/OpenFOAM/temp/OpenFOAM-6/user/tutorials/python/UVFlash/ANN/OnnxModel.onnx", session_options);
+    auto inputshape = session_TPX.GetInputTypeInfo(0).GetTensorTypeAndShapeInfo().GetShape();
+    std::vector<float> inputValues = {T,p,x1,x2};
+    int batchsize = 1;
+    inputshape[0] = batchsize;
+    auto memoryinfo = Ort::MemoryInfo::CreateCpu(OrtDeviceAllocator,OrtMemTypeCPU); 
+    auto inputOnnxTensor = Ort::Value::CreateTensor<float>(memoryinfo,inputValues.data(),inputValues.size(),inputshape.data(),inputshape.size());
+    const char* inputNames[] = {"input"};
+    const char* outputNames[] = {"u","rho","phi","c"};
+    //std::cout<<"here before run"<<std::endl;
+    auto outputValues = session_TPX.Run(Ort::RunOptions(nullptr),inputNames,&inputOnnxTensor,1,outputNames,4);
+    auto& u = outputValues[0];
+    auto& rho = outputValues[1];
+    auto& phi = outputValues[2];
+    auto& c = outputValues[3];
+
+    float* floatu = u.GetTensorMutableData<float>();
+    float* floatrho = rho.GetTensorMutableData<float>();
+    float* floatphi = phi.GetTensorMutableData<float>();
+    float* floatc = c.GetTensorMutableData<float>();
+    // std::cout<<u<<"\t"<<v<<"\t"<<x1<<"\t"<<x2<<std::endl;
+    // std::cout<<*floatT<<"\t"<<*floatP<<"\t"<<*floatphi<<"\t"<<*floatc<<std::endl;
+
+    return std::make_tuple(*floatu,*floatrho,*floatphi,*floatc);
 }
 
 // template <class BasicPsiThermo, class MixtureType>
