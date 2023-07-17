@@ -1,0 +1,113 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  6
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volScalarField;
+    location    "0";
+    object      T;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+dimensions      [1 -1 -2 0 0 0 0];
+
+//internalField  uniform 20e6;
+
+internalField  #codeStream
+{
+    
+        codeInclude
+        #{
+            #include "fvCFD.H"
+        #};
+        codeOptions
+        #{
+            -I$(LIB_SRC)/finiteVolume/lnInclude \
+            -I$(LIB_SRC)/meshTools/lnInclude
+        #};  
+        codeLibs
+        #{
+            -lmeshTools \
+            -lfiniteVolume
+        #};
+        code
+        #{
+            const IOdictionary & d = static_cast<const IOdictionary&>(dict);
+            const fvMesh& mesh = refCast<const fvMesh>(d.db());
+
+
+            double Tlow=1000 ;
+            double Thigh=1000 ;
+
+            scalarField T(mesh.nCells(), Tlow);
+            forAll(T, i)
+            {
+                const scalar x1 = mesh.C()[i][0];
+                //const scalar y = mesh.C()[i][1];
+                //const scalar z = mesh.C()[i][2];
+                if (x1 < -0.2e-3)
+                {
+                    T[i] = Thigh;
+                }
+            }
+ 
+            double r = 0.125e-3;
+            double x_center = 0.5e-3;
+            double y_center = 0.5e-3;
+            double thickness = 5e-5;
+            double omega=1e-5;
+            double Clow=Tlow;
+            double Chigh=370;
+
+            forAll(T, i)
+            {
+                const scalar x = mesh.C()[i][0];
+                const scalar y = mesh.C()[i][1];
+                //const scalar z = mesh.C()[i][2];
+                scalar r_tmp=sqrt(sqr(y - y_center)+sqr(x-x_center));
+                if (r_tmp < r-thickness/2)
+                {
+                    T[i] = Chigh;
+                }
+                else if (r_tmp < r+thickness/2)
+                {
+                    T[i] =0.5*(Clow+Chigh)+0.5*(Clow-Chigh)*tanh((r_tmp-r)*5/omega);
+                }
+            }
+
+            T.writeEntry( "", os);
+        #};
+};
+
+boundaryField
+{
+    wall
+    {
+        type            empty;
+    }
+        top
+    {
+        type            zeroGradient; //symmetryPlane; //zeroGradient;
+    }
+    bottom
+    {
+        type            zeroGradient; //symmetryPlane; //zeroGradient;
+    }
+    inlet
+    {
+        type            zeroGradient;//waveTransmissiveDF;
+    }
+    outlet
+    {
+        type            zeroGradient;//waveTransmissiveDF;
+    }
+}
+
+
+// ************************************************************************* //
