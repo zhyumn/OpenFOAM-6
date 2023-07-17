@@ -125,7 +125,7 @@ model.summary()
 # phi_t = Ytest[:,4]
 
 #model.fit(Xtrain,[Ttrain,Ptrain,vftrain,ctrain],,batch_size=32,epochs = 200, validation_data=(Xval,[Tval,Pval,vfval,cval]))
-model.fit(Xtrain,[Ttrain,Ptrain,vftrain,ctrain],epochs=1000,batch_size=512,validation_data=(Xval,[Tval,Pval,vfval,cval]))
+model.fit(Xtrain,[Ttrain,Ptrain,vftrain,ctrain],epochs=200,batch_size=64,validation_data=(Xval,[Tval,Pval,vfval,cval]))
 # #print(model.predict(Xtest) - Ytest)
 print("model testing")
 print(model.evaluate(Xtest,[Ttest,Ptest,vftest,ctest]))

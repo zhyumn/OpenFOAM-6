@@ -3,6 +3,8 @@ import tensorflow as tf
 from tensorflow.keras import Sequential,Input,Model
 from tensorflow.keras.layers import Dense
 from sklearn.model_selection import train_test_split
+from tensorflow.keras.callbacks import ModelCheckpoint
+import tensorflow.keras.backend as K
 
 
 data1 = np.loadtxt("data_gen_IC_shock_N2.txt",delimiter='\t',dtype=float)
@@ -11,8 +13,8 @@ data3 = np.loadtxt("data_gen_IC_droplet_new.txt",delimiter='\t',dtype=float)
 
 data = np.vstack((data1,data2,data3))
 
-train,test = train_test_split(data, test_size=0.1, random_state = 1)
-train,val = train_test_split(train, test_size=0.2, random_state = 1)
+train,test = train_test_split(data, test_size=0.1, random_state = 1123123)
+train,val = train_test_split(train, test_size=0.2, random_state = 1312312)
 
 # print(train,"\n")
 # print(val,'\n')
@@ -24,19 +26,19 @@ Xtrain = np.vstack((train[:,4],train[:,5],train[:,2],train[:,3])).T
 print(Xtrain)
 print(Xtrain.shape)
 utrain = train[:,0]
-rhotrain = train[:,1]
+rhotrain = 1.0/train[:,1]
 vftrain = train[:,6]
 ctrain = train[:,7]
 
 Xval = np.vstack((val[:,4],val[:,5],val[:,2],val[:,3])).T
 uval = val[:,0]
-rhoval = val[:,1]
+rhoval = 1.0/val[:,1]
 vfval = val[:,6]
 cval = val[:,7]
 
 Xtest = np.vstack((test[:,4],test[:,5],test[:,2],test[:,3])).T
 utest = test[:,0]
-rhotest = test[:,1]
+rhotest = 1.0/test[:,1]
 vftest = test[:,6]
 ctest = test[:,7]
 
@@ -45,11 +47,11 @@ ctest = test[:,7]
 # print(Xtest,'\n')
 
 num1 = 64
-num2 = 64
+num2 = 96
 num3 = 32
 
 input_shape = (4,) 
-initializer = tf.keras.initializers.RandomNormal(stddev=0.1)
+initializer = tf.keras.initializers.RandomNormal(stddev=0.1,seed = 1032342)
 normalizer = tf.keras.layers.Normalization(axis = -1)
 normalizer.adapt(Xtrain)
 
@@ -80,13 +82,13 @@ vfx1 = Dense(num1,activation='relu',name='vf1',kernel_initializer=initializer,bi
 vfx2 = Dense(num2,activation='relu',name='vf2',kernel_initializer=initializer,bias_initializer=tf.keras.initializers.Zeros())(vfx1)
 vfx3 = Dense(num3,activation='relu',name='vf3',kernel_initializer=initializer,bias_initializer=tf.keras.initializers.Zeros())(vfx2)
 vfx4 = Dense(num3,activation='relu',name='vf4',kernel_initializer=initializer,bias_initializer=tf.keras.initializers.Zeros())(vfx3)
-vfx5 = Dense(num3,activation='relu',name='vf5',kernel_initializer=initializer,bias_initializer=tf.keras.initializers.Zeros())(vfx3)
+# vfx5 = Dense(num3,activation='relu',name='vf5',kernel_initializer=initializer,bias_initializer=tf.keras.initializers.Zeros())(vfx3)
 
 cx1 = Dense(num1,activation='relu',name='c1',kernel_initializer=initializer,bias_initializer=tf.keras.initializers.Zeros())(l1)
 cx2 = Dense(num2,activation='relu',name='c2',kernel_initializer=initializer,bias_initializer=tf.keras.initializers.Zeros())(cx1)
 cx3 = Dense(num3,activation='relu',name='c3',kernel_initializer=initializer,bias_initializer=tf.keras.initializers.Zeros())(cx2)
 cx4 = Dense(num3,activation='relu',name='c4',kernel_initializer=initializer,bias_initializer=tf.keras.initializers.Zeros())(cx3)
-cx5 = Dense(num3,activation='relu',name='c5',kernel_initializer=initializer,bias_initializer=tf.keras.initializers.Zeros())(cx4)
+# cx5 = Dense(num3,activation='relu',name='c5',kernel_initializer=initializer,bias_initializer=tf.keras.initializers.Zeros())(cx4)
 
 
 # x4 = Dense(num1,activation='relu',name='4',kernel_initializer=initializer)(x)
@@ -103,11 +105,32 @@ cx5 = Dense(num3,activation='relu',name='c5',kernel_initializer=initializer,bias
 
 output1 = Dense(1,activation='relu',name='u',kernel_initializer=initializer)(Tx6)
 output2 = Dense(1,activation='relu',name='rho',kernel_initializer=initializer)(px6)
-output3 = Dense(1,activation='relu',name='phi',kernel_initializer=initializer)(vfx5)
-output4 = Dense(1,activation='relu',name='c',kernel_initializer=initializer)(cx5)
+output3 = Dense(1,activation='relu',name='phi',kernel_initializer=initializer)(vfx4)
+output4 = Dense(1,activation='relu',name='c',kernel_initializer=initializer)(cx4)
 
-model = Model(inputs=inputs, outputs=[output1,output2,output3,output4])
-model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=1e-4), loss = {'u':'mae','rho':'mae','phi':'mae','c':'mae'} ) #loss=tf.keras.losses.BinaryCrossentropy(from_logits=False), metrics=[tf.keras.metrics.MeanAbsoluteError(),])
+## custom loss
+UVX_model = tf.keras.models.load_model("ANN_model")
+
+def custom_loss(y_true,y_pred,input_tensor):
+    a = K.mean(UVX_model.predict(y_pred) - input_tensor)
+    b = K.mean(y_true - y_pred)
+    return a+b
+
+UVX_model = tf.keras.models.load_model("ANN_model")
+
+def custom_metric(layer,model):
+    def metric(y_true,y_pred):
+        y = model(y_pred)
+        y = K.square(y-layer)
+        y = K.mean(y)
+        return y
+    return metric
+
+
+
+
+model = Model(inputs=inputs, outputs=[output1,output2]) #,output3,output4])
+model.compile(optimizer=tf.keras.optimizers.Adam(), loss = {'u':'mae','rho':'mae'}) #,'phi':'mae','c':'mae'})#,metrics=[custom_metric(inputs,UVX_model)] ) #loss=tf.keras.losses.BinaryCrossentropy(from_logits=False), metrics=[tf.keras.metrics.MeanAbsoluteError(),])
 
 model.summary()
 
@@ -120,12 +143,20 @@ model.summary()
 # Xgas_t = Ytest[:,2:4]
 # phi_t = Ytest[:,4]
 
-model.fit(Xtrain,[utrain,rhotrain,vftrain,ctrain],epochs = 200, validation_data=(Xval,[uval,rhoval,vfval,cval]))
+checkpoint = ModelCheckpoint(
+    filepath='TPX',
+    monitor='loss',
+    verbose=1,
+    save_best_only=True
+)
+
+# model.fit(Xtrain,[utrain,rhotrain,vftrain,ctrain],epochs = 200, batch_size = 64, shuffle = True, callbacks=[checkpoint], validation_data=(Xval,[uval,rhoval,vfval,cval]))
+model.fit(Xtrain,[utrain,rhotrain],epochs = 200, batch_size = 64, shuffle = True, callbacks=[checkpoint], validation_data=(Xval,[uval,rhoval]))
 
 # #print(model.predict(Xtest) - Ytest)
 print("model testing")
-print(model.evaluate(Xtest,[utest,rhotest,vftest,ctest]))
-model.save("TPX")
+print(model.evaluate(Xtest,[utest,rhotest]))
+# model.save("TPX")
 
 # #test reconstruct model
 # #recons = tf.keras.models.load_model("my_model")
