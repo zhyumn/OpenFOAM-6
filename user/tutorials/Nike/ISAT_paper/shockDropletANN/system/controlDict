@@ -1,0 +1,90 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  6
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      controlDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+libs            ("libISATVLERhoThermo_onnxRun.so"); //libISATVLERhoThermo_ANN.so" );//"libboundaryConditions.so");//libISATVLERhoThermo_NoRxn.so
+
+application     rhoCentralRealgasFoam;
+
+startFrom       latestTime;
+
+startTime       0;
+
+stopAt          endTime; //writeNow; //endTime;
+
+endTime         2e-6;
+
+deltaT          1e-9;
+
+writeControl    adjustableRunTime;
+
+writeInterval   1e-7;
+
+purgeWrite      0;
+
+writeFormat     ascii;//binary;
+
+writePrecision  12;//6;
+
+writeCompression off;
+
+timeFormat      general;
+
+timePrecision   6;
+
+adjustTimeStep  yes;
+
+maxCo           0.1;
+
+runTimeModifiable yes;
+/*
+functions
+{
+
+    volFieldValue1
+    {
+        type            volFieldValue;
+        libs            ("libfieldFunctionObjects.so");
+
+        log             false;//true;
+        writeControl    timeStep;//writeTime;//
+        writeInterval   1;
+        writeFields     no;//false;
+
+        regionType      all;
+        //name            c0;
+        operation       average;
+
+        //weightField     alpha1;
+
+        fields
+        (
+            p
+            T
+    //k
+        );
+    }
+   
+}
+
+functions
+{
+    #includeFunc internalProbes
+}
+*/
+
+
+// ************************************************************************* //

@@ -1,0 +1,95 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  6
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volScalarField;
+    location    "0.00015";
+    object      O2;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+dimensions      [0 0 0 0 0 0 0];
+
+internalField   uniform 0.001 ;//#codeStream
+// {
+    
+//         codeInclude
+//         #{
+//             #include "fvCFD.H"
+//         #};
+//         codeOptions
+//         #{
+//             -I$(LIB_SRC)/finiteVolume/lnInclude \
+//             -I$(LIB_SRC)/meshTools/lnInclude
+//         #};  
+//         codeLibs
+//         #{
+//             -lmeshTools \
+//             -lfiniteVolume
+//         #};
+//         code
+//         #{
+//             const IOdictionary & d = static_cast<const IOdictionary&>(dict);
+//             const fvMesh& mesh = refCast<const fvMesh>(d.db());
+//             const scalar PI = 3.1415926535897932384626;
+            
+//             double dx=2.7947042792608553e-03;
+//             double thickness =5.0*dx/29.16;//5.901;
+//             double Ntop=0.001;//0.9499;
+//             double Nbottom=0.999;//0.0001;
+
+//             double WMC=86.1754;
+//             double WMN=28.0134;
+
+//             scalarField N2(mesh.nCells());
+//             forAll(N2, i)
+//             {
+//                 const scalar z = mesh.C()[i][2];
+//                 double a = 0.5*(1+erf(sqrt(PI)*z/thickness));
+//                 N2[i] =0.5*(Ntop+Nbottom)+0.5*(Ntop-Nbottom)*erf(sqrt(PI)*z/thickness);
+//                 double X=(Ntop*a+Nbottom*(1-a));
+//                 //N2[i] = WMN*X/(WMN*X+WMC*(1-X));
+                
+//             }
+//             N2.writeEntry( "", os);
+//         #};
+// };
+boundaryField
+{
+    top
+    {
+        type            zeroGradient;
+        //       type            waveTransmissiveDF;
+    }
+    bottom
+    {
+        type            zeroGradient;
+        //        type            waveTransmissiveDF;
+    }
+    front
+    {
+        type             empty;
+    }
+    back
+    {
+        type             empty;
+    }
+    left
+    {
+        type            cyclic;
+    }
+    right
+    {
+        type            cyclic;
+    }
+}
+
+
+// ************************************************************************* //

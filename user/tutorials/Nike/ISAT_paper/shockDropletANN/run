@@ -1,0 +1,7 @@
+foamListTimes -rm 
+cp -r 0.orig 0
+rhoCentralRealgasUVFoam &>out
+rm -r VTK
+foamToVTK
+rm -r /g/m-y-crfel/srini237/shockDroplet/ANN/new/VTK
+cp -r VTK /g/m-y-crfel/srini237/shockDroplet/ANN/new

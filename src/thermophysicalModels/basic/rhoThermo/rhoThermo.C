@@ -24,6 +24,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "rhoThermo.H"
+#include "fixedGradientFvPatchFields.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -33,6 +34,18 @@ namespace Foam
     defineRunTimeSelectionTable(rhoThermo, fvMesh);
 }
 
+void Foam::rhoThermo::rhoBoundaryCorrection(volScalarField& rho)
+{
+    volScalarField::Boundary& rhoBf = rho.boundaryFieldRef();
+    forAll(rhoBf, patchi){
+        if(rhoBf[patchi].type()!="empty")
+        {
+        refCast<fixedGradientFvPatchScalarField>(rhoBf[patchi]).gradient()
+                = rhoBf[patchi].fvPatchField::snGrad();
+        }
+    }
+
+}
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
@@ -43,10 +56,10 @@ Foam::rhoThermo::rhoThermo(const fvMesh& mesh, const word& phaseName)
     (
         IOobject
         (
-            phasePropertyName("thermo:rho"),
+            phasePropertyName("rho"),
             mesh.time().timeName(),
             mesh,
-            IOobject::NO_READ,
+            IOobject::READ_IF_PRESENT,
             IOobject::NO_WRITE
         ),
         mesh,
@@ -80,7 +93,14 @@ Foam::rhoThermo::rhoThermo(const fvMesh& mesh, const word& phaseName)
         mesh,
         dimensionSet(1, -1, -1, 0, 0)
     )
-{}
+{
+    Info<<"inside rho thermo 1 \n";
+
+    Info<<rho_.boundaryField()<<endl;
+    // rhoBoundaryCorrection(rho_);
+    // Info<<rho_.boundaryField()<<endl;
+
+}
 
 
 Foam::rhoThermo::rhoThermo
@@ -98,7 +118,7 @@ Foam::rhoThermo::rhoThermo
             phasePropertyName("thermo:rho"),
             mesh.time().timeName(),
             mesh,
-            IOobject::NO_READ,
+            IOobject::READ_IF_PRESENT,
             IOobject::NO_WRITE
         ),
         mesh,
@@ -132,7 +152,9 @@ Foam::rhoThermo::rhoThermo
         mesh,
         dimensionSet(1, -1, -1, 0, 0)
     )
-{}
+{
+    Info<<"inside rho thermo 2 \n";
+}
 
 
 // * * * * * * * * * * * * * * * * Selectors * * * * * * * * * * * * * * * * //

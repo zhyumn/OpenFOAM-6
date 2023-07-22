@@ -428,6 +428,11 @@ namespace Foam
         inline scalar c_noVLE(scalar p, scalar T, solution &sol) const;
         inline scalar c_noVLE(scalar p, scalar T) const;
 
+        // PF functions
+        inline tuple<scalar,scalar> rho_lv(scalar p, scalar T) const;
+        inline void Y_lv(scalar p, scalar T, scalarList &Y_liq, scalarList &Y_gas) const;
+        inline tuple<scalar,scalar> h_lv(scalar p, scalar T) const;
+
         inline bool TPn_flash_Matheis_test(
             scalar p,
             scalar T,
@@ -486,6 +491,7 @@ namespace Foam
 #include "VLE_StandardInterface.H"
 #include "VLE_Opt.H"
 #include "VLE_NIO.H"
+#include "VLE_PF.H"
 
 #ifdef NoRepository
 #include "VLE.C"
