@@ -372,9 +372,15 @@ CO
 RP2
 {
     specie
-    {
-        //posf7688
+    {   
+
+        //posf7688 
         molWeight       167.9;//https://web.stanford.edu/group/haiwanglab/HyChem/approach/Report_RP2_Fuel_Thermochemical_Properties_v2.pdf
+        //posf5433 
+        //molWeight        177.0;//https://web.stanford.edu/group/haiwanglab/HyChem/approach/Report_RP2_Fuel_Thermochemical_Properties_v2.pdf
+        //posf11778 
+        //molWeight        169.7;//https://web.stanford.edu/group/haiwanglab/HyChem/approach/Report_RP2_Fuel_Thermochemical_Properties_v2.pdf
+
         //molWeight       164.6;//Huber M L, Lemmon E W, Ott L S, et al. Preliminary surrogate mixture models for the thermophysical properties of rocket propellants RP-1 and RP-2[J]. Energy & Fuels, 2009, 23(6): 3083-3088.
     }
     equationOfState
@@ -392,6 +398,7 @@ RP2
         //7688
         Tlow            298;
         Tcommon         1000;
+        //Tcommon         1590;
         Thigh           3000;
         //posf7688
         lowCpCoeffs     (-0.35378470E+01 0.11644043E+00    0.18290234E-05  -0.76465852E-07   0.37018073E-10  -0.31231943E+05  0.47469734E+02);
@@ -399,6 +406,12 @@ RP2
         //posf5433
         //lowCpCoeffs     (-0.31802526E+01 0.12693286E+00    -0.12924561E-04  -0.69135012E-07   0.37410103E-10   -0.38786742E+05  0.47556671E+02);
         //highCpCoeffs    (0.23592041E+02  0.77888370E-01    -0.24078539E-04  0.12665510E-08    0.43475073E-12   -0.47524078E+05  -0.96981651E+02);
+        //posf11778
+        //lowCpCoeffs     (-0.68600278E+01 0.14183873E+00     -0.64431195E-04  -0.54145666E-08 0.99425390E-11   -0.32938332E+05 0.61092018E+02);
+        //highCpCoeffs    (0.20270151E+02  0.75435720E-01     -0.20840080E-04  -0.55227833E-09 0.76199160E-12   -0.40776820E+05 -0.81034767E+02);
+
+        //lowCpCoeffs     (-2.38265893E+00  1.45739929E-01 -9.14517778E-05  2.85289455E-08 -3.49138416E-12 -4.00920589E+04  4.90709953E+01);
+        //highCpCoeffs    ( 3.85078111E+01  5.63574461E-02 -1.91505499E-05  2.96050890E-09 -1.71263883E-13 -5.48939801E+04 -1.72672880E+02);
     }
     transport
     {        
