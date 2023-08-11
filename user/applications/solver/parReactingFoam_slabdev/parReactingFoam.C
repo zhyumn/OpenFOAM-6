@@ -50,13 +50,24 @@ int main(int argc, char *argv[])
 #include "setRootCaseLists.H"
 #include "createTime.H"
 
-    
     if (SUPstream::parRun())
     {
-        size_t memorySize = runTime.controlDict().lookupOrDefault<label>("memorySize", 60000*5000);
+        size_t memorySize_G = runTime.controlDict().subDict("memorySize").lookupOrDefault<label>("G", 0);
+        size_t memorySize_M = runTime.controlDict().subDict("memorySize").lookupOrDefault<label>("M", 300);
+        size_t memorySize_K = runTime.controlDict().subDict("memorySize").lookupOrDefault<label>("K", 0);
+        size_t memorySize_B = runTime.controlDict().subDict("memorySize").lookupOrDefault<label>("B", 0);
+/*         size_t memorySize = memorySize_G;
+        memorySize *= 1024;
+        memorySize += memorySize_M;
+        memorySize *= 1024;
+        memorySize += memorySize_K;
+        memorySize *= 1024;
+        memorySize += memorySize_B; */
+        size_t memorySize = memorySize_G * (1<<30) + memorySize_M * (1<<20) +  memorySize_K * (1<<10) + memorySize_B;
+        //size_t memorySize = runTime.controlDict().lookupOrDefault<label>("memorySize", 60000*5000);
         size_t maxMemBlock = runTime.controlDict().lookupOrDefault<label>("maxMemBlock", 60000);
 
-        //FatalErrorInFunction << "memorySize = " << memorySize << ",maxMemBlock = "<< maxMemBlock << exit(FatalError);
+        //FatalErrorInFunction << "memorySize = " << memorySize << ",maxMemBlock = " << maxMemBlock << exit(FatalError);
 
         SUPstream::node_init();
         //Foam::Slab slab(SUPstream::node_manager, 1000, 100000);
@@ -66,7 +77,7 @@ int main(int argc, char *argv[])
         pslab = new Foam::Slab(SUPstream::node_manager, maxMemBlock, memorySize);
     }
     //FatalErrorInFunction  << exit(FatalError);
-    
+
     /*
     {
         if (SUPstream::node_manager.rank == 0)

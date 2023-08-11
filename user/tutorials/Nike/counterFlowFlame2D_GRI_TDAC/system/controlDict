@@ -50,7 +50,15 @@ adjustTimeStep  yes;
 
 maxCo           0.4;
 
-memorySize   60000;//300000000;//60000;//300000000;
+//memorySize   60000;//300000000;//60000;//300000000;
+
+memorySize
+{
+  G 0;
+  M 300;
+  K 0;
+  B 0;
+}
 
 maxMemBlock   60000;
 
