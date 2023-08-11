@@ -49,14 +49,25 @@ int main(int argc, char *argv[])
 
 #include "setRootCaseLists.H"
 #include "createTime.H"
+
+    
     if (SUPstream::parRun())
     {
+        size_t memorySize = runTime.controlDict().lookupOrDefault<label>("memorySize", 60000*5000);
+        size_t maxMemBlock = runTime.controlDict().lookupOrDefault<label>("maxMemBlock", 60000);
+
+        //FatalErrorInFunction << "memorySize = " << memorySize << ",maxMemBlock = "<< maxMemBlock << exit(FatalError);
+
         SUPstream::node_init();
         //Foam::Slab slab(SUPstream::node_manager, 1000, 100000);
-        size_t memsize =60000;
-        memsize *=5000;
-        pslab = new Foam::Slab(SUPstream::node_manager, 60000, memsize);
-    }/*
+        //size_t memsize =60000;
+        //memsize *=5000;
+        //pslab = new Foam::Slab(SUPstream::node_manager, 60000, memsize);
+        pslab = new Foam::Slab(SUPstream::node_manager, maxMemBlock, memorySize);
+    }
+    //FatalErrorInFunction  << exit(FatalError);
+    
+    /*
     {
         if (SUPstream::node_manager.rank == 0)
         {

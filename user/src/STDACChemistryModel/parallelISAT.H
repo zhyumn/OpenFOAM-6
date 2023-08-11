@@ -138,6 +138,11 @@ namespace Foam
             {
                 size_++;
                 auto ret = pslab->alloc(sizeof(Type));
+                if (ret == sptr_NULL)
+                {
+                    FatalErrorInFunction << "Run out of memory\n"
+                                         << exit(FatalError);
+                }
                 (*SharedPointer<Type>(ret)).init(size_in);
                 return SharedPointer<Type>(ret);
             }
@@ -145,6 +150,11 @@ namespace Foam
             {
                 size_++;
                 auto ret = pslab->alloc(sizeof(Type));
+                if (ret == sptr_NULL)
+                {
+                    FatalErrorInFunction << "Run out of memory\n"
+                                         << exit(FatalError);
+                }
                 (*SharedPointer<Type>(ret)).init(x);
                 return SharedPointer<Type>(ret);
             }

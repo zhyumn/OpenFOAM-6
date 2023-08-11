@@ -205,7 +205,8 @@ namespace Foam
             if (UNLIKELY(this->partial.isNULL()))
             {
                 //assert(is_valid());
-                return perror("get_page failed"), this->partial = sptr_NULL;
+                //return perror("get_page failed"), this->partial = sptr_NULL;
+                return sptr_NULL;
             }
 
             SharedPointer_SLAB prev;

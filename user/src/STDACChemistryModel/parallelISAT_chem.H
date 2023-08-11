@@ -63,6 +63,11 @@ namespace Foam
             {
                 size_ = size_in;
                 v_ = pslab->alloc(sizeof(Type) * size_);
+                if (v_.offset == sptr_NULL)
+                {
+                    FatalErrorInFunction << "Run out of memory\n"
+                                         << exit(FatalError);
+                }
             }
             void init(const SList<Type> &x)
             {
@@ -156,6 +161,11 @@ namespace Foam
                 size_ = size_in;
                 total_size_ = size_in * size_in;
                 v_ = pslab->alloc(sizeof(Type) * total_size_);
+                if (v_.offset == sptr_NULL)
+                {
+                    FatalErrorInFunction << "Run out of memory\n"
+                                         << exit(FatalError);
+                }
             }
             void init(const SSquareMatrix<Type> &x)
             {
