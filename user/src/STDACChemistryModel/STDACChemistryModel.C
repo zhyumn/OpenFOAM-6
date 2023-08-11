@@ -1252,8 +1252,8 @@ Foam::scalar Foam::STDACChemistryModel<ReactionThermo, ThermoType>::solve(
                         }
                         else
                             break;
-                        l_sender.unlock();
                     }
+                    l_sender.unlock();
                 }
             }
             //int xx = 0;
