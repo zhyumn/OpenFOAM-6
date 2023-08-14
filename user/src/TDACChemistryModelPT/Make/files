@@ -1,0 +1,12 @@
+
+BasicChemistryModelsPT.C
+
+makeChemistrySolversPT.C
+
+
+reduction/makeChemistryReductionMethodsPT.C
+tabulation/makeChemistryTabulationMethodsPT.C
+
+
+
+LIB = $(FOAM_USER_LIBBIN)/libchemistryModelPT
