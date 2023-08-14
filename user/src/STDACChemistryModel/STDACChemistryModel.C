@@ -1024,8 +1024,10 @@ Foam::scalar Foam::STDACChemistryModel<ReactionThermo, ThermoType>::solve(
     scalarField phiq(this->nEqns() + nAdditionalEqn);
 
     scalarField Rphiq(this->nEqns() + nAdditionalEqn);
-    SUPstream::Sync();
     scalar solveCpuTime_ = 0;
+    scalar starttime = MPI_Wtime();
+    SUPstream::Sync();
+
     clockTime_.timeIncrement();
     if (tabulation_->active())
     {
@@ -1365,7 +1367,7 @@ Foam::scalar Foam::STDACChemistryModel<ReactionThermo, ThermoType>::solve(
                     spare_cpu++;
                 }
                 //std::cout << SUPstream::node_manager.rank << "!!!!!!!!!!!!!!!!!!!nfinished_block= "<< nfinished_block << std::endl;
-                if (spare_cpu == n_cpu && nfinished_block == nloop)
+                if (spare_cpu.load() == n_cpu && nfinished_block == nloop)
                 {
                     break;
                 }
@@ -1373,7 +1375,12 @@ Foam::scalar Foam::STDACChemistryModel<ReactionThermo, ThermoType>::solve(
                 //l_sender.unlock();
             }
             //std::cout << SUPstream::node_manager.rank << "!!!!!!!!!!!!!!!!!!!1 " << std::endl;
-            SUPstream::Sync();
+            //SUPstream::Sync.sync();
+            //clockTime_.timeIncrement();
+            //solveCpuTime_ += clockTime_.timeIncrement();
+            //SUPstream::Sync.sync();
+            tabulation_->sync();
+            //solveCpuTime_ += clockTime_.timeIncrement();
         }
         //l_receiver.lock();
 
@@ -1641,7 +1648,20 @@ Foam::scalar Foam::STDACChemistryModel<ReactionThermo, ThermoType>::solve(
             }
         }
     }
+    
+    //if (loadBalance_)
+    //    tabulation_->sync();
     solveCpuTime_ += clockTime_.timeIncrement();
+    tabulation_->sync();
+    scalar tmp = clockTime_.timeIncrement();
+    scalar endtime = MPI_Wtime();
+    if (loadBalance_)
+        solveCpuTime_ = endtime - starttime;
+        //solveCpuTime_ += tmp;
+    //SUPstream::Sync();
+
+    //
+    //solveCpuTime_ = 0 ;
 
     if (mechRed_->log() || tabulation_->log())
     {
@@ -1661,6 +1681,9 @@ Foam::scalar Foam::STDACChemistryModel<ReactionThermo, ThermoType>::solve(
     {
         // Every time-step, look if the tabulation should be updated
         tabulation_->update();
+
+        //solveCpuTime_ += clockTime_.timeIncrement();
+        //SUPstream::Sync();
 
         // Write the performance of the tabulation
         tabulation_->writePerformance();

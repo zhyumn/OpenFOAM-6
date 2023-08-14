@@ -169,6 +169,8 @@ public:
         // The underlying structure of the tabulation is updated/cleaned
         // to increase the performance of the retrieve
         virtual bool update() = 0;
+
+        virtual bool sync(){return true;};
 };
 
 

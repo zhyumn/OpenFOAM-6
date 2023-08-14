@@ -537,6 +537,13 @@ namespace Foam
                 this->sync_.sync();
                 return ret;
             }
+
+            bool sync()
+            {
+                bool ret = false;
+                this->sync_.sync();
+                return ret;
+            }
             label size() { return this->size_leaf(); };
             void writePerformance()
             {
