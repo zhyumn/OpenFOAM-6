@@ -751,7 +751,6 @@ Foam::scalar Foam::TDACChemistryModelPT<ReactionThermo, ThermoType>::solve
                 (c[i] - c0[i])*this->specieThermo_[i].W()/deltaT[celli];
         }
     }
-    SUPstream::Sync();
     solveCpuTime_ += clockTime_.timeIncrement();
 
     if (mechRed_->log() || tabulation_->log())
