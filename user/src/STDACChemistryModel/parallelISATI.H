@@ -24,7 +24,8 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "parallelISAT.H"
-
+#define LIKELY(exp) __builtin_expect(exp, 1)
+#define UNLIKELY(exp) __builtin_expect(exp, 0)
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
 //const dataType Foam::ISAT::staticData();
@@ -297,7 +298,7 @@ Foam::label Foam::parallelISAT<T, T2>::add(
     {
         SharedPointer<Node> pnode = node_manager.New(x.size());
 
-        if (pnode.isNULL())
+        if (UNLIKELY(pnode.isNULL()))
         {
             growthOrAddFlag = 0;
 
@@ -306,7 +307,7 @@ Foam::label Foam::parallelISAT<T, T2>::add(
         }
         SharedPointer<Leaf> pleaf = leaf_manager.New(x.size());
 
-        if (pleaf.isNULL())
+        if (UNLIKELY(pleaf.isNULL()))
         {
             growthOrAddFlag = 0;
             node_manager.Delete(pnode);
