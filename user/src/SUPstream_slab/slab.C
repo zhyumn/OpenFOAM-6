@@ -257,6 +257,7 @@ namespace Foam
 
     void slab_chain::free(SHAREDPOINTER addr, MemPool &mempool)
     {
+        //std::cout<< "!!!!!!!!!!!1"<<std::endl; 
         //assert(is_valid());
         assert(addr != sptr_NULL);
 
@@ -265,33 +266,38 @@ namespace Foam
         register const int slot = ((char *)addr - (char *)slab.offset -
                                    offsetof(struct slab_header, data)) /
                                   this->itemsize;
-
+        //std::cout<< "!!!!!!!!!!!2"<<std::endl; 
         if (UNLIKELY(slab->slots == SLOTS_ALL_ZERO))
         {
+            //std::cout<< "!!!!!!!!!!!3-1"<<std::endl; 
             /* target slab is full, change state to partial */
             slab->slots = SLOTS_FIRST << slot;
-
+            //std::cout<< "!!!!!!!!!!!4-1"<<std::endl; 
             if (LIKELY(slab != this->full))
             {
+                //std::cout<< "!!!!!!!!!!!5-1-1"<<std::endl; 
                 if (LIKELY((slab->prev->next = slab->next) != sptr_NULL))
                     slab->next->prev = slab->prev;
-
+                //std::cout<< "!!!!!!!!!!!5.1-1-1"<<std::endl; 
                 slab->prev = sptr_NULL;
             }
             else if (LIKELY((this->full = this->full->next) != sptr_NULL))
             {
+                //std::cout<< "!!!!!!!!!!!5-1-2"<<std::endl; 
                 this->full->prev = sptr_NULL;
             }
-
+            //std::cout<< "!!!!!!!!!!!6-1"<<std::endl; 
+            
             slab->next = this->partial;
 
             if (LIKELY(this->partial != sptr_NULL))
                 this->partial->prev = slab;
-
+            //std::cout<< "!!!!!!!!!!!7-1"<<std::endl; 
             this->partial = slab;
         }
         else if (UNLIKELY(ONE_USED_SLOT(slab->slots, this->empty_slotmask)))
         {
+            //std::cout<< "!!!!!!!!!!!3-2"<<std::endl; 
             /* target slab is partial and has only one filled slot */
             if (UNLIKELY(slab->refcount == 1 || (slab->refcount == 0 &&
                                                  slab->page->refcount == 1)))
@@ -335,6 +341,7 @@ namespace Foam
             }
             else
             {
+                
                 slab->slots = this->empty_slotmask;
 
                 if (LIKELY(slab != this->partial))
@@ -361,6 +368,7 @@ namespace Foam
         }
         else
         {
+            //std::cout<< "!!!!!!!!!!!3-3"<<std::endl; 
             /* target slab is partial, no need to change state */
             slab->slots |= SLOTS_FIRST << slot;
         }

@@ -278,7 +278,7 @@ namespace Foam
                 scalar EOA;
 
             public:
-                void set(const scalarField &x, const scalarField &y, const scalar rhoi, const scalar dt);
+                void set(const scalarField &x, const scalarField &y, SUPstream::mpi_mutex &mem_mutex, const scalar rhoi, const scalar dt);
 
                 void init(const leafData &x)
                 {
@@ -303,7 +303,7 @@ namespace Foam
                     gradientType &A_out,
                     scalarSquareMatrix &A,
                     const scalar rhoi,
-                    const scalar dt);
+                    const scalar dt, SUPstream::mpi_mutex &mem_mutex);
 
                 void qrDecompose(
                     const label nCols,
@@ -326,7 +326,7 @@ namespace Foam
                     const scalarField &phiq,
                     const scalarField &Rphiq);
 
-                bool grow(const scalarField &x);
+                bool grow(const scalarField &x, SUPstream::mpi_mutex &mem_mutex);
                 static outputType func(const inputType &x);
                 static gradientType gradFunc(const inputType &x);
                 void retrieve(const scalarField &x, scalarField &y);
@@ -352,7 +352,7 @@ namespace Foam
                 }
                 bool inEOA(const scalarField &x);
 
-                void computeLT(scalarSquareMatrix &A);
+                void computeLT(scalarSquareMatrix &A, SUPstream::mpi_mutex &mem_mutex);
                 label simplifiedToCompleteIndex(const label i);
                 inline const scalar &timeTag() { return timeTag_; }
                 inline const label &nGrowth() { return nGrowth_; }
@@ -370,11 +370,20 @@ namespace Foam
             public:
                 void set() {}
 
+                void set(leafData &x, leafData &y, SUPstream::mpi_mutex &mem_mutex)
+                {
+                    calcV(x, y, v_, mem_mutex);
+                    a_ = calcA(x, y);
+                }
                 void set(leafData &x, leafData &y)
                 {
                     calcV(x, y, v_);
                     a_ = calcA(x, y);
                 }
+                void calcV(
+                    leafData &elementLeft,
+                    leafData &elementRight,
+                    inputType &v, SUPstream::mpi_mutex &mem_mutex);
                 void calcV(
                     leafData &elementLeft,
                     leafData &elementRight,
@@ -532,6 +541,7 @@ namespace Foam
                         this->clear();
                         ret = true;
                     }
+                    //Pout << "\n???here!"<< ","<< "\n"<< endl;
                     parallelISAT<ISAT_chem<CompType, ThermoType>, emptyClass>::update();
                 }
                 this->sync_.sync();

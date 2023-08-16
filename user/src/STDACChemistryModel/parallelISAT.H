@@ -118,6 +118,8 @@ namespace Foam
             //- Parent node  Only for write
             SharedPointer<Node> parent_;
 
+            SUPstream::ref_mutex mutex;
+
             //- Number of equations in addition to the species eqs.
         };
 
@@ -220,6 +222,8 @@ namespace Foam
         label &totalGrowth_;
 
         SUPstream::mpi_mutex write_lock;
+        SUPstream::mpi_mutex mem_lock;
+
         Mem_manager<Leaf> leaf_manager;
         Mem_manager<Node> node_manager;
 
@@ -264,6 +268,7 @@ namespace Foam
         SharedPointer<Leaf> binaryTreeSearch(const inputType &value, SharedPointer<Node> node_index);
         SharedPointer<Leaf> binaryTreeSearch(const scalarField &value);
         SharedPointer<Leaf> binaryTreeSearch(const scalarField &value, SharedPointer<Node> node_index);
+        SharedPointer<Leaf> binaryTreeSearch(const scalarField &value, SharedPointer<Node> node_index, SharedPointer<Node> &node_ret, int &side);
         void writeDot(string name);
         void writeDot(label nodeindex, std::ofstream &fout);
         scalar leafvalue(SharedPointer<Leaf> index)
@@ -281,7 +286,7 @@ namespace Foam
 
         // Edit
         bool grow(const scalarField &x, SharedPointer<Leaf> &pleaf);
-        bool grow(const inputType &value);
+        //bool grow(const inputType &value);
 
         template <typename... Args>
         label add(const scalarField &x, const scalarField &y, Args... args);

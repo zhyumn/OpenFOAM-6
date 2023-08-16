@@ -119,7 +119,7 @@ namespace Foam
                 : sync_(0), sync_r_(0), manager(manager_in) {}
             void sync()
             {
-                //MPI_Reduce(&sync_, &sync_r_, 1, MPI_INT, MPI_MAX, 0, manager.comm);
+                MPI_Reduce(&sync_, &sync_r_, 1, MPI_INT, MPI_MAX, 0, manager.comm);
                 //MPI_Barrier(MPI_COMM_WORLD);
                 MPI_Barrier(manager.comm);
             }
@@ -127,6 +127,31 @@ namespace Foam
             {
                 sync();
             }
+        };
+        struct padded_atomic_flag
+        {
+            std::atomic_flag var;
+            char m_pad[CacheLineSize - sizeof(std::atomic_flag)];
+        };
+        class ref_mutex
+        {
+            padded_atomic_flag flag;
+            //std::atomic_flag flag;
+
+        public:
+            ref_mutex()
+            {
+            }
+            void lock()
+            {
+                while (flag.var.test_and_set(std::memory_order_acquire))
+                    ;
+            }
+            bool try_lock()
+            {
+                return !flag.var.test_and_set(std::memory_order_acquire);
+            }
+            void unlock() { flag.var.clear(std::memory_order_release); }
         };
         class my_mutex
         {
@@ -256,11 +281,7 @@ namespace Foam
             Datatype *ptr() { return table; }
             ~shared_data2() { MPI_Win_free(&wintable); }
         };
-        struct padded_atomic_flag
-        {
-            std::atomic_flag var;
-            char m_pad[CacheLineSize - sizeof(std::atomic_flag)];
-        };
+
         class mpi_mutex
         {
             shared_data<padded_atomic_flag> flag_shared;

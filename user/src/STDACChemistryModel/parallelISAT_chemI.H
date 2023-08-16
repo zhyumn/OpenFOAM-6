@@ -181,14 +181,14 @@ void Foam::chemistryTabulationMethodSs::ISAT_chem<CompType, ThermoType>::leafDat
 */
 
 template <class CompType, class ThermoType>
-void Foam::chemistryTabulationMethodSs::ISAT_chem<CompType, ThermoType>::leafData::set(const scalarField &x, const scalarField &y, const scalar rhoi, const scalar dt)
+void Foam::chemistryTabulationMethodSs::ISAT_chem<CompType, ThermoType>::leafData::set(const scalarField &x, const scalarField &y, SUPstream::mpi_mutex& mem_mutex, const scalar rhoi, const scalar dt)
 {
     scalarSquareMatrix A(0); //TODO
     phi_ = x;
     Rphi_ = y;
 
-    computeA(x, y, A_, A, rhoi, dt);
-    computeLT(A);
+    computeA(x, y, A_, A, rhoi, dt, mem_mutex);
+    computeLT(A, mem_mutex);
     timeTag_ = pISAT->chemistry_.timeSteps();
     nGrowth_ = 0;
 }
@@ -207,7 +207,7 @@ void Foam::chemistryTabulationMethodSs::ISAT_chem<CompType, ThermoType>::leafDat
     gradientType &A_out,
     scalarSquareMatrix &A,
     const scalar rhoi,
-    const scalar dt)
+    const scalar dt, SUPstream::mpi_mutex& mem_mutex)
 {
 
     bool mechRedActive = pISAT->chemistry_.mechRed()->active();
@@ -218,7 +218,9 @@ void Foam::chemistryTabulationMethodSs::ISAT_chem<CompType, ThermoType>::leafDat
 
     label Asize = pISAT->chemistry_.nEqns() + nAdditionalEqns_ - 2;
     A.setSize(Asize);
+    mem_mutex.lock();
     A_out.init(Asize);
+    mem_mutex.unlock();
 
     scalarField Rcq(pISAT->chemistry_.nEqns() + nAdditionalEqns_ - 2);
     for (label i = 0; i < speciesNumber; i++)
@@ -327,7 +329,7 @@ void Foam::chemistryTabulationMethodSs::ISAT_chem<CompType, ThermoType>::leafDat
 
 template <class CompType, class ThermoType>
 void Foam::chemistryTabulationMethodSs::ISAT_chem<CompType, ThermoType>::leafData::computeLT(
-    scalarSquareMatrix &A)
+    scalarSquareMatrix &A, SUPstream::mpi_mutex& mem_mutex)
 {
     const scalar &tolerance_ = pISAT->tolerance();
     const label &nAdditionalEqns_ = pISAT->nAdditionalEqns_;
@@ -411,7 +413,9 @@ void Foam::chemistryTabulationMethodSs::ISAT_chem<CompType, ThermoType>::leafDat
     scalarSquareMatrix LT = scalarSquareMatrix(Atilde);
 
     qrDecompose(reduOrCompDim, LT);
+    mem_mutex.lock();
     LT_.init(reduOrCompDim);
+    mem_mutex.unlock();
     for (label i = 0; i < reduOrCompDim; i++)
     {
         for (label j = 0; j < reduOrCompDim; j++)
@@ -690,7 +694,7 @@ bool Foam::chemistryTabulationMethodSs::ISAT_chem<CompType, ThermoType>::leafDat
 }
 
 template <class CompType, class ThermoType>
-bool Foam::chemistryTabulationMethodSs::ISAT_chem<CompType, ThermoType>::leafData::grow(const scalarField &phiq)
+bool Foam::chemistryTabulationMethodSs::ISAT_chem<CompType, ThermoType>::leafData::grow(const scalarField &phiq, SUPstream::mpi_mutex &mem_mutex)
 {
 
     const label &completeSpaceSize = pISAT->completeSpaceSize_;
@@ -716,9 +720,10 @@ bool Foam::chemistryTabulationMethodSs::ISAT_chem<CompType, ThermoType>::leafDat
 
     //gradientType &LT_ref = LT_;
     //gradientType &A_ref = A_;
-
+    mem_mutex.lock();
     FSSquareMatrix<scalar> LT_ref(LT_);
     FSSquareMatrix<scalar> A_ref(A_);
+    mem_mutex.unlock();
 
     if (isMechRedActive)
     {
@@ -764,7 +769,9 @@ bool Foam::chemistryTabulationMethodSs::ISAT_chem<CompType, ThermoType>::leafDat
 
         // the number of added dimension to the current chemPoint
         nActiveSpecies_ += dimToAdd.size();
+        mem_mutex.lock();
         simplifiedToCompleteIndex_.setSize(nActiveSpecies_);
+        mem_mutex.unlock();
         forAll(dimToAdd, i)
         {
             label si = nActiveSpecies_ - dimToAdd.size() + i;
@@ -802,8 +809,10 @@ bool Foam::chemistryTabulationMethodSs::ISAT_chem<CompType, ThermoType>::leafDat
                     LT_ref(i, j) = 0;
                 }
             }
+            mem_mutex.lock();
             LT_ref.setSize(nActiveSpecies_ + nAdditionalEqns_);
             A_ref.setSize(nActiveSpecies_ + nAdditionalEqns_);
+            mem_mutex.unlock();
             for (label i = 0; i < LT_.size_; i++)
             {
                 for (label j = 0; j < LT_.size_; j++)
@@ -1164,6 +1173,95 @@ bool Foam::chemistryTabulationMethodSs::ISAT_chem<CompType, ThermoType>::leafDat
         return true;
     }
 }
+template <class CompType, class ThermoType>
+void Foam::chemistryTabulationMethodSs::ISAT_chem<CompType, ThermoType>::nodeData::calcV(
+    leafData &elementLeft,
+    leafData &elementRight,
+    inputType &v, SUPstream::mpi_mutex& mem_mutex)
+{
+
+    const label &nAdditionalEqns_ = pISAT->nAdditionalEqns_;
+    // LT is the transpose of the L matrix
+    //gradientType_old &LT = elementLeft.LT_old;
+    //gradientType &LT = elementLeft.LT_;
+    mem_mutex.lock();
+    FSSquareMatrix<scalar> LT(elementLeft.LT_);
+    mem_mutex.unlock();
+    bool mechReductionActive = pISAT->chemistry_.mechRed()->active();
+
+    // Difference of composition in the full species domain
+    scalarField phiDif(elementRight.phi_.size_);
+
+    for (label i = 0; i < phiDif.size(); i++)
+    {
+        phiDif[i] = elementRight.phi_[i] - elementLeft.phi_[i];
+    }
+
+    const outputType &scaleFactor = elementLeft.scaleFactor_;
+    const scalar &epsTol = pISAT->tolerance();
+
+    // v = LT.T()*LT*phiDif
+    for (label i = 0; i < pISAT->completeSpaceSize_; i++)
+    {
+        label si = i;
+        bool outOfIndexI = true;
+        if (mechReductionActive)
+        {
+            if (i < pISAT->completeSpaceSize_ - nAdditionalEqns_)
+            {
+                si = elementLeft.completeToSimplifiedIndex_[i];
+                outOfIndexI = (si == -1);
+            }
+            else // temperature and pressure
+            {
+                outOfIndexI = false;
+                const label dif =
+                    i - (pISAT->completeSpaceSize_ - nAdditionalEqns_);
+                si = elementLeft.nActiveSpecies_ + dif;
+            }
+        }
+        if (!mechReductionActive || (mechReductionActive && !(outOfIndexI)))
+        {
+            v[i] = 0;
+            for (label j = 0; j < pISAT->completeSpaceSize_; j++)
+            {
+                label sj = j;
+                bool outOfIndexJ = true;
+                if (mechReductionActive)
+                {
+                    if (j < pISAT->completeSpaceSize_ - nAdditionalEqns_)
+                    {
+                        sj = elementLeft.completeToSimplifiedIndex_[j];
+                        outOfIndexJ = (sj == -1);
+                    }
+                    else
+                    {
+                        outOfIndexJ = false;
+                        const label dif =
+                            j - (pISAT->completeSpaceSize_ - nAdditionalEqns_);
+                        sj = elementLeft.nActiveSpecies_ + dif;
+                    }
+                }
+                if (
+                    !mechReductionActive || (mechReductionActive && !(outOfIndexJ)))
+                {
+                    // Since L is a lower triangular matrix k=0->min(i, j)
+                    for (label k = 0; k <= min(si, sj); k++)
+                    {
+                        v[i] += LT(k, si) * LT(k, sj) * phiDif[j];
+                    }
+                }
+            }
+        }
+        else
+        {
+            // When it is an inactive species the diagonal element of LT is
+            // 1/(scaleFactor*epsTol)
+            v[i] = phiDif[i] / sqr(scaleFactor[i] * epsTol);
+        }
+    }
+}
+
 template <class CompType, class ThermoType>
 void Foam::chemistryTabulationMethodSs::ISAT_chem<CompType, ThermoType>::nodeData::calcV(
     leafData &elementLeft,
