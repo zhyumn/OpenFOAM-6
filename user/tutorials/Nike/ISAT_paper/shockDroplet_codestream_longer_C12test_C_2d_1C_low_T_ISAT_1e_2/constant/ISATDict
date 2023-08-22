@@ -38,6 +38,30 @@ TEvfctree_XrhoP
     scaleIn (1 200 1e7);//(1 1 1 1);//(1 1 2.3e+07 500);
 }
 
+
+Trhovfctree_XEP
+{
+    noISAT true;
+    checkInterval  20;
+    maxDepthFactor   2;
+
+    //maxNLeafs 10000; //tuning using activated leafs
+    maxNLeafs
+    {
+        type adaptive;//const; //adaptive 
+        value 10000;
+        base 100;
+        ratio 1.3;
+        range 4;
+        max 100000;
+    }
+    NtimeTag 5;
+    maxLeafsize (0.3 50 1e6);
+    toleranceOut (1e-1 100 1e-2 5);//(1e-0 1e-1 1e-3 1e-1);//BUG input!!(1e-10 1e-10 1e-10);//(1e-0 1e-0 1e-3);//(1e-1 1e-8 1e-3);
+    initToleranceIn (1e-5 1e-2 10);
+    scaleIn (1 200 1e7);//(1 1 1 1);//(1 1 2.3e+07 500);
+}
+
 THvfctree_XrhoP
 {
     noISAT true;
@@ -83,7 +107,7 @@ Erhovfctree_XTP
 TPvfctree_XErho
 {
     noISAT false;//true;//false;//true;//false;//true;
-    checkInterval  40;
+    checkInterval  60;
     maxDepthFactor   3;
     muted false;
 
@@ -93,16 +117,16 @@ TPvfctree_XErho
     {
         type adaptive;//const; //adaptive
         value 10000;
-        base 3000;
-        ratio 1.3;
-        range 19;
-        max 100000;
+        base 5000;
+        ratio 1.1;
+        range 70;
+        max 1000000;
     }
-    NtimeTag 20;
-    maxLeafsize (0.3 1e2 1e2);
+    NtimeTag 100;
+    maxLeafsize (0.3 1e3 1e2);
     toleranceOut (1e0 1e5 1e-2 1e0);//BUG input!!(1e-10 1e-10 1e-10);//(1e-0 1e-0 1e-3);//(1e-1 1e-8 1e-3);
     initToleranceIn (1e-4 1e-2 1e-4);
-    scaleIn (1 100000 1e6);//(1 1 1 1);//(1 1 2.3e+07 500);
+    scaleIn (1 4e4 2e2);//(1 1 1 1);//(1 1 2.3e+07 500);
 }
 
 

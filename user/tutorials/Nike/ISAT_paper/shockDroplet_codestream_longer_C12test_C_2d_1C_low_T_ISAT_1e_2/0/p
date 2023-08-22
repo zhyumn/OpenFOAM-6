@@ -51,7 +51,7 @@ internalField  #codeStream
                 const scalar x = mesh.C()[i][0];
                 //const scalar y = mesh.C()[i][1];
                 //const scalar z = mesh.C()[i][2];
-                if (x < -0.2e-3)
+                if (x < 0e-3)
                 {
                     p[i] = phigh;
                 }
