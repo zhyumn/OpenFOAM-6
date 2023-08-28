@@ -41,7 +41,8 @@ Description
 #ifndef ISATMANAGER_H
 #define ISATMANAGER_H
 
-#include "ISATbinaryTree.H"
+#include "parISATbinaryTree.H"
+#include <fstream>
 //#include "ISATleaf.H"
 //#include "ISATNode.H"
 
@@ -60,8 +61,10 @@ namespace Foam
         // Private data
 
         //- List of the stored 'points' organized in a binary tree
+
+        label Ninput, Noutput;
         dictionary ISATDict_;
-        ISATbinaryTree tableTree_;
+        parISATbinaryTree tableTree_;
         FuncType *pfunc;
         double epsilon_;
         double relepsilon_;
@@ -222,12 +225,12 @@ namespace Foam
         virtual ~ISATmanager();
 
         // Member Functions
-        inline ISATbinaryTree &tableTree()
+        inline parISATbinaryTree &tableTree()
         {
             return tableTree_;
         }
         template <class... Args>
-        void add(const scalarList &value, scalarList &out, Args &... arg);
+        void add(const scalarList &value, scalarList &out, bool growflag, Args &... arg);
         inline void mute()
         {
             muted_ = true;
@@ -277,7 +280,7 @@ namespace Foam
             return initToleranceIn2_;
         }*/
 
-        ISATleaf *search(const scalarList &value);
+        SharedPointer<parISATleaf> search(const scalarList &value);
         template <class... Args>
         bool call(const Foam::scalarList &value, scalarList &out, Args &... arg);
 
@@ -285,8 +288,8 @@ namespace Foam
 
         bool retrieve(const Foam::scalarList &value, scalarList &out);
 
-        bool grow(ISATleaf *plf, const scalarList &dvalue, scalarList &data1, const scalarList &data2);
-        bool grow2(ISATleaf *plf, const scalarList &dvalue, scalarList &data1);
+        //bool grow(SharedPointer<parISATleaf>plf, const scalarList &dvalue, scalarList &data1, const scalarList &data2);
+        bool grow2(SharedPointer<parISATleaf> plf, const scalarList &dvalue, scalarList &data1);
 
         double distance(const scalarList &l, const scalarList &r);
         double normalized_distance(const scalarList &l, const scalarList &r);
@@ -302,45 +305,195 @@ namespace Foam
             modified_ = false;
             return ret;
         }
+        void test(SharedPointer<parISATNode> subroot, int level, const string es)
+        {
+            bool flag = true;
+            if (subroot->nodeLeft_.isNULL())
+            {
+                flag = flag && subroot->leafLeft_.notNULL();
+                if (flag)
+                {
+                    flag = flag && subroot->leafLeft_->value_.size() == Ninput;
+                }
+                if (flag == false)
+                {
+                    FatalErrorInFunction << "broken tree at " << level << es << exit(FatalError);
+                }
+            }
+            else
+            {
+                flag = flag && subroot->leafLeft_.isNULL();
+                if (flag == false)
+                {
+                    FatalErrorInFunction << "broken tree at " << level << es << "\n"
+                                         << tableTree_.size() << exit(FatalError);
+                }
+            }
+            if (flag == false)
+            {
+                FatalErrorInFunction << "broken tree at " << level << es << exit(FatalError);
+            }
+            if (subroot->nodeRight_.isNULL())
+            {
+                flag = flag && subroot->leafRight_.notNULL();
+                if (flag)
+                {
+                    flag = flag && subroot->leafRight_->value_.size() == Ninput;
+                }
+                if (flag == false)
+                {
+                    FatalErrorInFunction << "broken tree at " << level << es << exit(FatalError);
+                }
+            }
+            else
+            {
+                flag = flag && subroot->leafRight_.isNULL();
+                if (flag == false)
+                {
+                    FatalErrorInFunction << "broken tree at " << level << es << exit(FatalError);
+                }
+            }
+            if (flag == false)
+            {
+                FatalErrorInFunction << "broken tree at " << level << es << exit(FatalError);
+            }
+            if (subroot->nodeLeft_.notNULL())
+            {
+                test(subroot->nodeLeft_, level + 1, es);
+            }
+            if (subroot->nodeRight_.notNULL())
+            {
+                test(subroot->nodeRight_, level + 1, es);
+            }
+        }
+        void test(const string es)
+        {
+            bool flag = true;
+            if (tableTree_.size() == 0)
+            {
+                flag = flag && tableTree_.root_.isNULL();
+                if (flag == false)
+                {
+                    FatalErrorInFunction << "broken tree at 0" << es << exit(FatalError);
+                }
+            }
+            else if (tableTree_.size() == 1)
+            {
+                flag = flag && tableTree_.root_->leafRight_.isNULL();
+                flag = flag && tableTree_.root_->nodeLeft_.isNULL();
+                flag = flag && tableTree_.root_->nodeRight_.isNULL();
+                flag = flag && tableTree_.root_->parent_.isNULL();
+                flag = flag && tableTree_.root_->leafLeft_->node_ == tableTree_.root_;
+                flag = flag && tableTree_.root_->leafLeft_->value_.size() == Ninput;
+
+                if (flag == false)
+                {
+                    FatalErrorInFunction << "broken tree at 0" << es << exit(FatalError);
+                }
+            }
+            else
+            {
+                test(tableTree_.root_, 1, es);
+            }
+        }
+
+        void print(std::ofstream &out, SharedPointer<parISATNode> subroot)
+        {
+            out << "{";
+            if (subroot->nodeLeft_.isNULL())
+            {
+                out << "(";
+                out << subroot->leafLeft_.offset << "," << subroot->leafLeft_->value_.size();
+                out << ")";
+            }
+            else
+            {
+                print(out, subroot->nodeLeft_);
+            }
+
+            if (subroot->nodeRight_.isNULL())
+            {
+                out << "(";
+                out << subroot->leafRight_.offset << "," << subroot->leafRight_->value_.size();
+                out << ")";
+            }
+            else
+            {
+                print(out, subroot->nodeRight_);
+            }
+
+            out << "}";
+        }
+
+        void print(std::ofstream &out)
+        {
+            if (tableTree_.size() <= 1)
+            {
+                return;
+            }
+            print(out, tableTree_.root_);
+            out << std::endl;
+        }
 
         void newTimeStep()
         {
             nloop_ = 0;
             modified_ = false;
             timeSteps_++;
-            tableTree_.updateMaxNLeaf();
+            //tableTree_.updateMaxNLeaf();
             if (timeSteps_ % checkInterval_ == 0)
             {
 
                 showPerformance();
             }
-            tableTree_.timeTagList().newTimeStep();
-
-            if (tableTree_.maxTimeTag_ != 0)
+            //tableTree_.timeTagList().newTimeStep();
+            //Pout << "!!!!!!!!test-x0" << endl;
+            tableTree_.sync_.sync();
+            if (tableTree_.manager_.rank == 0)
             {
-                int n = tableTree_.timeTagList().sizeSum(tableTree_.maxTimeTag_ + 1) - tableTree_.timeTagList().sizeSum(tableTree_.maxTimeTag_);
-
-                for (int i = 0; i < n; i++)
-                {
-                    tableTree_.deleteLeaf(tableTree_.timeTagList().pop());
-                }
-            }
-
-            if (tableTree_.size() == 0 || tableTree_.size() == 1)
-            {
-
-                return;
-            }
-            if (timeSteps_ % checkInterval_ == 0 && tableTree_.depth() * 1.0 / ceil(log2(tableTree_.size())) > maxDepthFactor_)
-            {
-                tableTree_.balance(scaleIn_);
                 //showPerformance();
+                //std::ofstream out("out.txt");
+                //print(out);
+                //test("x1");
+                //Pout << "!!!!!!!!test-x1" << endl;
+                if (!(tableTree_.size() == 0 || tableTree_.size() == 1))
+                {
+
+                    if (timeSteps_ % checkInterval_ == 0)
+                    {
+                        tableTree_.clean(timeSteps_);
+                    }
+                    if (timeSteps_ % checkInterval_ == 0 && tableTree_.depth() * 1.0 / ceil(log2(tableTree_.size())) > maxDepthFactor_)
+                    {
+                        /*                         std::ofstream out("out.txt");
+                        //print(out);
+                        Pout << "1" << endl;
+                        test(); */
+                        //test("x2");
+
+                        tableTree_.balance(scaleIn_);
+                        //test("x3");
+                        /*                         Pout << "2" << endl;
+                        //print(out);
+                        test();
+                        out.close(); */
+                        showPerformance();
+                    }
+                }
+
+                tableTree_.leaf_manager.update();
+                //Pout << "!!!!!!!!test-x2" << endl;
+                tableTree_.node_manager.update();
+                //test("x4");
+                //out.close();
+                //Pout << "!!!!!!!!test-x3" << endl;
             }
+            tableTree_.sync_.sync();
         }
 
         label treesize()
         {
-            return tableTree_.size_;
+            return tableTree_.size();
         }
 
         inline const scalarRectangularMatrix &scaleFactor() const
@@ -420,7 +573,7 @@ namespace Foam
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-#include "ISATmanager.C"
+#include "parISATmanager.C"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

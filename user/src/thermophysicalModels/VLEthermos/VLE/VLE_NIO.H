@@ -248,7 +248,7 @@ inline void Foam::VLE<ThermoMixture>::TPn_flash_Matheis_NIO(
         //if (relax < 1 || (iter_outer > 300 && relax < 4) || (iter_outer > 600 && relax < 4) || (iter_outer > 1000 && relax < 4))
         //    relax *= 4;
         //else
-            relax *= 2;
+        relax *= 2;
         if (eps_outer < tol_outer)
         {
             success = true;
@@ -462,7 +462,7 @@ inline void Foam::VLE<ThermoMixture>::TPn_flash_New_TPD_Tudisco_NIO // TPn flash
         }
 
         bool success2 = false;
-        scalar ggas2, gliq2, g2 = -1e10, Zgas2, Zliq2;
+        scalar ggas2, gliq2, g2 = -1e10; //, Zgas2, Zliq2;
         VLE_data solution2(Xinp.size());
         TPn_flash_Matheis_NIO(p, T, Xinp, K_init, success2, solution2, g2);
         //autoPtr<solution> sol2 = TPn_flash_Matheis(p, T, Xinp, stable, isVapor, K_init, success2, Zliq2, Zgas2, g2);
@@ -1027,9 +1027,9 @@ inline std::tuple<Foam::scalar, Foam::scalar> Foam::VLE<ThermoMixture>::UVn_flas
     int iter = 0;
     scalar maxratio = 0.3;
     scalar dTdE, dPdE, dTdrho, dPdrho;
-    if(p0<0)
+    if (p0 < 0)
     {
-        p0 =1e5;
+        p0 = 1e5;
     }
 
     scalar t_f;
@@ -1473,8 +1473,8 @@ inline void Foam::VLE<ThermoMixture>::dTPvfcdXErho_NIO(scalar p, scalar T, VLE_D
 
     scalar Hs_gas = this->ThermoMixture::Hs(p, T, X_gas, 1);
     scalar Hs_liq = this->ThermoMixture::Hs(p, T, X_liq, 0);
-    scalar Cp_Hs_value = sol.dHsdT;
-    scalar dHsdP_value = sol.dHsdP;
+    //scalar Cp_Hs_value = sol.dHsdT;
+    //scalar dHsdP_value = sol.dHsdP;
     scalarList dHsdXi_value(nsp);
     for (int i = 0; i < nsp; i++)
     {
@@ -1503,8 +1503,8 @@ inline void Foam::VLE<ThermoMixture>::dTPvfcdXErho_NIO(scalar p, scalar T, VLE_D
         }
     }
 
-    scalar dZMixturedT = sol.dZdT;
-    scalar dZMixturedP = sol.dZdP;
+    //scalar dZMixturedT = sol.dZdT;
+    //scalar dZMixturedP = sol.dZdP;
     scalarList dZMixturedXi(nsp);
 
     for (int i = 0; i < nsp; i++)

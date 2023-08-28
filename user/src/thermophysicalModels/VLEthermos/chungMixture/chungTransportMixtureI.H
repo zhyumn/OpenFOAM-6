@@ -600,7 +600,6 @@ inline Foam::scalar Foam::chungTransportMixture<Specie>::Dimix_opt(
     return Dimix / 1e4;
 }
 
-
 //- Return coefficient phi based on Takahashi model
 template <class Specie>
 inline Foam::scalar Foam::chungTransportMixture<Specie>::phi(
@@ -918,33 +917,33 @@ inline Foam::scalar Foam::chungTransportMixture<Specie>::phi_opt(
     scalar PRR,
     scalar TRR) const
 {
-    const scalar A01 = 0.038042;//, B01 = 1.52267;
-    const scalar A02 = 0.067433;//, B02 = 2.16794;
-    const scalar A03 = 0.098317;//, B03 = 2.42910;
-    const scalar A04 = 0.137610;//, B04 = 2.77605;
-    const scalar A05 = 0.175081;//, B05 = 2.98256;
-    const scalar A06 = 0.216376;//, B06 = 3.11384;
-    const scalar A08 = 0.314051;//, B08 = 3.50264;
+    const scalar A01 = 0.038042; //, B01 = 1.52267;
+    const scalar A02 = 0.067433; //, B02 = 2.16794;
+    const scalar A03 = 0.098317; //, B03 = 2.42910;
+    const scalar A04 = 0.137610; //, B04 = 2.77605;
+    const scalar A05 = 0.175081; //, B05 = 2.98256;
+    const scalar A06 = 0.216376; //, B06 = 3.11384;
+    const scalar A08 = 0.314051; //, B08 = 3.50264;
     //    const scalar C08 = 0.000000, E08 = 0.00000; //unused
-    const scalar A10 = 0.385736;//, B10 = 3.07773;
-    const scalar C10 = 0.141211;//, E10 = 13.45454;
-    const scalar A12 = 0.514553;//, B12 = 3.54744;
-    const scalar C12 = 0.278407;//, E12 = 14.00000;
-    const scalar A14 = 0.599184;//, B14 = 3.61216;
-    const scalar C14 = 0.372683;//, E14 = 10.00900;
-    const scalar A16 = 0.557725;//, B16 = 3.41882;
-    const scalar C16 = 0.504894;//, E16 = 8.57519;
-    const scalar A18 = 0.593007;//, B18 = 3.18415;
-    const scalar C18 = 0.678469;//, E18 = 10.37483;
-    const scalar A20 = 0.696001;//, B20 = 3.37660;
-    const scalar C20 = 0.665702;//, E20 = 11.21674;
-    const scalar A25 = 0.790770;//, B25 = 3.27984;
+    const scalar A10 = 0.385736; //, B10 = 3.07773;
+    const scalar C10 = 0.141211; //, E10 = 13.45454;
+    const scalar A12 = 0.514553; //, B12 = 3.54744;
+    const scalar C12 = 0.278407; //, E12 = 14.00000;
+    const scalar A14 = 0.599184; //, B14 = 3.61216;
+    const scalar C14 = 0.372683; //, E14 = 10.00900;
+    const scalar A16 = 0.557725; //, B16 = 3.41882;
+    const scalar C16 = 0.504894; //, E16 = 8.57519;
+    const scalar A18 = 0.593007; //, B18 = 3.18415;
+    const scalar C18 = 0.678469; //, E18 = 10.37483;
+    const scalar A20 = 0.696001; //, B20 = 3.37660;
+    const scalar C20 = 0.665702; //, E20 = 11.21674;
+    const scalar A25 = 0.790770; //, B25 = 3.27984;
     //const scalar C25 = 0.000000, E25 = 0.00000;
-    const scalar A30 = 0.502100;//, B30 = 2.39031;
-    const scalar C30 = 0.602907;//, E30 = 6.19043;
-    const scalar A40 = 0.837452;//, B40 = 3.23513;
+    const scalar A30 = 0.502100; //, B30 = 2.39031;
+    const scalar C30 = 0.602907; //, E30 = 6.19043;
+    const scalar A40 = 0.837452; //, B40 = 3.23513;
     //const scalar C40 = 0.000000, E40 = 0.00000;
-    const scalar A50 = 0.890390;//, B50 = 3.13001;
+    const scalar A50 = 0.890390; //, B50 = 3.13001;
 
     scalar Y = 0, YA = 0, YB = 0;
     TRR = (TRR < 1.0) ? 1.0 : TRR;
@@ -1717,7 +1716,7 @@ inline double pow_nW(double x)
 }
 inline double fast_exp(double y)
 {
-    double d;
+    double d = 0;
     *(reinterpret_cast<int *>(&d) + 0) = 0;
     *(reinterpret_cast<int *>(&d) + 1) = static_cast<int>(1512775 * y + 1072632447);
     return d;
@@ -1825,9 +1824,9 @@ inline tuple<Foam::scalar, Foam::scalar> Foam::chungTransportMixture<Specie>::ka
 
     scalar t_mix = T / e_k_mix;
     scalar Fcm = 1.0 - 0.2756 * w_mix + 0.0590350 * mur_mix4 + k_mix;
-    const scalar A = 1.16145;//, B = 0.14874;
+    const scalar A = 1.16145; //, B = 0.14874;
     const scalar C = 0.52487, D = 0.77320, E = 2.16178;
-    const scalar F = 2.43787, G = -6.435e-4, H = 7.27371, S = 18.0323;//, W = -0.76830;
+    const scalar F = 2.43787, G = -6.435e-4, H = 7.27371, S = 18.0323; //, W = -0.76830;
     scalar temp1 = pow_B(t_mix);
     //Info << t_mix << endl;
     scalar omegav = A / temp1 + C * (fast_exp(-D * t_mix)) + E * fast_exp(-F * t_mix) + G * temp1 * sin(S / pow_nW(t_mix) - H);

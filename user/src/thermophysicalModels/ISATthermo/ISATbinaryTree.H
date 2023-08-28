@@ -45,7 +45,6 @@ Description
 #ifndef ISATbinaryTree_H
 #define ISATbinaryTree_H
 
-
 #include "dictionary.H"
 //#include "ISATleaf.H"
 #include "ISATNode.H"
@@ -56,14 +55,12 @@ Description
 namespace Foam
 {
 
-
     //template<class CompType, class ThermoType>
     //class TDACChemistryModel;
 
     class ISATleaf;
 
     class ISATNode;
-
 
     /*
         class Heap
@@ -97,7 +94,7 @@ namespace Foam
             ISATleaf* pop() { if (size_ <= 0)FatalErrorInFunction << "size_<=0" << exit(FatalError);ISATleaf* temp = heap_[0];heap_[0] = heap_[--size_];ShiftDown(0);return temp; }
         };*/
 
-        //template<class CompType, class ThermoType>
+    //template<class CompType, class ThermoType>
 
     class ISATbinaryTree
     {
@@ -117,13 +114,14 @@ namespace Foam
         label NLeafMax_;
 
         //- Reference to the chemistryModel
-       // TDACChemistryModel<CompType, ThermoType>& chemistry_;
+        // TDACChemistryModel<CompType, ThermoType>& chemistry_;
 
         //- Root node of the binary tree
-        ISATNode* root_;
+        ISATNode *root_;
 
         //- Maximum number of elements in the binary tree
         label maxNLeafs_;
+        label maxTimeTag_;
 
         //- Size of the BST (= number of chemPoint stored)
         label size_;
@@ -138,16 +136,14 @@ namespace Foam
         //  phi0 should be already attached to another node or the pointer to it
         //  will be lost
 
-        void insertNode
-        (
-            ISATleaf*& phi0,
-            ISATNode*& newNode
-        );
+        void insertNode(
+            ISATleaf *&phi0,
+            ISATNode *&newNode);
 
-        ISATleaf* Sibling(ISATleaf* x);
-        ISATNode* nodeSibling(ISATleaf* x);
+        ISATleaf *Sibling(ISATleaf *x);
+        ISATNode *nodeSibling(ISATleaf *x);
         //- Replace the binaryNode u with v
-        void transplant(ISATNode* u, ISATNode* v);
+        void transplant(ISATNode *u, ISATNode *v);
         //- Perform a search in the subtree starting from the subtree node y
         //  This search continue to use the hyperplan to walk the tree
         //  If covering EOA is found return true and x points to the chemPoint
@@ -178,9 +174,8 @@ namespace Foam
     public:
         //- Constructors
 
-            //- Construct from dictionary and chemistryOnLineLibrary
-        ISATbinaryTree
-        (
+        //- Construct from dictionary and chemistryOnLineLibrary
+        ISATbinaryTree(
             //TDACChemistryModel<CompType, ThermoType>& chemistry,
             //dictionary coeffsDict
             label in_n,
@@ -188,14 +183,15 @@ namespace Foam
             dictionary ISATDict
             //label maxNLeafs,
             //label timeTagList
-        ) :n_in_(in_n), n_out_(out_n), root_(nullptr), size_(0), timeTagList_(readLabel(ISATDict.lookup("NtimeTag")))
+            ) : n_in_(in_n), n_out_(out_n), root_(nullptr), size_(0), timeTagList_(readLabel(ISATDict.lookup("NtimeTag")))
         {
             label timeTagList = readLabel(ISATDict.lookup("NtimeTag"));
-            dictionary& NleafDcit = ISATDict.subDict("maxNLeafs");
+            dictionary &NleafDcit = ISATDict.subDict("maxNLeafs");
             if (word(NleafDcit.lookup("type")) == word("const"))
             {
                 constNLeafs_ = true;
                 maxNLeafs_ = readLabel(NleafDcit.lookup("value"));
+                maxTimeTag_ = 0;
             }
             else if (word(NleafDcit.lookup("type")) == word("adaptive"))
             {
@@ -206,7 +202,18 @@ namespace Foam
                 NLeafRange_ = min(NLeafRange_, timeTagList - 1);
                 NLeafMax_ = readLabel(NleafDcit.lookup("max"));
                 maxNLeafs_ = NLeafMax_;
-
+                maxTimeTag_ = 0;
+            }
+            else if (word(NleafDcit.lookup("type")) == word("maxTimeTag"))
+            {
+                constNLeafs_ = false;
+                NLeafBase_ = readLabel(NleafDcit.lookup("base"));
+                NLeafRatio_ = readScalar(NleafDcit.lookup("ratio"));
+                NLeafRange_ = readLabel(NleafDcit.lookup("range"));
+                NLeafRange_ = min(NLeafRange_, timeTagList - 1);
+                NLeafMax_ = readLabel(NleafDcit.lookup("max"));
+                maxNLeafs_ = NLeafMax_;
+                maxTimeTag_ = readLabel(NleafDcit.lookup("maxTimeTag"));
             }
             else
             {
@@ -225,70 +232,62 @@ namespace Foam
             }
         }
 
-
-
-
-        inline ISATNode* root()
+        inline ISATNode *root()
         {
             return root_;
         }
 
-        inline const ISATNode* root()const
+        inline const ISATNode *root() const
         {
             return root_;
         }
 
-
-        inline  label n_in()const
+        inline label n_in() const
         {
             return n_in_;
         }
-        inline  label n_out()const
+        inline label n_out() const
         {
             return n_out_;
         }
 
-        inline  List2D<ISATleaf>& timeTagList()
+        inline List2D<ISATleaf> &timeTagList()
         {
             return timeTagList_;
         }
 
-        inline  const List2D<ISATleaf>& timeTagList() const
+        inline const List2D<ISATleaf> &timeTagList() const
         {
             return timeTagList_;
         }
-        void deleteSubTree(ISATNode* subTreeRoot);
+        void deleteSubTree(ISATNode *subTreeRoot);
 
         inline void deleteSubTree()
         {
             deleteSubTree(root_);
         }
 
-
         inline void deleteSubTree_Node()
         {
             deleteSubTree_Node(root_);
         }
 
-        void deleteSubTree_Node(ISATNode* subTreeRoot);
+        void deleteSubTree_Node(ISATNode *subTreeRoot);
 
         inline label size() const
         {
             return size_;
         }
         //- Computes iteratively the depth of the subTree
-        label depth(ISATNode* subTreeRoot)const;
+        label depth(ISATNode *subTreeRoot) const;
 
         inline label depth() const
         {
             return depth(root_);
         }
-        void deleteLeaf(ISATleaf* pleaf);
-
+        void deleteLeaf(ISATleaf *pleaf);
 
         //- Member functions
-
-
 
         inline label maxNLeafs()
         {
@@ -302,7 +301,6 @@ namespace Foam
         {
             maxNLeafs_ = n;
         }
-
 
         // Insert a new leaf starting from the parent node of phi0
         // Parameters: phi0 the leaf to replace by a node
@@ -320,24 +318,18 @@ namespace Foam
         // leaf of phi0. This new node is constructed with phi0 on the left
         // and phiq on the right (the hyperplane is computed inside the
         // binaryNode constructor)
-        ISATleaf* insertNewLeaf
-        (
-            const scalarList& value,
-            const scalarList& data
-        );
-
-
+        ISATleaf *insertNewLeaf(
+            const scalarList &value,
+            const scalarList &data);
 
         // Search the ISATbinaryTree until the nearest leaf of a specified
         // leaf is found.
-        void binaryTreeSearch
-        (
-            const scalarList& value,
-            ISATNode* node,
-            ISATleaf*& nearest
-        );
+        void binaryTreeSearch(
+            const scalarList &value,
+            ISATNode *node,
+            ISATleaf *&nearest);
 
-        void eval(const scalarList& value, scalarList& ret);
+        void eval(const scalarList &value, scalarList &ret);
         /*void print
         (
             Ostream& OFout,
@@ -370,14 +362,12 @@ namespace Foam
         //  and by inserting the chemPoint in increasing order of value in that
         //  direction
 
-
-
-        ISATNode* balance_build(scalarRectangularMatrix& scaleIn, ISATNode* pNode, int start, int end, List<ISATleaf*>& arrays);
-        void balance(scalarRectangularMatrix& scaleIn);
+        ISATNode *balance_build(scalarRectangularMatrix &scaleIn, ISATNode *pNode, int start, int end, List<ISATleaf *> &arrays);
+        void balance(scalarRectangularMatrix &scaleIn);
         //void balance();
-        void getMiddle(List<ISATleaf*>& arrays, int ic, int left, int right, int posleft, int posright);
+        void getMiddle(List<ISATleaf *> &arrays, int ic, int left, int right, int posleft, int posright);
         //inline void balance(scalarRectangularMatrix & scaleIn);
-/*
+        /*
         inline void deleteAllNode()
         {
             deleteAllNode(root_);
@@ -402,7 +392,6 @@ namespace Foam
         //- ListFull
         bool isFull();
 
-
         template <typename T>
         friend class ISATmanager;
     };
@@ -414,8 +403,7 @@ namespace Foam
         }
         */
 
-
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 } // End namespace Foam
 

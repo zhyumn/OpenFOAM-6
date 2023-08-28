@@ -1,0 +1,33 @@
+sinclude $(GENERAL_RULES)/mplib$(WM_MPLIB)
+sinclude $(RULES)/mplib$(WM_MPLIB)
+
+EXE_INC = \
+    $(PFLAGS) $(PINC) \
+    -IBCs/lnInclude \
+    -I$(LIB_SRC)/finiteVolume/lnInclude \
+    -I$(LIB_SRC)/transportModels/compressible/lnInclude \
+    -I$(LIB_SRC)/thermophysicalModels/basic/lnInclude \
+    -I$(LIB_SRC)/thermophysicalModels/specie/lnInclude \
+    -I$(LIB_SRC)/thermophysicalModels/reactionThermo/lnInclude \
+    -I$(LIB_SRC)/TurbulenceModels/turbulenceModels/lnInclude \
+    -I$(LIB_SRC)/TurbulenceModels/compressible/lnInclude \
+    -I$(LIB_SRC)/dynamicMesh/lnInclude \
+    -I$(LIB_SRC)/meshTools/lnInclude \
+    -I$(LIB_SRC)/combustionModels/lnInclude \
+    -fmax-errors=2 \
+    -I$(FOAM_USER_SRC)/SUPstream_slab/lnInclude
+
+EXE_LIBS = \
+    $(PLIBS) \
+    -lfiniteVolume \
+    -lfvOptions \
+    -lcompressibleTransportModels \
+    -lfluidThermophysicalModels \
+    -lspecie \
+    -lrhoCentralFoam \
+    -lturbulenceModels \
+    -lcompressibleTurbulenceModels \
+    -lmeshTools \
+    -lcombustionModels \
+    -L$(FOAM_USER_LIBBIN) \
+    -lSUPstreamSlab

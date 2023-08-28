@@ -432,8 +432,7 @@ Foam::label Foam::parallelISAT<T, T2>::add(
     int ret_side; // 0 left, 1 right
     SharedPointer<Leaf> pleaf2 = binaryTreeSearch(x, SharedPointer<Node>(root_atomic->load(std::memory_order_acquire)), parentNode, ret_side);
     //Pout << "\n!!!!!!!!!!!" << pleaf2->phi().size_ << "," << size_leaf_ << "\n"<< endl;
-
-    if (pleaf2.isNULL() || pleaf2->inEOA(x))
+    if (pleaf2->inEOA(x))
     {
         growthOrAddFlag = 0;
         //write_lock.unlock();
