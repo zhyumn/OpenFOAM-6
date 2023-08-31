@@ -284,7 +284,8 @@ inline void Foam::VLE<ThermoMixture>::TPn_flash_Matheis_NIO(
             {
                 //Ktmp[i] = exp(Ln_fugcoef_liq()[i] - Ln_fugcoef_gas()[i]);
                 K[i] = Ktmp[i];
-                lnK[i] += relax * F[i];
+                lnK[i] = log(K[i]);
+                //lnK[i] += relax * F[i];
                 //K[i] = exp(Ln_fugcoef_liq()[i] - Ln_fugcoef_gas()[i]);
             }
         }
