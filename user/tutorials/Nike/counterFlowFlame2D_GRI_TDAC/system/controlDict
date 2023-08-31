@@ -14,7 +14,7 @@ FoamFile
     object      controlDict;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-libs            ( "libchemistryModelS.so"  ); //"libParallelISATchemSlabDEV.so"
+libs            ( "libchemistryModelS.so"  "libchemistryModelPT.so"); //"libParallelISATchemSlabDEV.so"
 
 application     reactingFoam;
 
