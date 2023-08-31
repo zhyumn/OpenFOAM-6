@@ -1,4 +1,7 @@
+sinclude $(GENERAL_RULES)/mplib$(WM_MPLIB)
+sinclude $(RULES)/mplib$(WM_MPLIB)
 EXE_INC = \
+    $(PFLAGS) $(PINC) \
     -Wno-deprecated-copy \
     -I$(LIB_SRC)/finiteVolume/lnInclude \
     -I$(LIB_SRC)/thermophysicalModels/specie/lnInclude \

@@ -52,8 +52,8 @@ inline Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::ISATRhoMultitherm
       TPvfcfun_XErho(temp_p ? temp_p : this),
       Trhovfcfun_XEP(temp_p ? temp_p : this),
       Erhovfctree_XTP(speciesData.size() + 2, 4, Erhovfcfun_XTP, "Erhovfctree_XTP", ISATDict_),
-      TEvfctree_XrhoP(speciesData.size() + 2, 4, TEvfcfun_XrhoP, "TEvfctree_XrhoP", ISATDict_),
       THvfctree_XrhoP(speciesData.size() + 2, 4, THvfcfun_XrhoP, "THvfctree_XrhoP", ISATDict_),
+      TEvfctree_XrhoP(speciesData.size() + 2, 4, TEvfcfun_XrhoP, "TEvfctree_XrhoP", ISATDict_),
       TPvfctree_XErho(speciesData.size() + 2, 4, TPvfcfun_XErho, "TPvfctree_XErho", ISATDict_),
       Trhovfctree_XEP(speciesData.size() + 2, 4, Trhovfcfun_XEP, "Trhovfctree_XEP", ISATDict_)
 {

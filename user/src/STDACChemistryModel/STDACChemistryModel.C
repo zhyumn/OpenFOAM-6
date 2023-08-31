@@ -1653,7 +1653,7 @@ Foam::scalar Foam::STDACChemistryModel<ReactionThermo, ThermoType>::solve(
     //    tabulation_->sync();
     solveCpuTime_ += clockTime_.timeIncrement();
     tabulation_->sync();
-    scalar tmp = clockTime_.timeIncrement();
+    //scalar tmp = clockTime_.timeIncrement();
     scalar endtime = MPI_Wtime();
     if (loadBalance_)
         solveCpuTime_ = endtime - starttime;

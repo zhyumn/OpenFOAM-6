@@ -292,8 +292,8 @@ bool Foam::parallelISAT<T, T2>::grow(const scalarField &x, SharedPointer<Leaf> &
                 //pleaf->node_2->leafRight_ = pleaf_new;
             }
 
-            //std::atomic<size_t> *leaf_atomic = reinterpret_cast<std::atomic<long unsigned int> *>(&leaf->offset);
-            std::atomic<size_t> *leaf_atomic = (std::atomic<long unsigned int> *)(&leaf->offset);
+            std::atomic<size_t> *leaf_atomic = reinterpret_cast<std::atomic<long unsigned int> *>(&leaf->offset);
+            //std::atomic<size_t> *leaf_atomic = (std::atomic<long unsigned int> *)(&leaf->offset);
             leaf_atomic->store(pleaf_new.offset, std::memory_order_release);
             mem_lock.lock();
             leaf_manager.Delete(pleaf);
@@ -564,11 +564,11 @@ Foam::label Foam::parallelISAT<T, T2>::add(
         //node->offset = pnode_new.offset;
         //leaf->offset = sptr_NULL;
 
-        //std::atomic<size_t> *node_atomic = reinterpret_cast<std::atomic<long unsigned int> *>(&node->offset);
-        //std::atomic<size_t> *leaf_atomic = reinterpret_cast<std::atomic<long unsigned int> *>(&leaf->offset);
+        std::atomic<size_t> *node_atomic = reinterpret_cast<std::atomic<long unsigned int> *>(&node->offset);
+        std::atomic<size_t> *leaf_atomic = reinterpret_cast<std::atomic<long unsigned int> *>(&leaf->offset);
 
-        std::atomic<size_t> *node_atomic = (std::atomic<long unsigned int> *)(&node->offset);
-        std::atomic<size_t> *leaf_atomic = (std::atomic<long unsigned int> *)(&leaf->offset);
+        //std::atomic<size_t> *node_atomic = (std::atomic<long unsigned int> *)(&node->offset);
+        //std::atomic<size_t> *leaf_atomic = (std::atomic<long unsigned int> *)(&leaf->offset);
 
         node_atomic->store(pnode_new.offset, std::memory_order_release);
         leaf_atomic->store(sptr_NULL, std::memory_order_release);
@@ -586,8 +586,8 @@ Foam::label Foam::parallelISAT<T, T2>::add(
     else
     {
 
-        //std::atomic<size_t> *root_atomic = reinterpret_cast<std::atomic<long unsigned int> *>(&root_.offset);
-        std::atomic<size_t> *root_atomic = (std::atomic<long unsigned int> *)(&root_.offset);
+        std::atomic<size_t> *root_atomic = reinterpret_cast<std::atomic<long unsigned int> *>(&root_.offset);
+        //std::atomic<size_t> *root_atomic = (std::atomic<long unsigned int> *)(&root_.offset);
 
         root_atomic->store(pnode_new.offset, std::memory_order_release);
         //root_ = pnode_new;

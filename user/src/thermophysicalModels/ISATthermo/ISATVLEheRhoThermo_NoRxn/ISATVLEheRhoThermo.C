@@ -44,7 +44,7 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate_init()
     scalarField &kappaCells = this->kappa_.primitiveFieldRef();
 
     //scalar p_temp, T_temp,
-    scalar he_temp;
+    //scalar he_temp;
     scalarList Y_temp(MixtureType::Y().size());
 
     forAll(TCells, celli)
