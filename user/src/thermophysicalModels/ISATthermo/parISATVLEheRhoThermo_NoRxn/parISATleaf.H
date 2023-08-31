@@ -160,6 +160,7 @@ namespace Foam
         parISATleaf(int n_in, int n_out, const scalarList &v, SharedPointer<parISATNode> &node);
         parISATleaf(int n_in, int n_out, const scalarList &v, SharedPointer<parISATNode> &node, const scalarList &data_in);
         void init(int n_in, int n_out);
+        void reuse();
 
         void set(const parISATleaf &x)
         {

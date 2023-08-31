@@ -1349,6 +1349,12 @@ Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::TPvfc_XErho(FixedList<sc
 }
 
 template <class ThermoMixture, template <class> class Type>
+inline label Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::TPvfc_XErho_treesize() const
+{
+    return TPvfctree_XErho.treesize();
+}
+
+template <class ThermoMixture, template <class> class Type>
 inline void Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::TPvfc_XErho(const scalar E, const scalar rho, const scalar T0, const scalar P0, scalar &T, scalar &P, scalar &vf, scalar &c) const
 {
     static scalarList in(this->X().size() + 2), out(4);

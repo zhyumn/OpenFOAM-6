@@ -26,6 +26,11 @@ License
 #include "parISATmanager.H"
 #include "LUscalarMatrix.H"
 
+#define REUSELIST
+
+#define LIKELY(exp) __builtin_expect(exp, 1)
+#define UNLIKELY(exp) __builtin_expect(exp, 0)
+
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 template <class FuncType>
 Foam::ISATmanager<FuncType>::ISATmanager(label in_n, label out_n, FuncType &func, const word &name_in, const dictionary &ISATDict)
@@ -122,10 +127,24 @@ void Foam::ISATmanager<FuncType>::add(const scalarList &value, scalarList &out, 
         T.write_lock.lock();
         if (T.size() == 0)
         {
-            T.mem_lock.lock();
+
+#ifdef REUSELIST
+            SharedPointer<parISATNode> pnode = T.node_manager.New_reuse();
+            SharedPointer<parISATleaf> pleaf = T.leaf_manager.New_reuse();
+            if (UNLIKELY(pnode.isNULL() || pleaf.isNULL()))
+            {
+                T.mem_lock.lock();
+                if (pnode.isNULL())
+                    pnode = T.node_manager.New();
+                if (pleaf.isNULL())
+                    pleaf = T.leaf_manager.New();
+                T.mem_lock.unlock();
+            }
+#else
+
             SharedPointer<parISATNode> pnode = T.node_manager.New();
             SharedPointer<parISATleaf> pleaf = T.leaf_manager.New();
-            T.mem_lock.unlock();
+#endif
 
             pnode->parent_.setNULL();
             pnode->nodeLeft_.setNULL();
@@ -245,10 +264,25 @@ void Foam::ISATmanager<FuncType>::add(const scalarList &value, scalarList &out, 
         //T.NF3++;
     }
     //Pout << "!!!!!!herexxxzzz1" << endl;
+#ifdef REUSELIST
+    SharedPointer<parISATNode> pnode_new = T.node_manager.New_reuse();
+    SharedPointer<parISATleaf> pleaf_new = T.leaf_manager.New_reuse();
+    if (UNLIKELY(pnode_new.isNULL() || pleaf_new.isNULL()))
+    {
+        T.mem_lock.lock();
+        if (pnode_new.isNULL())
+            pnode_new = T.node_manager.New();
+        if (pleaf_new.isNULL())
+            pleaf_new = T.leaf_manager.New();
+        T.mem_lock.unlock();
+    }
+#else
+
     T.mem_lock.lock();
     SharedPointer<parISATNode> pnode_new = T.node_manager.New();
     SharedPointer<parISATleaf> pleaf_new = T.leaf_manager.New();
     T.mem_lock.unlock();
+#endif
 
     pleaf_new->set(value, pnode_new, out);
     pleaf_new->lastUsed = timeSteps_;
@@ -275,10 +309,10 @@ void Foam::ISATmanager<FuncType>::add(const scalarList &value, scalarList &out, 
     if (!(*parentNode).mutex.try_lock())
     {
         T.NF6++;
-        T.mem_lock.lock();
+        // T.mem_lock.lock();
         T.node_manager.Delete(pnode_new);
         T.leaf_manager.Delete(pleaf_new);
-        T.mem_lock.unlock();
+        //T.mem_lock.unlock();
         return;
     }
     /*     if (T.size() >= 4)
@@ -316,10 +350,10 @@ void Foam::ISATmanager<FuncType>::add(const scalarList &value, scalarList &out, 
     if (!tmp_flag)
     {
         T.NF7++;
-        T.mem_lock.lock();
+        //T.mem_lock.lock();
         T.node_manager.Delete(pnode_new);
         T.leaf_manager.Delete(pleaf_new);
-        T.mem_lock.unlock();
+        //T.mem_lock.unlock();
         (*parentNode).mutex.unlock();
         return;
     }
@@ -382,9 +416,9 @@ void Foam::ISATmanager<FuncType>::add(const scalarList &value, scalarList &out, 
 
         root_atomic->store(pnode_new.offset, std::memory_order_release);
 
-        T.mem_lock.lock();
+        //T.mem_lock.lock();
         T.node_manager.Delete(parentNode);
-        T.mem_lock.unlock();
+        //T.mem_lock.unlock();
         T.size_leaf_++;
         nRAdd_++;
         T.NAdd++;
@@ -586,11 +620,19 @@ bool Foam::ISATmanager<FuncType>::grow2(
         /*         FatalErrorInFunction << " test!!!!!xzzA\n"
                              << exit(FatalError); */
         data1 = ret1;
-
+#ifdef REUSELIST
+        SharedPointer<parISATleaf> pleaf_new = tableTree_.leaf_manager.New_reuse();
+        if (UNLIKELY(pleaf_new.isNULL()))
+        {
+            tableTree_.mem_lock.lock();
+            pleaf_new = tableTree_.leaf_manager.New();
+            tableTree_.mem_lock.unlock();
+        }
+#else
         tableTree_.mem_lock.lock();
         SharedPointer<parISATleaf> pleaf_new = tableTree_.leaf_manager.New();
         tableTree_.mem_lock.unlock();
-
+#endif
         if (pleaf_new.notNULL())
         {
             pleaf_new->node_ = plf->node_;
@@ -610,9 +652,9 @@ bool Foam::ISATmanager<FuncType>::grow2(
             //std::atomic<size_t> *leaf_atomic = (std::atomic<long unsigned int> *)(&leaf->offset);
             std::atomic<size_t> *leaf_atomic = reinterpret_cast<std::atomic<long unsigned int> *>(&leaf->offset);
             leaf_atomic->store(pleaf_new.offset, std::memory_order_release);
-            tableTree_.mem_lock.lock();
+            //tableTree_.mem_lock.lock();
             tableTree_.leaf_manager.Delete(plf);
-            tableTree_.mem_lock.unlock();
+            //tableTree_.mem_lock.unlock();
             nRGrowth_++;
             tableTree_.NGrowth++;
             modified_ = true;

@@ -191,6 +191,17 @@ namespace Foam
             a_ = 0;
         }
 
+        void reuse()
+        {
+            leafLeft_ = sptr_NULL;
+            leafRight_ = sptr_NULL;
+            nodeLeft_ = sptr_NULL;
+            nodeRight_ = sptr_NULL;
+            parent_ = sptr_NULL;
+            mutex.unlock();
+            a_ = 0;
+        }
+
         void Delete()
         {
             v_.Delete();

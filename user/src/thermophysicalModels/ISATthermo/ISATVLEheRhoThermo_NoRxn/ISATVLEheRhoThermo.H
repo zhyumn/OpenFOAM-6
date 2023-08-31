@@ -74,9 +74,11 @@ namespace Foam
         const clockTime clockTime_;
 
         autoPtr<OFstream> cpuISAT_VLE_;
+
+        autoPtr<OFstream> tree_size_;
         bool ISATlog_;
 
-        volScalarField *FCcell; 
+        volScalarField *FCcell;
 
         // bool noVLE_;
 

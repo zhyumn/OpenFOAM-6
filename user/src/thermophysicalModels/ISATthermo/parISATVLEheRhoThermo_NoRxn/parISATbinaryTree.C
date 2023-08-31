@@ -28,7 +28,8 @@ License
 #include "demandDrivenData.H"
 #include "IOstream.H"
 #include <fstream>
-
+#define LIKELY(exp) __builtin_expect(exp, 1)
+#define UNLIKELY(exp) __builtin_expect(exp, 0)
 // * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * * //
 
 void Foam::parISATbinaryTree::insertNode(

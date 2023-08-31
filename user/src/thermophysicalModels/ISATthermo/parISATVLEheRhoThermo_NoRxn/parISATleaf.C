@@ -68,6 +68,17 @@ void Foam::parISATleaf::init(int n_in, int n_out)
         value_[i] = 0;
     }
 }
+
+void Foam::parISATleaf::reuse()
+{
+    lastUsed = 0;
+    node_.offset = sptr_NULL;
+    numRetrieve_ = 0;
+    forAll(value_, i)
+    {
+        value_[i] = 0;
+    }
+}
 Foam::parISATleaf::parISATleaf(int n_in, int n_out,
                                const scalarList &v,
                                SharedPointer<parISATNode> &node, const scalarList &data_in) : node_(node), numRetrieve_(0) //, pTimeTagList_(nullptr)

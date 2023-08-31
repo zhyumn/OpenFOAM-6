@@ -299,7 +299,7 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
                 {
                     const typename MixtureType::thermoType &mixture_ = this->cellMixture(celli);
 
-                            std::tie(TCells[celli], pCells[celli], vaporfracCells[celli], soundspeedCells[celli]) = mixture_.TPvfc_XErho(hCells[celli], rhoCells[celli], TCells[celli], pCells[celli]);
+                    std::tie(TCells[celli], pCells[celli], vaporfracCells[celli], soundspeedCells[celli]) = mixture_.TPvfc_XErho(hCells[celli], rhoCells[celli], TCells[celli], pCells[celli]);
 
                     psiCells[celli] = rhoCells[celli] / pCells[celli];
                 }
@@ -335,6 +335,10 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
             cpuISAT_VLE_()
                 << this->time().timeOutputValue()
                 << ",    " << VLEtime << endl;
+
+            tree_size_()
+                << this->time().timeOutputValue()
+                << ",    " << this->cellMixture(0).TPvfc_XErho_treesize() << endl;
         }
 
         if (!inviscid_)
@@ -587,6 +591,7 @@ Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::ISATVLEheRhoThermo(
     if (ISATlog_)
     {
         cpuISAT_VLE_ = logFile("VLEtime", mesh);
+        tree_size_ = logFile("TreeSize", mesh);
     }
 
     forAll(Dimix_, i)

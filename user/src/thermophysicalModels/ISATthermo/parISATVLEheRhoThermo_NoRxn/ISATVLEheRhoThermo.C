@@ -262,6 +262,7 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
         this->newTimeStep();
         SUPstream::Sync();
         clockTime_.timeIncrement();
+        //scalar starttime = MPI_Wtime();
         if (scheme_ == "doubleFlux")
         {
             do
@@ -563,12 +564,21 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
             } while (this->newLoop());
         }
 
+        //scalar endtime = MPI_Wtime();
+
         if (ISATlog_)
         {
             VLEtime += clockTime_.timeIncrement();
             cpuISAT_VLE_()
                 << this->time().timeOutputValue()
                 << ",    " << VLEtime << endl;
+            tree_size_()
+                << this->time().timeOutputValue()
+                << ",    " << this->cellMixture(0).TPvfc_XErho_treesize() << endl;
+
+            /*             cpuISAT_VLE_()
+                << this->time().timeOutputValue()
+                << ",    " << endtime - starttime << endl; */
         }
         SUPstream::Sync();
         if (!inviscid_)
@@ -837,6 +847,7 @@ Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::ISATVLEheRhoThermo(
     if (ISATlog_)
     {
         cpuISAT_VLE_ = logFile("VLEtime", mesh);
+        tree_size_ = logFile("TreeSize", mesh);
     }
     SUPstream::Sync();
     if (SUPstream::node_manager.rank == 0)

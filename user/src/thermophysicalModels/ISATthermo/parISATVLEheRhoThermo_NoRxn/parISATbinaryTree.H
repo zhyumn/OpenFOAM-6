@@ -84,19 +84,46 @@ namespace Foam
         SUPstream::shared_data<label> emptylist_leaf;
         SUPstream::shared_data<label> emptylist_node;
 
+        SUPstream::shared_data<label> reuselist_leaf;
+        SUPstream::shared_data<label> reuselist_node;
+
         template <class Type>
         class Mem_manager
         {
             SUPstream::shared_data<label> &emptylist_;
+            SUPstream::shared_data<label> &reuselist_;
+            int reuse_N;
             int n_in_, n_out_;
-            label &tail_;
-            label &size_;
-            label &tmp_size_;
+            std::atomic<int> &tail_;
+            std::atomic<int> &size_;
+            std::atomic<int> &reuse_tail_;
 
         public:
-            Mem_manager(SUPstream::shared_data<label> &emptylist_in, int n_in, int n_out, label &tail_in, label &size_in, label &tmp_size_in)
-                : emptylist_(emptylist_in), n_in_(n_in), n_out_(n_out), tail_(tail_in),
-                  size_(size_in), tmp_size_(tmp_size_in) { tail_ = 0; }
+            Mem_manager(SUPstream::shared_data<label> &emptylist_in, SUPstream::shared_data<label> &reuselist_in, int n_in, int n_out, std::atomic<int> &tail_in, std::atomic<int> &size_in, std::atomic<int> &tmp_size_in)
+                : emptylist_(emptylist_in), reuselist_(reuselist_in), n_in_(n_in), n_out_(n_out), tail_(tail_in),
+                  size_(size_in), reuse_tail_(tmp_size_in)
+            {
+                tail_ = 0;
+                reuse_tail_ = 0;
+                reuse_N = reuselist_.size;
+            }
+
+            inline SharedPointer<Type> New_reuse()
+            {
+                label x = --reuse_tail_;
+                if (x >= 0)
+                {
+                    SharedPointer<Type> ret;
+                    ret.offset = reuselist_[x];
+                    //ret->reuse();
+                    return ret;
+                }
+                else
+                {
+                    //reuse_tail_ = 0;
+                    return SharedPointer<Type>(sptr_NULL);
+                }
+            }
             inline SharedPointer<Type> New()
             {
                 size_++;
@@ -124,24 +151,40 @@ namespace Foam
             inline void Delete(SharedPointer<Type> &in)
             {
                 size_--;
-                tmp_size_++;
-                emptylist_[tail_] = in.offset;
-                tail_++;
+                //tmp_size_++;
+                emptylist_[tail_++] = in.offset;
+                //tail_++;
             }
             inline void update()
             {
-                tmp_size_ = 0;
+                if (reuse_tail_ < 0)
+                    reuse_tail_ = 0;
+                //tmp_size_ = 0;
+                while (reuse_tail_ < reuse_N && tail_ > 0)
+                {
+                    tail_--;
+                    reuselist_[reuse_tail_] = emptylist_[tail_];
+                    SharedPointer<Type>(reuselist_[reuse_tail_])->reuse();
+                    reuse_tail_++;
+                }
                 while (tail_ > 0)
                 {
                     tail_--;
+                    //tmp_size_--;
                     (*SharedPointer<Type>(emptylist_[tail_])).Delete();
                     pslab->free(sizeof(Type), emptylist_[tail_]);
+                }
+                while (reuse_tail_ < reuse_N)
+                {
+                    reuselist_[reuse_tail_] = New().offset;
+                    reuse_tail_++;
                 }
             }
             inline void report()
             {
                 std::cout << "Mem_manager" << std::endl;
-                std::cout << "Total:" << (tmp_size_ + size_) * sizeof(Type) << " Used:" << size_ * sizeof(Type) << " Temp:" << (tmp_size_) * sizeof(Type) << std::endl;
+                std::cout << " Used:" << size_ * sizeof(Type) << std::endl;
+                //std::cout << "Total:" << (tmp_size_ + size_) * sizeof(Type) << " Used:" << size_ * sizeof(Type) << " Temp:" << (tail_) * sizeof(Type) << std::endl;
             }
         };
 
@@ -179,14 +222,30 @@ namespace Foam
 
             label totalGrowth;
         };
+
+        template <typename T>
+        struct padded_atomic
+        {
+            std::atomic<T> var;
+            char m_pad[CacheLineSize - sizeof(std::atomic<T>)];
+        };
+
         SUPstream::shared_data<Private_variable> pv_;
         std::atomic<label> &size_leaf_;
         label &head_leaf;
-        label &tail_leaf;
+        //label &tail_leaf;
+
+        SUPstream::shared_data<padded_atomic<int>> stail_leaf;
+        SUPstream::shared_data<padded_atomic<int>> ssize_leaf;
+        SUPstream::shared_data<padded_atomic<int>> stmp_size_leaf;
 
         std::atomic<label> &size_node;
         label &head_node;
-        label &tail_node;
+        // label &tail_node;
+
+        SUPstream::shared_data<padded_atomic<int>> stail_node;
+        SUPstream::shared_data<padded_atomic<int>> ssize_node;
+        SUPstream::shared_data<padded_atomic<int>> stmp_size_node;
 
         std::atomic<label> &NRetrieved;
         std::atomic<label> &NGrowth;
@@ -252,19 +311,26 @@ namespace Foam
             dictionary ISATDict)
             : manager_(SUPstream::node_manager), sync_(SUPstream::Sync),
               emptylist_leaf(manager_, 100000), emptylist_node(manager_, 100000),
+              reuselist_leaf(manager_, manager_.size * 20), reuselist_node(manager_, manager_.size * 100),
               pv_(manager_),
               size_leaf_(pv_().size_leaf), head_leaf(pv_().head_leaf),
-              tail_leaf(pv_().tail_leaf),
+              //tail_leaf(pv_().tail_leaf),
+              stail_leaf(SUPstream::node_manager),
+              ssize_leaf(SUPstream::node_manager),
+              stmp_size_leaf(SUPstream::node_manager),
               size_node(pv_().size_node), head_node(pv_().heaf_node),
-              tail_node(pv_().tail_node),
+              //tail_node(pv_().tail_node),
+              stail_node(SUPstream::node_manager),
+              ssize_node(SUPstream::node_manager),
+              stmp_size_node(SUPstream::node_manager),
               NRetrieved(pv_().NRetrieved), NGrowth(pv_().NGrowth), NAdd(pv_().NAdd), NCall(pv_().NCall),
               NRetrievedL(0), NGrowthL(0), NAddL(0), NCallL(0),
               NF1(pv_().NF1), NF2(pv_().NF2), NF3(pv_().NF3),
               NF4(pv_().NF4), NF5(pv_().NF5), NF6(pv_().NF6),
               NF7(pv_().NF7),
               write_lock(manager_, sync_), mem_lock(manager_, sync_),
-              leaf_manager(emptylist_leaf, in_n, out_n, tail_leaf, pv_().m_size_leaf, pv_().tmp_size_leaf),
-              node_manager(emptylist_node, in_n, out_n, tail_node, pv_().m_size_node, pv_().tmp_size_node),
+              leaf_manager(emptylist_leaf, reuselist_leaf, in_n, out_n, stail_leaf().var, ssize_leaf().var, stmp_size_leaf().var),
+              node_manager(emptylist_node, reuselist_node, in_n, out_n, stail_node().var, ssize_node().var, stmp_size_node().var),
               n_in_(in_n), n_out_(out_n), root_(pv_().root_), NtimeTag_(readLabel(ISATDict.lookup("NtimeTag"))),
               start_s(NtimeTag_), N_s(NtimeTag_) //, size_(0) //, timeTagList_(readLabel(ISATDict.lookup("NtimeTag")))
         {

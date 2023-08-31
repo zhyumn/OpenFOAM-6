@@ -227,13 +227,13 @@ namespace Foam
             Datatype *table;
             MPI_Win wintable;
             mpi_manager &manager;
-            size_t size;
 
         public:
+            size_t size;
             shared_data(mpi_manager &manager_in, size_t size_in = 1)
                 : manager(manager_in), size(size_in)
             {
-                int  windisp;
+                int windisp;
                 size_t localsize = 0;
                 MPI_Aint winsize;
                 if (manager.rank == 0)

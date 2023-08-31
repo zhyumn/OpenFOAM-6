@@ -1,0 +1,4 @@
+#!/bin/bash
+
+find processor*  -name ISAT_VLE  | xargs -I{} mkdir -p CPU_data/$1/{}
+find processor*  -name ISAT_VLE  | xargs -I{} cp -r {} CPU_data/$1/{}

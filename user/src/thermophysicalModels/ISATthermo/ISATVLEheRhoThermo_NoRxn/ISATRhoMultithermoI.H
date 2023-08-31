@@ -1353,6 +1353,12 @@ inline void Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::TPvfc_XErho(
     }
     return; //return std::make_tuple(out[0], out[1], out[2], out[3]);
 }
+
+template <class ThermoMixture, template <class> class Type>
+inline label Foam::species::ISATRhoMultithermo<ThermoMixture, Type>::TPvfc_XErho_treesize() const
+{
+    return TPvfctree_XErho.treesize();
+}
 /*
 template <class ThermoMixture, template <class> class Type>
 inline std::tuple<Foam::scalar, Foam::scalar, Foam::scalar, Foam::scalar, Foam::autoPtr<typename ThermoMixture::solution>>
