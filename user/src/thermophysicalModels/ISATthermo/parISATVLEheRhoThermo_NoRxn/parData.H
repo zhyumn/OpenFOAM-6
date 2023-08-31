@@ -98,7 +98,7 @@ namespace Foam
             return *this;
         }
 
-/*         inline const SList<Type> &operator=(const FixedList<scalar, Datasize> &x)
+        /*         inline const SList<Type> &operator=(const FixedList<scalar, Datasize> &x)
         {
             for (int i = 0; i < size_; i++)
                 v_()[i] = x[i];
@@ -132,7 +132,10 @@ namespace Foam
         }
         ~SList()
         {
-            pslab->free(sizeof(Type) * size_, v_.offset);
+            FatalErrorInFunction
+                << "~SList"
+                << abort(FatalError);
+            //pslab->free(sizeof(Type) * size_, v_.offset);
         }
     };
 
@@ -200,7 +203,10 @@ namespace Foam
         }
         ~SMatrix()
         {
-            pslab->free(sizeof(Type) * total_size_, v_.offset);
+            FatalErrorInFunction
+                << "~SMatrix"
+                << abort(FatalError);
+            //pslab->free(sizeof(Type) * total_size_, v_.offset);
         }
     };
 
@@ -266,7 +272,10 @@ namespace Foam
         }
         ~SSquareMatrix()
         {
-            pslab->free(sizeof(Type) * total_size_, v_.offset);
+            FatalErrorInFunction
+                << "~SSquareMatrix"
+                << abort(FatalError);
+            //pslab->free(sizeof(Type) * total_size_, v_.offset);
         }
     };
 

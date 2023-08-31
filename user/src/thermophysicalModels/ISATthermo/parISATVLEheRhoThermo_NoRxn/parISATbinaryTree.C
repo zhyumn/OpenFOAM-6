@@ -394,7 +394,8 @@ void Foam::parISATbinaryTree::clear()
 
 Foam::parISATbinaryTree::~parISATbinaryTree()
 {
-    clear();
+    if (manager_.rank == 0)
+        clear();
 }
 
 void Foam::parISATbinaryTree::deleteLeaf(SharedPointer<parISATleaf> pleaf)
