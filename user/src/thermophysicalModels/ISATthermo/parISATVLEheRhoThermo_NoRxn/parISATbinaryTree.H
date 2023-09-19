@@ -78,6 +78,7 @@ namespace Foam
         label NLeafMax_;
 
         label maxTimeTag_;
+        mutable bool notempty_;
 
         label preAllocateLeaf;
         label preAllocateNode;
@@ -260,13 +261,13 @@ namespace Foam
         label NAddL;
         label NCallL;
 
-        std::atomic<label> &NF1;
+        /*         std::atomic<label> &NF1;
         std::atomic<label> &NF2;
         std::atomic<label> &NF3;
         std::atomic<label> &NF4;
         std::atomic<label> &NF5;
         std::atomic<label> &NF6;
-        std::atomic<label> &NF7;
+        std::atomic<label> &NF7; */
 
         SUPstream::mpi_mutex write_lock;
         SUPstream::mpi_mutex mem_lock;
@@ -330,9 +331,9 @@ namespace Foam
               stmp_size_node(SUPstream::node_manager),
               NRetrieved(pv_().NRetrieved), NGrowth(pv_().NGrowth), NAdd(pv_().NAdd), NCall(pv_().NCall),
               NRetrievedL(0), NGrowthL(0), NAddL(0), NCallL(0),
-              NF1(pv_().NF1), NF2(pv_().NF2), NF3(pv_().NF3),
+              /*               NF1(pv_().NF1), NF2(pv_().NF2), NF3(pv_().NF3),
               NF4(pv_().NF4), NF5(pv_().NF5), NF6(pv_().NF6),
-              NF7(pv_().NF7),
+              NF7(pv_().NF7), */
               write_lock(manager_, sync_), mem_lock(manager_, sync_),
               leaf_manager(emptylist_leaf, reuselist_leaf, in_n, out_n, stail_leaf().var, ssize_leaf().var, stmp_size_leaf().var),
               node_manager(emptylist_node, reuselist_node, in_n, out_n, stail_node().var, ssize_node().var, stmp_size_node().var),
@@ -348,15 +349,17 @@ namespace Foam
                 NAdd = 0;
                 NCall = 0;
 
-                NF1 = 0;
+                /*                 NF1 = 0;
                 NF2 = 0;
                 NF3 = 0;
                 NF4 = 0;
                 NF5 = 0;
                 NF6 = 0;
-                NF7 = 0;
+                NF7 = 0; */
             }
             sync_.sync();
+
+            notempty_ = false;
 
             label timeTagList = readLabel(ISATDict.lookup("NtimeTag"));
             dictionary &NleafDcit = ISATDict.subDict("maxNLeafs");
@@ -464,6 +467,24 @@ namespace Foam
         inline label size() const
         {
             return size_leaf_;
+        }
+
+        inline label sizeLargerThan1() const
+        {
+            if(size_leaf_.load(std::memory_order_relaxed)>1)
+            return true;
+            return size_leaf_.load()>1;
+        }
+
+        inline label notempty() const
+        {
+            if (notempty_)
+                return true;
+            else
+            {
+                notempty_ = !(size_leaf_.load() == 0);
+                return notempty_;
+            }
         }
         //- Computes iteratively the depth of the subTree
         label depth(SharedPointer<parISATNode> &subTreeRoot) const;

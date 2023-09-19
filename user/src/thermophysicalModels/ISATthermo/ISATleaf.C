@@ -41,19 +41,17 @@ void Foam::ISATleaf::print(Foam::Ostream& OFout, int a)
 */
 
 Foam::ISATleaf::ISATleaf(int n_in, int n_out,
-    const scalarList& v,
-    ISATNode* node) :
-    node_(node), value_(n_in),
-    data_(n_out), A_(n_in, n_out),
-    EOA_(n_in, n_in), numRetrieve_(0), pTimeTagList_(nullptr)
+                         const scalarList &v,
+                         ISATNode *node) : node_(node), value_(n_in),
+                                           data_(n_out), A_(n_in, n_out),
+                                           EOA_(n_in, n_in), numRetrieve_(0), pTimeTagList_(nullptr)
 {
     forAll(value_, i)
     {
         value_[i] = v[i];
     }
 }
-Foam::ISATleaf::ISATleaf(int n_in, int n_out, const scalarList& v, ISATNode* node, const scalarList& data_in
-) : node_(node), value_(n_in), data_(n_out), A_(n_in, n_out), EOA_(n_in, n_in), numRetrieve_(0), pTimeTagList_(nullptr)
+Foam::ISATleaf::ISATleaf(int n_in, int n_out, const scalarList &v, ISATNode *node, const scalarList &data_in) : node_(node), value_(n_in), data_(n_out), A_(n_in, n_out), EOA_(n_in, n_in), numRetrieve_(0), pTimeTagList_(nullptr)
 {
     forAll(value_, i)
     {
@@ -63,49 +61,43 @@ Foam::ISATleaf::ISATleaf(int n_in, int n_out, const scalarList& v, ISATNode* nod
     {
         data_[i] = data_in[i];
     }
-
 }
-bool Foam::ISATleaf::inEOA(const scalarList& point, const scalarRectangularMatrix& scaleIn)
+bool Foam::ISATleaf::inEOA(const scalarList &point, const scalarRectangularMatrix &scaleIn)
 {
-    static scalarRectangularMatrix dx(value_.size(), 1);
+    scalarRectangularMatrix dx(value_.size(), 1);
     forAll(value_, i)
     {
         dx[i][0] = (point[i] - value_[i]) / scaleIn[i][i];
     }
-    
-    return ((dx.T()) * EOA_ * dx)[0][0] <= 1.0;
 
+    return ((dx.T()) * EOA_ * dx)[0][0] <= 1.0;
 }
 
-
-void Foam::ISATleaf::eval(const scalarList& value, scalarList& ret)
+void Foam::ISATleaf::eval(const scalarList &value, scalarList &ret)
 {
-    static scalarRectangularMatrix dx(1, value_.size()), retm;
+    scalarRectangularMatrix dx(1, value_.size()), retm;
     ret = data_;
-    for (int i = 0;i < value_.size();i++)
+    for (int i = 0; i < value_.size(); i++)
         dx[0][i] = value[i] - value_[i];
     retm = dx * A_;
-    for (int i = 0;i < data_.size();i++)
+    for (int i = 0; i < data_.size(); i++)
         ret[i] += retm[0][i];
 }
 
-void Foam::ISATleaf::grow(const scalarList& point, const scalarRectangularMatrix& scaleIn)
+void Foam::ISATleaf::grow(const scalarList &point, const scalarRectangularMatrix &scaleIn)
 {
     static scalarRectangularMatrix dx(value_.size(), 1);
     double pbp;
-    for (int i = 0;i < value_.size();i++)
+    for (int i = 0; i < value_.size(); i++)
         dx[i][0] = (point[i] - value_[i]) / scaleIn[i][i];
     pbp = (dx.T() * EOA_ * dx)[0][0];
     EOA_ = EOA_ + EOA_ * dx * (dx.T()) * EOA_ * (1 - pbp) / sqr(pbp);
 }
 
-
 void Foam::ISATleaf::increaseNumRetrieve()
 {
     this->numRetrieve_++;
 }
-
-
 
 void Foam::ISATleaf::resetNumRetrieve()
 {

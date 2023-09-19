@@ -196,7 +196,7 @@ void Foam::ISATmanager<FuncType>::add(const scalarList &value, scalarList &out, 
 
     if (pleaf2.isNULL() || pleaf2->inEOA(value, scaleIn_)) //pleaf2.isNULL() is necessary
     {
-        T.NF2++;
+        //T.NF2++;
         return;
     }
     //Pout << "!!!!!!herexxxzzz1" << endl;
@@ -308,7 +308,7 @@ void Foam::ISATmanager<FuncType>::add(const scalarList &value, scalarList &out, 
 
     if (!(*parentNode).mutex.try_lock())
     {
-        T.NF6++;
+        //T.NF6++;
         // T.mem_lock.lock();
         T.node_manager.Delete(pnode_new);
         T.leaf_manager.Delete(pleaf_new);
@@ -349,7 +349,7 @@ void Foam::ISATmanager<FuncType>::add(const scalarList &value, scalarList &out, 
     }
     if (!tmp_flag)
     {
-        T.NF7++;
+        //T.NF7++;
         //T.mem_lock.lock();
         T.node_manager.Delete(pnode_new);
         T.leaf_manager.Delete(pleaf_new);
@@ -506,10 +506,10 @@ bool Foam::ISATmanager<FuncType>::retrieve(
     SharedPointer<parISATleaf> plf;
 
     // If the tree is not empty
-    if (tableTree_.size())
+    if (LIKELY(tableTree_.notempty()))
     {
         plf = search(value);
-        if (plf.isNULL())
+        if (UNLIKELY(plf.isNULL()))
         {
             return false;
         }
@@ -519,16 +519,11 @@ bool Foam::ISATmanager<FuncType>::retrieve(
         //lastSearch_ = phi0;
         if (plf->inEOA(value, scaleIn_))
         {
-            retrieved = true;
-        }
-        if (retrieved)
-        {
-
+            //retrieved = true;
             nRRetrieved_++;
             plf->eval(value, out);
-            plf->lastUsed = timeSteps_;
+            //plf->lastUsed = timeSteps_;
             plf->increaseNumRetrieve();
-
             return true;
         }
     }
@@ -720,9 +715,9 @@ void Foam::ISATmanager<FuncType>::showPerformance() const
         std::cout << "NtimeSteps: " << timeSteps_ << ", Treedepth: " << tableTree_.depth() << ", Mindepth: " << ceil(log2(tableTree_.size() + 1)) << std::endl;
         std::cout << "maxNLeafs: " << tableTree_.maxNLeafs() << std::endl;
         Info << treename_ << ", shared ISAT performance: nCall = " << tableTree_.NCall << ", nRetrieved = " << tableTree_.NRetrieved << ", nGrowth = " << tableTree_.NGrowth << ", nAdd = " << tableTree_.NAdd << endl;
-        Info << "NF1 = " << tableTree_.NF1 << ", NF2 = " << tableTree_.NF2 << ", NF3 = " << tableTree_.NF3 << endl;
+/*         Info << "NF1 = " << tableTree_.NF1 << ", NF2 = " << tableTree_.NF2 << ", NF3 = " << tableTree_.NF3 << endl;
         Info << "NF4 = " << tableTree_.NF4 << ", NF5 = " << tableTree_.NF5 << ", NF6 = " << tableTree_.NF6 << endl;
-        Info << "NF7 = " << tableTree_.NF7 << endl;
+        Info << "NF7 = " << tableTree_.NF7 << endl; */
     }
     nRCall_ = 0;
     nRRetrieved_ = 0;

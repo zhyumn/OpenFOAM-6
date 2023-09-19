@@ -226,7 +226,7 @@ void Foam::parISATbinaryTree::binaryTreeSearch(
     SharedPointer<parISATNode> &node,
     SharedPointer<parISATleaf> &nearest)
 {
-    if (size() > 1)
+    if (LIKELY(sizeLargerThan1()))
     {
         scalar vPhi = 0.0;
         const SList<scalar> &v = node->v_;
@@ -277,7 +277,7 @@ void Foam::parISATbinaryTree::binaryTreeSearch(
     SharedPointer<parISATleaf> &nearest,
     SharedPointer<parISATNode> &node_ret, int &side)
 {
-    if (size() > 1)
+    if (LIKELY(sizeLargerThan1()))
     {
         scalar vPhi = 0.0;
         //const SList<scalar> &v = node->v_;
