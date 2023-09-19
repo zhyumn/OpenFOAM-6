@@ -532,7 +532,7 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
                         spare = true;
                         spare_cpu++;
                     }
-                    if (spare_cpu.load() == n_cpu && nfinished_block == nloop)
+                    if (spare_cpu.load() == n_cpu && nfinished_block == nloop && filled_head == -1)
                     {
                         break;
                     }

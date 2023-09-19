@@ -79,6 +79,9 @@ namespace Foam
 
         label maxTimeTag_;
 
+        label preAllocateLeaf;
+        label preAllocateNode;
+
         //labelList 2dlist_s;
 
         SUPstream::shared_data<label> emptylist_leaf;
@@ -310,8 +313,10 @@ namespace Foam
             label out_n,
             dictionary ISATDict)
             : manager_(SUPstream::node_manager), sync_(SUPstream::Sync),
+              preAllocateLeaf(readLabel(ISATDict.lookup("preAllocateLeaf"))),
+              preAllocateNode(readLabel(ISATDict.lookup("preAllocateNode"))),
               emptylist_leaf(manager_, 100000), emptylist_node(manager_, 100000),
-              reuselist_leaf(manager_, manager_.size * 20), reuselist_node(manager_, manager_.size * 100),
+              reuselist_leaf(manager_, manager_.size * preAllocateLeaf), reuselist_node(manager_, manager_.size * preAllocateNode), // 20 100
               pv_(manager_),
               size_leaf_(pv_().size_leaf), head_leaf(pv_().head_leaf),
               //tail_leaf(pv_().tail_leaf),
