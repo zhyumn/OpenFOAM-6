@@ -495,7 +495,9 @@ bool Foam::ISATmanager<FuncType>::call(
 
     if (!retrieve(value, out))
     {
-        //pleaf = search(value);
+#ifdef ISATcache
+        pleaf = search(value);
+#endif
         tableTreeL_.binaryTreeSearch(value, tableTreeL_.root_, pleafL);
 
 #ifndef ISATcache
@@ -511,6 +513,9 @@ bool Foam::ISATmanager<FuncType>::call(
             add(value, out, pleaf_out, false, arg...);
             if (pleaf_out.notNULL())
                 addL_in(value, out, pleaf_out);
+            else
+            {
+            }
         }
 #endif
         else
