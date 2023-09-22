@@ -520,6 +520,7 @@ namespace Foam
                 //Pout << "!!!!!!!!test-x3" << endl;
             }
             tableTree_.sync_.sync();
+            tableTreeL_.updateMaxNLeaf(tableTree_.size());
         }
 
         label treesize()

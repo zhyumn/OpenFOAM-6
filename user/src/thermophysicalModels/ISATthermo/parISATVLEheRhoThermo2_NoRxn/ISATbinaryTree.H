@@ -122,6 +122,7 @@ namespace Foam
         //- Maximum number of elements in the binary tree
         label maxNLeafs_;
         label maxTimeTag_;
+        scalar maxRatio_;
 
         //- Size of the BST (= number of chemPoint stored)
         label size_;
@@ -197,6 +198,7 @@ namespace Foam
                 constNLeafs_ = true;
                 maxNLeafs_ = readLabel(NleafDcit.lookup("value"));
                 maxTimeTag_ = 0;
+                maxRatio_ = 1.0;
             }
             else if (word(NleafDcit.lookup("type")) == word("adaptive"))
             {
@@ -208,6 +210,7 @@ namespace Foam
                 NLeafMax_ = readLabel(NleafDcit.lookup("max"));
                 maxNLeafs_ = NLeafMax_;
                 maxTimeTag_ = 0;
+                maxRatio_ = 1.0;
             }
             else if (word(NleafDcit.lookup("type")) == word("maxTimeTag"))
             {
@@ -219,6 +222,19 @@ namespace Foam
                 NLeafMax_ = readLabel(NleafDcit.lookup("max"));
                 maxNLeafs_ = NLeafMax_;
                 maxTimeTag_ = readLabel(NleafDcit.lookup("maxTimeTag"));
+                maxRatio_ = 1.0;
+            }
+            else if (word(NleafDcit.lookup("type")) == word("maxRatio"))
+            {
+                constNLeafs_ = false;
+                NLeafBase_ = readLabel(NleafDcit.lookup("base"));
+                NLeafRatio_ = readScalar(NleafDcit.lookup("ratio"));
+                NLeafRange_ = readLabel(NleafDcit.lookup("range"));
+                NLeafRange_ = min(NLeafRange_, timeTagList - 1);
+                NLeafMax_ = readLabel(NleafDcit.lookup("max"));
+                maxNLeafs_ = NLeafMax_;
+                maxTimeTag_ = readLabel(NleafDcit.lookup("maxTimeTag"));
+                maxRatio_ = readScalar(NleafDcit.lookup("maxRatio"));
             }
             else
             {
@@ -234,6 +250,14 @@ namespace Foam
             {
                 label sum = timeTagList_.sizeSum(NLeafRange_);
                 maxNLeafs_ = min(max(NLeafBase_, sum * NLeafRatio_), NLeafMax_);
+            }
+        }
+
+        inline void updateMaxNLeaf(label treesize_S)
+        {
+            if (constNLeafs_ == false)
+            {
+                maxNLeafs_ = max(min(maxNLeafs_, (int)(maxRatio_ * treesize_S)), NLeafBase_);
             }
         }
 
