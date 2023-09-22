@@ -257,7 +257,7 @@ namespace Foam
         {
             if (constNLeafs_ == false)
             {
-                maxNLeafs_ = max(min(maxNLeafs_, (int)(maxRatio_ * treesize_S)), NLeafBase_);
+                maxNLeafs_ = max(min(maxNLeafs_, static_cast<int>(maxRatio_ * treesize_S)), NLeafBase_);
             }
         }
 
