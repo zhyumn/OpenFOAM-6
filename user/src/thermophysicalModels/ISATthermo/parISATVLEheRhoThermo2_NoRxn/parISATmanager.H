@@ -527,6 +527,11 @@ namespace Foam
             return tableTree_.size();
         }
 
+        label treesize_loc()
+        {
+            return tableTreeL_.size();
+        }
+
         inline const scalarRectangularMatrix &scaleFactor() const
         {
             return scaleFactor_;

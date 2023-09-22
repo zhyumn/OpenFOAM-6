@@ -513,9 +513,6 @@ bool Foam::ISATmanager<FuncType>::call(
             add(value, out, pleaf_out, false, arg...);
             if (pleaf_out.notNULL())
                 addL_in(value, out, pleaf_out);
-            else
-            {
-            }
         }
 #endif
         else
@@ -549,7 +546,8 @@ bool Foam::ISATmanager<FuncType>::call(
 #ifndef ISATcache
                 addL(value, out, arg...);
 #else
-                addL_in(value, out, pleaf_out);
+                if (pleaf_out.notNULL())
+                    addL_in(value, out, pleaf_out);
 #endif
 
             /*             
@@ -687,7 +685,7 @@ bool Foam::ISATmanager<FuncType>::retrieve(
                     nRRetrieved_++;
                     plf->eval(value, out);
                     //plf->lastUsed = timeSteps_;
-                    plf->increaseNumRetrieve();
+                    //plf->increaseNumRetrieve();
 
                     if (plfL->SleafN == plf->SleafN)
                     {

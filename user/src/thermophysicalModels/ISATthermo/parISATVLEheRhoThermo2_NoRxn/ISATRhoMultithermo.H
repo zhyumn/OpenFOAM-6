@@ -255,6 +255,7 @@ namespace Foam
 
             inline void TPvfc_XErho(const scalar E, const scalar rho, const scalar T0, const scalar P0, scalar &T, scalar &P, scalar &vf, scalar &c) const;
             inline label TPvfc_XErho_treesize() const;
+            inline label TPvfc_XErho_treesize_loc() const;
 
             //inline std::tuple<scalar, scalar, scalar, scalar, autoPtr<typename ThermoMixture::solution>> TPvfcsol_Erho(const scalar E, const scalar rho, const scalar T0, const scalar P0) const;
             inline std::tuple<scalar, scalar, scalar, scalar, autoPtr<typename ThermoMixture::solution>> Tpsivfcsol_XHP(const scalar H, const scalar P, const scalar T0) const;
