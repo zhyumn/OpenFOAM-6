@@ -31,8 +31,6 @@ License
 #define LIKELY(exp) __builtin_expect(exp, 1)
 #define UNLIKELY(exp) __builtin_expect(exp, 0)
 
-#define ISATcache
-
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 template <class FuncType>
 Foam::ISATmanager<FuncType>::ISATmanager(label in_n, label out_n, FuncType &func, const word &name_in, const dictionary &ISATDict)
@@ -105,47 +103,12 @@ Foam::ISATmanager<FuncType>::~ISATmanager()
     if (tableTree_.size() > 0)
         showPerformance();
 }
-
-template <class FuncType>
-void Foam::ISATmanager<FuncType>::addL_in(const scalarList &value, scalarList &out, SharedPointer<parISATleaf> &pleaf_in)
-{
-
-    ISATbinaryTree &T = tableTreeL_;
-    ISATleaf *pleaf;
-    while (T.size() >= T.maxNLeafs())
-    {
-
-        T.deleteLeaf(T.timeTagList().pop());
-    }
-
-    pleaf = T.insertNewLeaf(value, out);
-
-    for (int i = 0; i < Ninput; i++)
-        for (int j = 0; j < Noutput; j++)
-        {
-            pleaf->A_[i][j] = pleaf_in->A_(i, j);
-        }
-
-    for (int i = 0; i < Ninput; i++)
-        for (int j = 0; j < Ninput; j++)
-        {
-            pleaf->EOA_[i][j] = pleaf_in->EOA_(i, j);
-        }
-    pleaf->SleafN = pleaf_in->SleafN;
-    //pfunc->derive(value, out, pleaf->A(), arg...);
-
-    //pleaf->EOA() = scaleIn_ * (initToleranceIn2_ + (pleaf->A()) * toleranceOut2_ * (pleaf->A().T())) * scaleIn_;
-    modified_ = true;
-
-    //nRAdd_++;
-}
-
 template <class FuncType>
 template <class... Args>
 void Foam::ISATmanager<FuncType>::add(const scalarList &value, scalarList &out, SharedPointer<parISATleaf> &pleaf_out, bool growflag, Args &... arg)
 {
-    parISATbinaryTree &T = tableTree_;
     pleaf_out.offset = sptr_NULL;
+    parISATbinaryTree &T = tableTree_;
     std::atomic<size_t> *root_atomic = reinterpret_cast<std::atomic<long unsigned int> *>(&T.root_.offset);
 
     static scalarRectangularMatrix A_tmp(Ninput, Noutput);
@@ -195,6 +158,7 @@ void Foam::ISATmanager<FuncType>::add(const scalarList &value, scalarList &out, 
             pleaf->node_ = pnode;
             pleaf->set(value, pnode, out);
             pleaf->lastUsed = timeSteps_;
+            pleaf->SleafN = T.SN++;
             pleaf_out.offset = pleaf.offset;
             pfunc->derive(value, out, pleaf->A_, arg...);
 
@@ -216,7 +180,7 @@ void Foam::ISATmanager<FuncType>::add(const scalarList &value, scalarList &out, 
             T.size_node++;
             modified_ = true;
             nRAdd_++;
-            //T.NAdd++;
+            T.NAdd++;
 
             T.write_lock.unlock();
             return;
@@ -281,7 +245,6 @@ void Foam::ISATmanager<FuncType>::add(const scalarList &value, scalarList &out, 
             //FatalErrorInFunction<<" test!!!!!xz\n"<< exit(FatalError);
             if (grow2(pleaf2, dvalue, out))
             {
-                pleaf_out.offset = pleaf2.offset;
                 pleaf2->lastUsed = timeSteps_;
                 /*                 FatalErrorInFunction << " test!!!!!xzz\n"
                                      << exit(FatalError); */
@@ -304,7 +267,7 @@ void Foam::ISATmanager<FuncType>::add(const scalarList &value, scalarList &out, 
     {
         //T.NF3++;
     }
-    //Pout << "!!!!!!herexxxzzz1" << endl;
+//Pout << "!!!!!!herexxxzzz1" << endl;
 #ifdef REUSELIST
     SharedPointer<parISATNode> pnode_new = T.node_manager.New_reuse();
     SharedPointer<parISATleaf> pleaf_new = T.leaf_manager.New_reuse();
@@ -327,8 +290,9 @@ void Foam::ISATmanager<FuncType>::add(const scalarList &value, scalarList &out, 
 
     pleaf_new->set(value, pnode_new, out);
     pleaf_new->lastUsed = timeSteps_;
-    pleaf_out.offset = pleaf_new.offset;
+    pleaf_new->SleafN = T.SN++;
     //pleaf_new->node_2 = pnode_new;
+    pleaf_out.offset = pleaf_new.offset;
     pfunc->derive(value, out, pleaf_new->A_, arg...);
     for (int i = 0; i < Ninput; i++)
         for (int j = 0; j < Noutput; j++)
@@ -447,7 +411,7 @@ void Foam::ISATmanager<FuncType>::add(const scalarList &value, scalarList &out, 
         T.size_leaf_++;
         T.size_node++;
         nRAdd_++;
-        //T.NAdd++;
+        T.NAdd++;
         (*parentNode).mutex.unlock();
         return;
     }
@@ -463,7 +427,7 @@ void Foam::ISATmanager<FuncType>::add(const scalarList &value, scalarList &out, 
         //T.mem_lock.unlock();
         T.size_leaf_++;
         nRAdd_++;
-        //T.NAdd++;
+        T.NAdd++;
 
         return;
     }
@@ -483,6 +447,7 @@ bool Foam::ISATmanager<FuncType>::call(
     SharedPointer<parISATleaf> pleaf;
     SharedPointer<parISATleaf> pleaf_out;
     ISATleaf *pleafL;
+
     if (noISAT_)
     {
         pfunc->value(value, out, arg...);
@@ -495,40 +460,26 @@ bool Foam::ISATmanager<FuncType>::call(
 
     if (!retrieve(value, out))
     {
-#ifdef ISATcache
-        pleaf = search(value);
-#endif
+        tableTree_.binaryTreeSearch(value, tableTree_.root_, pleaf);
         tableTreeL_.binaryTreeSearch(value, tableTreeL_.root_, pleafL);
+        //pleaf = search(value);
 
-#ifndef ISATcache
-        if (UNLIKELY(pleafL == nullptr))
-        {
-            pfunc->value(value, out, arg...);
-            addL(value, out, arg...);
-        }
-#else
-        if (UNLIKELY(pleaf.isNULL() || pleafL == nullptr))
+        if (UNLIKELY(pleaf.isNULL() || pleaf == nullptr))
         {
             pfunc->value(value, out, arg...);
             add(value, out, pleaf_out, false, arg...);
-            if (pleaf_out.notNULL())
-                addL_in(value, out, pleaf_out);
-            else
-            {
-            }
+            addL_in(value, out, pleaf_out);
         }
-#endif
         else
         {
 
+            //pfunc->value(leafvalue - dvalue, out2, arg...);
             static scalarList dvalue(value.size(), Zero);
+            static scalarList dvalue2(value.size(), Zero);
             for (int i = 0; i < tableTree_.n_in_; i++)
             {
-#ifndef ISATcache
-                dvalue[i] = value[i] - pleafL->value_[i];
-#else
                 dvalue[i] = value[i] - pleaf->value_[i];
-#endif
+                dvalue2[i] = value[i] - pleafL->value_[i];
             }
 
             bool flag = true;
@@ -537,68 +488,25 @@ bool Foam::ISATmanager<FuncType>::call(
                 flag = flag && mag(dvalue[i]) <= maxLeafsize_[i];
             }
             pfunc->value(value, out, arg...);
-#ifdef ISATcache
-            add(value, out, pleaf_out, flag, arg...);
-#endif
-            static scalarList dvalue2(value.size(), Zero);
-            for (int i = 0; i < tableTree_.n_in_; i++)
-            {
-                dvalue2[i] = value[i] - pleafL->value_[i];
-            }
-            if (!flag || !growL(pleafL, dvalue2, out))
-#ifndef ISATcache
-                addL(value, out, arg...);
-#else
-                addL_in(value, out, pleaf_out);
-#endif
-
-            /*             
-                static scalarList dvalue2(value.size(), Zero);
-                for (int i = 0; i < tableTree_.n_in_; i++)
-                {
-                    dvalue2[i] = value[i] - pleafL->value_[i];
-                }
-                if (!flag || !growL(pleafL, dvalue2, out))
-                    if (pleaf_out.notNULL())
-                        addL_in(value, out, pleaf_out);
-            
-  */
 
             //if (!flag || !grow2(pleaf, dvalue, out))
             //    add(value, out, arg...);
             //if (!flag)
+
+            add(value, out, pleaf_out, flag, arg...);
+            if (!flag || !growL(pleafL, dvalue2, out))
+                addL_in(value, out, pleaf_out);
+
+            
         }
     }
     else
     {
-        //tableTree_.NRetrieved++;
-        nRRetrieved_++;
+        tableTree_.NRetrieved++;
     }
-    //tableTree_.NCall++;
+    tableTree_.NCall++;
     nRCall_++;
     return true;
-}
-
-template <class FuncType>
-template <class... Args>
-void Foam::ISATmanager<FuncType>::addL(const scalarList &value, scalarList &out, Args &... arg)
-{
-
-    ISATbinaryTree &T = tableTreeL_;
-    ISATleaf *pleaf;
-    while (T.size() >= T.maxNLeafs())
-    {
-
-        T.deleteLeaf(T.timeTagList().pop());
-    }
-
-    pleaf = T.insertNewLeaf(value, out);
-    pfunc->derive(value, out, pleaf->A(), arg...);
-
-    pleaf->EOA() = scaleIn_ * (initToleranceIn2_ + (pleaf->A()) * toleranceOut2_ * (pleaf->A().T())) * scaleIn_;
-    modified_ = true;
-
-    nRAdd_++;
 }
 
 template <class FuncType>
@@ -641,6 +549,62 @@ bool Foam::ISATmanager<FuncType>::growL(
 }
 
 template <class FuncType>
+template <class... Args>
+void Foam::ISATmanager<FuncType>::addL(const scalarList &value, scalarList &out, ISATleaf *&pleaf, Args &... arg)
+{
+
+    ISATbinaryTree &T = tableTreeL_;
+    //ISATleaf *pleaf;
+    while (T.size() >= T.maxNLeafs())
+    {
+
+        T.deleteLeaf(T.timeTagList().pop());
+    }
+
+    pleaf = T.insertNewLeaf(value, out);
+    pfunc->derive(value, out, pleaf->A(), arg...);
+
+    pleaf->EOA() = scaleIn_ * (initToleranceIn2_ + (pleaf->A()) * toleranceOut2_ * (pleaf->A().T())) * scaleIn_;
+    modified_ = true;
+
+    nRAdd_++;
+}
+
+template <class FuncType>
+void Foam::ISATmanager<FuncType>::addL_in(const scalarList &value, scalarList &out, SharedPointer<parISATleaf> &pleaf_in)
+{
+
+    ISATbinaryTree &T = tableTreeL_;
+    ISATleaf *pleaf;
+    while (T.size() >= T.maxNLeafs())
+    {
+
+        T.deleteLeaf(T.timeTagList().pop());
+    }
+
+    pleaf = T.insertNewLeaf(value, out);
+
+    for (int i = 0; i < Ninput; i++)
+        for (int j = 0; j < Noutput; j++)
+        {
+            pleaf->A_[i][j] = pleaf_in->A_(i, j);
+        }
+
+    for (int i = 0; i < Ninput; i++)
+        for (int j = 0; j < Ninput; j++)
+        {
+            pleaf->EOA_[i][j] = pleaf_in->EOA_(i, j);
+        }
+    pleaf->SleafN = pleaf_in->SleafN;
+    //pfunc->derive(value, out, pleaf->A(), arg...);
+
+    //pleaf->EOA() = scaleIn_ * (initToleranceIn2_ + (pleaf->A()) * toleranceOut2_ * (pleaf->A().T())) * scaleIn_;
+    modified_ = true;
+
+    //nRAdd_++;
+}
+
+template <class FuncType>
 void Foam::ISATmanager<FuncType>::tablevalue(
     const Foam::scalarList &value, scalarList &out)
 {
@@ -658,7 +622,7 @@ bool Foam::ISATmanager<FuncType>::retrieve(
     if (LIKELY(tableTreeL_.size()))
     {
         tableTreeL_.binaryTreeSearch(value, tableTreeL_.root_, plfL);
-        if (LIKELY(plfL->inEOA(value, scaleIn_)))
+        if (plf->inEOA(value, scaleIn_))
         {
             nRRetrieved_++;
             plfL->eval(value, out);
@@ -667,7 +631,6 @@ bool Foam::ISATmanager<FuncType>::retrieve(
             tableTreeL_.timeTagList().renew(plfL->pTimeTagList());
             return true;
         }
-#ifdef ISATcache
         else
         {
             if (LIKELY(tableTree_.notempty()))
@@ -706,9 +669,44 @@ bool Foam::ISATmanager<FuncType>::retrieve(
                 }
             }
         }
-#endif
     }
+    else
+    {
+        if (LIKELY(tableTree_.notempty()))
+        {
+            plf = search(value);
+            if (UNLIKELY(plf.isNULL()))
+            {
+                return false;
+            }
 
+            // lastSearch keeps track of the chemPoint we obtain by the regular
+            // binary tree search
+            //lastSearch_ = phi0;
+            if (plf->inEOA(value, scaleIn_))
+            {
+                //retrieved = true;
+                nRRetrieved_++;
+                plf->eval(value, out);
+                //plf->lastUsed = timeSteps_;
+                plf->increaseNumRetrieve();
+
+                if (plfL->SleafN == plf->SleafN)
+                {
+                    for (int i = 0; i < Ninput; i++)
+                        for (int j = 0; j < Ninput; j++)
+                        {
+                            plfL->EOA_[i][j] = plf->EOA_(i, j);
+                        }
+                }
+                else
+                {
+                    addL_in(value, out, plf);
+                }
+                return true;
+            }
+        }
+    }
     // If the tree is not empty
 
     return false;
@@ -814,6 +812,7 @@ bool Foam::ISATmanager<FuncType>::grow2(
         if (pleaf_new.notNULL())
         {
             pleaf_new->node_ = plf->node_;
+            pleaf_new->SleafN = plf->SleafN;
             pleaf_new->set(*plf);
             pleaf_new->grow(value_tmp + dvalue_m * (1 + 1e-3), scaleIn_);
             SharedPointer<parISATleaf> *leaf;
@@ -834,7 +833,7 @@ bool Foam::ISATmanager<FuncType>::grow2(
             tableTree_.leaf_manager.Delete(plf);
             //tableTree_.mem_lock.unlock();
             nRGrowth_++;
-            //tableTree_.NGrowth++;
+            tableTree_.NGrowth++;
             modified_ = true;
             return true;
         }
@@ -895,10 +894,9 @@ void Foam::ISATmanager<FuncType>::showPerformance() const
         std::cout << treename_ << ", recent info: nCall = " << nRCall_ << ", nRetrieved = " << nRRetrieved_ << ", nGrowth = " << nRGrowth_ << ", nAdd = " << nRAdd_ << std::endl;
 
         std::cout << "tree size = " << tableTree_.size() << std::endl;
-        std::cout << "tree sizeL = " << tableTreeL_.size() << std::endl;
         std::cout << "NtimeSteps: " << timeSteps_ << ", Treedepth: " << tableTree_.depth() << ", Mindepth: " << ceil(log2(tableTree_.size() + 1)) << std::endl;
         std::cout << "maxNLeafs: " << tableTree_.maxNLeafs() << std::endl;
-        //Info << treename_ << ", shared ISAT performance: nCall = " << tableTree_.NCall << ", nRetrieved = " << tableTree_.NRetrieved << ", nGrowth = " << tableTree_.NGrowth << ", nAdd = " << tableTree_.NAdd << endl;
+        Info << treename_ << ", shared ISAT performance: nCall = " << tableTree_.NCall << ", nRetrieved = " << tableTree_.NRetrieved << ", nGrowth = " << tableTree_.NGrowth << ", nAdd = " << tableTree_.NAdd << endl;
         /*         Info << "NF1 = " << tableTree_.NF1 << ", NF2 = " << tableTree_.NF2 << ", NF3 = " << tableTree_.NF3 << endl;
         Info << "NF4 = " << tableTree_.NF4 << ", NF5 = " << tableTree_.NF5 << ", NF6 = " << tableTree_.NF6 << endl;
         Info << "NF7 = " << tableTree_.NF7 << endl; */
