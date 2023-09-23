@@ -251,6 +251,7 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
     scalarField &kappaCells = this->kappa_.primitiveFieldRef();
 
     bool retreived_tmp;
+    label N_add_tmp;
     //scalarField &rho_G_Cells = this->rho_G_.primitiveFieldRef();
     //scalarField &ZCells = this->Z_.primitiveFieldRef();
     //scalar tempT, tempP, maxdT = 0, maxdP = 0, tempmu, temppsi, tempHe;
@@ -342,6 +343,7 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
                     }
                     int first_i = iter_link * batch_size;
 
+                    N_add_tmp = size_i;
                     for (int j = 0; j < size_i; j++)
                     {
                         label celli = first_i + j;
@@ -349,7 +351,9 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
                         std::tie(TCells[celli], pCells[celli], vaporfracCells[celli], soundspeedCells[celli], retreived_tmp) = mixture_.TPvfc_XErho(hCells[celli], rhoCells[celli], TCells[celli], pCells[celli]);
 
                         psiCells[celli] = rhoCells[celli] / pCells[celli];
+                        N_add_tmp -= retreived_tmp;
                     }
+                    N_add_[iter_link] = N_add_tmp;
                     nfinished_block++;
                     iter_link = link_[iter_link];
                     i++;
@@ -379,6 +383,7 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
                             }
                             tail = iter;
                             iter = ja[iter].next;
+                            N_add_[ja[iter].N_batch] = ja[iter].N_add;
                             nfinished_block++;
                         }
                         l_empty.lock();
@@ -433,6 +438,7 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
                                     ja[iter].jobs[j].in[mixture_.X().size() + 1] = rhoCells[celli];
                                 }
                                 ja[iter].rank = rank;
+                                ja[iter].N_batch = iter_link;
 
                                 l_filled.lock();
                                 if (filled_tail == -1)

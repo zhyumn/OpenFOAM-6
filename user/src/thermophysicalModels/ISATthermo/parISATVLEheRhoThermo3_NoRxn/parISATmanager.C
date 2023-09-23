@@ -548,6 +548,10 @@ bool Foam::ISATmanager<FuncType>::call(
 #else
                 if (pleaf_out.notNULL())
                     addL_in(value, out, pleaf_out);
+                else
+                {
+                    addL(value, out, arg...);
+                }
 #endif
 
             /*             
@@ -592,6 +596,8 @@ void Foam::ISATmanager<FuncType>::addL(const scalarList &value, scalarList &out,
 
     pleaf = T.insertNewLeaf(value, out);
     pfunc->derive(value, out, pleaf->A(), arg...);
+
+    pleaf->SleafN = -1;
 
     pleaf->EOA() = scaleIn_ * (initToleranceIn2_ + (pleaf->A()) * toleranceOut2_ * (pleaf->A().T())) * scaleIn_;
     modified_ = true;

@@ -101,6 +101,7 @@ namespace Foam
             label first_i;
             label size_i;
             label N_add;
+            label N_batch;
             jobInput jobs[1];
         };
         label n_block;
