@@ -513,6 +513,10 @@ bool Foam::ISATmanager<FuncType>::call(
             add(value, out, pleaf_out, false, arg...);
             if (pleaf_out.notNULL())
                 addL_in(value, out, pleaf_out);
+            else
+            {
+                addL(value, out, arg...);
+            }
         }
 #endif
         else
