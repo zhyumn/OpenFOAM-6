@@ -231,6 +231,41 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate_init()
     //Pout << "!!!!!!!!test-2-4" << endl;
 }
 
+void my_quicksort(labelField &arrays1, labelField &arrays2, int left, int right)
+{
+    if (left >= right)
+    {
+        return;
+    }
+    int i = left, j = right;
+    label init1 = arrays1[i];
+    label init2 = arrays2[i];
+
+    while (j > i)
+    {
+        for (; arrays1[j] > init1 && j > i; j--)
+            ;
+        if (i < j)
+        {
+            arrays1[i] = arrays1[j];
+            arrays2[i] = arrays2[j];
+            i++;
+        }
+        for (; arrays1[i] < init1 && j > i; i++)
+            ;
+        if (i < j)
+        {
+            arrays1[j] = arrays1[i];
+            arrays2[j] = arrays2[i];
+            j--;
+        }
+    }
+    arrays1[i] = init1;
+    arrays2[i] = init2;
+    my_quicksort(arrays1, arrays2, left, i - 1);
+    my_quicksort(arrays1, arrays2, i + 1, right);
+}
+
 template <class BasicPsiThermo, class MixtureType>
 void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
 {
@@ -357,6 +392,7 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
                     nfinished_block++;
                     iter_link = link_[iter_link];
                     i++;
+
                     if (finished_head[rank] != -1)
                     {
                         int iter_start;
@@ -382,8 +418,8 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
                                 psiCells[celli] = rhoCells[celli] / pCells[celli];
                             }
                             tail = iter;
-                            iter = ja[iter].next;
                             N_add_[ja[iter].N_batch] = ja[iter].N_add;
+                            iter = ja[iter].next;
                             nfinished_block++;
                         }
                         l_empty.lock();
@@ -527,6 +563,7 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
                                 vaporfracCells[celli] = ja[iter].jobs[j].out[2];
                                 soundspeedCells[celli] = ja[iter].jobs[j].out[3];
                             }
+                            N_add_[ja[iter].N_batch] = ja[iter].N_add;
                             tail = iter;
                             iter = ja[iter].next;
                             nfinished_block++;
@@ -555,6 +592,22 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
                         break;
                     }
                 }
+
+                for (int iter = 0; iter < Nbatch; iter++)
+                {
+                    index_[iter] = iter;
+                }
+                //Pout << N_add_ << endl;
+                my_quicksort(N_add_, index_, 0, Nbatch - 1);
+                head_link = index_[0];
+                label iter_ = head_link;
+                for (int iter = 0; iter < Nbatch - 1; iter++)
+                {
+                    link_[iter_] = index_[iter + 1];
+                    iter_ = link_[iter_];
+                }
+                link_[iter_] = -1;
+                //Pout << link_ << endl;
                 SUPstream::Sync();
             }
         }
@@ -830,6 +883,7 @@ Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::ISATVLEheRhoThermo(
       Nbatch(vaporfrac_.size() / Batch_Size + (vaporfrac_.size() % Batch_Size > 0 ? 1 : 0)),
       link_(Nbatch, 0),
       N_add_(Nbatch, 0),
+      index_(Nbatch, 0),
       ja(SUPstream::node_manager, n_block, sizeof(jobArray) + sizeof(jobInput) * (Batch_Size - 1)),
       sspare_cpu(SUPstream::node_manager), spare_cpu(sspare_cpu().var),
       sfinished_head(SUPstream::node_manager, SUPstream::node_manager.size), finished_head(&sfinished_head()),

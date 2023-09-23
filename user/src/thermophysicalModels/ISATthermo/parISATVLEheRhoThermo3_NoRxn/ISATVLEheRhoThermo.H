@@ -110,6 +110,7 @@ namespace Foam
         label Nbatch;
         labelField link_;
         labelField N_add_;
+        labelField index_;
         label head_link;
 
         SUPstream::shared_data2<jobArray> ja;
