@@ -112,6 +112,10 @@ namespace Foam
         labelField N_add_;
         labelField index_;
         label head_link;
+        
+        label Nsend;
+        label Nreceive;
+        label Nplan;
 
         SUPstream::shared_data2<jobArray> ja;
 
