@@ -514,48 +514,55 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
                             {
                                 int iter;
                                 l_empty.lock();
-                                iter = empty_head;
-                                empty_head = ja[empty_head].next;
-                                if (empty_head == -1)
+                                if (empty_head != -1)
                                 {
-                                    empty_tail = -1;
-                                }
-                                l_empty.unlock();
+                                    iter = empty_head;
+                                    empty_head = ja[empty_head].next;
+                                    if (empty_head == -1)
+                                    {
+                                        empty_tail = -1;
+                                    }
+                                    l_empty.unlock();
 
-                                ja[iter].first_i = first_i;
-                                ja[iter].size_i = size_i;
+                                    ja[iter].first_i = first_i;
+                                    ja[iter].size_i = size_i;
 
-                                for (int j = 0; j < ja[iter].size_i; j++)
-                                {
-                                    label celli = ja[iter].first_i + j;
-                                    const typename MixtureType::thermoType &mixture_ = this->cellMixture(celli);
-                                    ja[iter].jobs[j].p0 = pCells[celli];
-                                    ja[iter].jobs[j].T0 = TCells[celli];
-                                    for (int k = 0; k < mixture_.X().size(); k++)
-                                        ja[iter].jobs[j].in[k] = mixture_.X()[k];
-                                    ja[iter].jobs[j].in[mixture_.X().size()] = hCells[celli];
-                                    ja[iter].jobs[j].in[mixture_.X().size() + 1] = rhoCells[celli];
-                                }
-                                Nsend++;
-                                ja[iter].rank = rank;
-                                ja[iter].N_batch = iter_link;
+                                    for (int j = 0; j < ja[iter].size_i; j++)
+                                    {
+                                        label celli = ja[iter].first_i + j;
+                                        const typename MixtureType::thermoType &mixture_ = this->cellMixture(celli);
+                                        ja[iter].jobs[j].p0 = pCells[celli];
+                                        ja[iter].jobs[j].T0 = TCells[celli];
+                                        for (int k = 0; k < mixture_.X().size(); k++)
+                                            ja[iter].jobs[j].in[k] = mixture_.X()[k];
+                                        ja[iter].jobs[j].in[mixture_.X().size()] = hCells[celli];
+                                        ja[iter].jobs[j].in[mixture_.X().size() + 1] = rhoCells[celli];
+                                    }
+                                    Nsend++;
+                                    ja[iter].rank = rank;
+                                    ja[iter].N_batch = iter_link;
 
-                                l_filled.lock();
-                                if (filled_tail == -1)
-                                {
-                                    ja[iter].next = -1;
-                                    filled_tail = iter;
-                                    filled_head = iter;
+                                    l_filled.lock();
+                                    if (filled_tail == -1)
+                                    {
+                                        ja[iter].next = -1;
+                                        filled_tail = iter;
+                                        filled_head = iter;
+                                    }
+                                    else
+                                    {
+                                        ja[iter].next = -1;
+                                        ja[filled_tail].next = iter;
+                                        filled_tail = iter;
+                                    }
+                                    l_filled.unlock();
+                                    iter_link = link_[iter_link];
+                                    i++;
                                 }
                                 else
                                 {
-                                    ja[iter].next = -1;
-                                    ja[filled_tail].next = iter;
-                                    filled_tail = iter;
+                                    l_empty.unlock();
                                 }
-                                l_filled.unlock();
-                                iter_link = link_[iter_link];
-                                i++;
                             }
                             else
                                 break;
