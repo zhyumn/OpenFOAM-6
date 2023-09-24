@@ -550,12 +550,14 @@ bool Foam::ISATmanager<FuncType>::call(
 #ifndef ISATcache
                 addL(value, out, arg...);
 #else
+            {
                 if (pleaf_out.notNULL())
                     addL_in(value, out, pleaf_out);
                 else
                 {
                     addL(value, out, arg...);
                 }
+            }
 #endif
 
             /*             
@@ -660,7 +662,7 @@ template <class FuncType>
 bool Foam::ISATmanager<FuncType>::retrieve(
     const Foam::scalarList &value, scalarList &out)
 {
-    bool retrieved(false);
+    //bool retrieved(false);
     ISATleaf *plfL;
     SharedPointer<parISATleaf> plf;
     if (LIKELY(tableTreeL_.size()))
