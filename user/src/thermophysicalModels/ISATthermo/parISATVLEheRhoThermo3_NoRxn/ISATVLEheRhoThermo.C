@@ -438,7 +438,7 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
                         l_empty.unlock();
                     }
 
-                    if (i < nloop && Nsend < Nplan)
+                    if (i < nloop && Nsend < Nplan && l_empty.try_lock())
                     {
                         int size_i = batch_size;
                         if (iter_link == nloop - 1)
@@ -447,10 +447,9 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
                         }
                         int first_i = iter_link * batch_size;
 
-                        if (empty_head != -1 && i < nloop)
+                        if (empty_head != -1)
                         {
                             int iter;
-                            l_empty.lock();
                             iter = empty_head;
                             empty_head = ja[empty_head].next;
                             if (empty_head == -1)
@@ -495,7 +494,9 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
                             i++;
                         }
                         else
-                            break;
+                        {
+                            l_empty.unlock();
+                        }
                     }
 
                     if (i < nloop && spare_cpu > 0 && l_sender.try_lock())
@@ -562,8 +563,10 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
                         l_sender.unlock();
                     }
                 }
+                //Pout << "2nd loop" << endl;
                 while (1)
                 {
+
                     if (l_receiver.try_lock())
                     {
                         int iter = -1;
@@ -654,6 +657,18 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
                     {
                         break;
                     }
+/*                     if (filled_head != -1)
+                    {
+                        Pout << "1" << endl;
+                    }
+                    if (spare_cpu.load() != n_cpu)
+                    {
+                        Pout << "2" << endl;
+                    }
+                    if (nfinished_block != nloop)
+                    {
+                        Pout << "3" << endl;
+                    } */
                 }
 
                 for (int iter = 0; iter < Nbatch; iter++)
@@ -1014,6 +1029,8 @@ Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::ISATVLEheRhoThermo(
         N_add_[i] = 0;
     }
     link_[link_.size() - 1] = -1;
+
+    Nplan = 0;
 
     forAll(Dimix_, i)
     {
