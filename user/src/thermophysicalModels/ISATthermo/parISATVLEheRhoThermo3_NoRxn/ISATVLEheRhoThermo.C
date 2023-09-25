@@ -977,7 +977,7 @@ Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::ISATVLEheRhoThermo(
       WList_(MixtureType::Y().size()),
       //Y_G_List_(MixtureType::Y().size()),
       inviscid_(false),
-      n_block(SUPstream::node_manager.size * 2),
+      n_block(SUPstream::node_manager.size * 5),
       Batch_Size(this->lookupOrDefault("batchSize", 100)),
       Nbatch(vaporfrac_.size() / Batch_Size + (vaporfrac_.size() % Batch_Size > 0 ? 1 : 0)),
       link_(Nbatch, 0),

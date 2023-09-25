@@ -315,6 +315,7 @@ namespace Foam
 
         //- Maximum number of elements in the binary tree
         label maxNLeafs_;
+        SUPstream::shared_data<label> smaxNLeafs_;
 
         //- Size of the BST (= number of chemPoint stored)
         //label size_;
@@ -358,6 +359,7 @@ namespace Foam
               NRetrieved(pv_().NRetrieved), NGrowth(pv_().NGrowth), NAdd(pv_().NAdd), NCall(pv_().NCall),
               NRetrievedL(0), NGrowthL(0), NAddL(0), NCallL(0),
               SN(pv_().SN),
+              smaxNLeafs_(manager_),
               /*               NF1(pv_().NF1), NF2(pv_().NF2), NF3(pv_().NF3),
               NF4(pv_().NF4), NF5(pv_().NF5), NF6(pv_().NF6),
               NF7(pv_().NF7), */
@@ -367,27 +369,6 @@ namespace Foam
               n_in_(in_n), n_out_(out_n), root_(pv_().root_), NtimeTag_(readLabel(ISATDict.lookup("NtimeTag"))),
               start_s(NtimeTag_), N_s(NtimeTag_) //, size_(0) //, timeTagList_(readLabel(ISATDict.lookup("NtimeTag")))
         {
-            sync_.sync();
-            if (manager_.rank == 0)
-            {
-                root_.setNULL();
-                NRetrieved = 0;
-                NGrowth = 0;
-                NAdd = 0;
-                NCall = 0;
-
-                SN = 0;
-                /*                 NF1 = 0;
-                NF2 = 0;
-                NF3 = 0;
-                NF4 = 0;
-                NF5 = 0;
-                NF6 = 0;
-                NF7 = 0; */
-            }
-            sync_.sync();
-
-            notempty_ = false;
 
             label timeTagList = readLabel(ISATDict.lookup("NtimeTag"));
             dictionary &NleafDcit = ISATDict.subDict("maxNLeafs");
@@ -425,6 +406,29 @@ namespace Foam
                     << "maxNLeafs type can only be const and adaptive."
                     << exit(FatalError);
             }
+
+            sync_.sync();
+            if (manager_.rank == 0)
+            {
+                root_.setNULL();
+                NRetrieved = 0;
+                NGrowth = 0;
+                NAdd = 0;
+                NCall = 0;
+
+                SN = 0;
+                smaxNLeafs_() = maxNLeafs_;
+                /*                 NF1 = 0;
+                NF2 = 0;
+                NF3 = 0;
+                NF4 = 0;
+                NF5 = 0;
+                NF6 = 0;
+                NF7 = 0; */
+            }
+            sync_.sync();
+
+            notempty_ = false;
         };
 
         inline label maxNLeaf()
@@ -441,11 +445,13 @@ namespace Foam
                     for (int i = 0; i < maxTimeTag_; i++)
                         sum2 += N_s[i];
                     Pout << "sum =  " << sum << "sum2 = " << sum2 << endl;
-                    return min(min(max(NLeafBase_, sum * NLeafRatio_), NLeafMax_), sum2);
+                    maxNLeafs_ = min(min(max(NLeafBase_, sum * NLeafRatio_), NLeafMax_), sum2);
+                    return maxNLeafs_;
                 }
                 else
                 {
-                    return min(max(NLeafBase_, sum * NLeafRatio_), NLeafMax_);
+                    maxNLeafs_ = min(max(NLeafBase_, sum * NLeafRatio_), NLeafMax_);
+                    return maxNLeafs_;
                 }
             }
             return maxNLeafs_;

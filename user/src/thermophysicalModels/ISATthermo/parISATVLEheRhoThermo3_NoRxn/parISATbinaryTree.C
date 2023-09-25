@@ -671,6 +671,7 @@ void Foam::parISATbinaryTree::clean(scalar timestep)
         Info << iter << ":" << N_s[iter] << endl;
     }
     label newmax = maxNLeaf();
+    Info << "newmax:" << newmax << endl;
     /*    i = 0;
      for (; i < NtimeTag_; i++)
     {
