@@ -298,7 +298,7 @@ namespace Foam
         bool retrieve(const Foam::scalarList &value, scalarList &out);
 
         //bool grow(SharedPointer<parISATleaf>plf, const scalarList &dvalue, scalarList &data1, const scalarList &data2);
-        bool grow2(SharedPointer<parISATleaf> plf, const scalarList &dvalue, scalarList &data1);
+        bool grow2(SharedPointer<parISATleaf> plf, const scalarList &dvalue, scalarList &data1, SharedPointer<parISATleaf> &plf_out);
         bool growL(ISATleaf *plf, const scalarList &dvalue, scalarList &data1);
 
         double distance(const scalarList &l, const scalarList &r);

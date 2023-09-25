@@ -156,10 +156,10 @@ void Foam::ISATmanager<FuncType>::add(const scalarList &value, scalarList &out, 
     {
         T.deleteLeaf(T.timeTagList().pop());
     } */
-     if (T.size() >= T.maxNLeafs())
+    if (T.size() >= T.maxNLeafs())
     {
         return;
-    } 
+    }
     //pleaf = T.insertNewLeaf(value, out);
     if (T.size() == 0)
     {
@@ -279,10 +279,10 @@ void Foam::ISATmanager<FuncType>::add(const scalarList &value, scalarList &out, 
             }
             //Pout << "!!!!!!herexxxzzz3" << endl;
             //FatalErrorInFunction<<" test!!!!!xz\n"<< exit(FatalError);
-            if (grow2(pleaf2, dvalue, out))
+            if (grow2(pleaf2, dvalue, out, pleaf_out))
             {
-                pleaf_out.offset = pleaf2.offset;
-                pleaf2->lastUsed = timeSteps_;
+                //pleaf_out.offset = pleaf2.offset;
+                pleaf_out->lastUsed = timeSteps_;
                 /*                 FatalErrorInFunction << " test!!!!!xzz\n"
                                      << exit(FatalError); */
                 //Pout << "!!!!!!herexxxzzz4" << endl;
@@ -773,7 +773,8 @@ template <class FuncType>
 bool Foam::ISATmanager<FuncType>::grow2(
     SharedPointer<parISATleaf> plf,
     const scalarList &dvalue,
-    scalarList &data1)
+    scalarList &data1,
+    SharedPointer<parISATleaf> &plf_out)
 {
     //bool success = false;
     // If the pointer to the chemPoint is nullptr, the function stops
@@ -827,6 +828,8 @@ bool Foam::ISATmanager<FuncType>::grow2(
             pleaf_new->set(*plf);
             pleaf_new->grow(value_tmp + dvalue_m * (1 + 1e-3), scaleIn_);
             SharedPointer<parISATleaf> *leaf;
+            pleaf_new->SleafN = plf->SleafN;
+            plf_out.offset = pleaf_new.offset;
 
             if (plf->node_->leafLeft_ == plf)
             {
