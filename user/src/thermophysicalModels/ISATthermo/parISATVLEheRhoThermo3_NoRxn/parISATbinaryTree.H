@@ -88,8 +88,8 @@ namespace Foam
         SUPstream::shared_data<label> emptylist_leaf;
         SUPstream::shared_data<label> emptylist_node;
 
-        SUPstream::shared_data<label> reuselist_leaf;
-        SUPstream::shared_data<label> reuselist_node;
+        //SUPstream::shared_data<label> reuselist_leaf;
+        //SUPstream::shared_data<label> reuselist_node;
 
         SUPstream::shared_data<label> pemptylist_node;
         SUPstream::shared_data<label> pemptylist_leaf;
@@ -97,25 +97,24 @@ namespace Foam
         template <class Type>
         class Mem_manager
         {
-            SUPstream::shared_data<label> &emptylist_;
+           // SUPstream::shared_data<label> &emptylist_;
 
-            SUPstream::shared_data<label> &pemptylist_;
-            SUPstream::shared_data<label> &reuselist_;
+            label pemptylist_;
+            labelList reuselist_;
             int reuse_N;
             int n_in_, n_out_;
             std::atomic<int> &tail_;
             std::atomic<int> &size_;
-            std::atomic<int> &reuse_tail_;
+            int reuse_tail_;
 
         public:
-            Mem_manager(SUPstream::shared_data<label> &emptylist_in, SUPstream::shared_data<label> &pemptylist_in, SUPstream::shared_data<label> &reuselist_in, int n_in, int n_out, std::atomic<int> &tail_in, std::atomic<int> &size_in, std::atomic<int> &tmp_size_in)
-                : emptylist_(emptylist_in), pemptylist_(pemptylist_in), reuselist_(reuselist_in), n_in_(n_in), n_out_(n_out), tail_(tail_in),
-                  size_(size_in), reuse_tail_(tmp_size_in)
+            Mem_manager(SUPstream::shared_data<label> &pemptylist_in, label reuselist_size, int n_in, int n_out, std::atomic<int> &tail_in, std::atomic<int> &size_in)
+                : pemptylist_(-1), reuselist_(reuselist_size), n_in_(n_in), n_out_(n_out), tail_(tail_in),
+                  size_(size_in), reuse_tail_(0)
             {
                 tail_ = 0;
                 reuse_tail_ = 0;
-                reuse_N = reuselist_.size;
-                pemptylist_() = -1;
+                reuse_N = reuselist_.size();
             }
 
             inline SharedPointer<Type> New_reuse()
@@ -162,34 +161,18 @@ namespace Foam
             {
                 size_--;
                 //tmp_size_++;
-                emptylist_[tail_++] = in.offset;
+                //emptylist_[tail_++] = in.offset;
                 //tail_++;
-                in->setNext(pemptylist_());
-                pemptylist_() = in.offset;
+                in->setNext(pemptylist_);
+                pemptylist_ = in.offset;
             }
-            inline void update()
+            inline void clean()
             {
                 if (reuse_tail_ < 0)
                     reuse_tail_ = 0;
-                //tmp_size_ = 0;
-                Pout << "1 " << tail_ << endl;
-                /*while (reuse_tail_ < reuse_N && tail_ > 0)
-                {
-                    tail_--;
-                    reuselist_[reuse_tail_] = emptylist_[tail_];
-                    SharedPointer<Type>(reuselist_[reuse_tail_])->reuse();
-                    reuse_tail_++;
-                }*/
-                Pout << "2" << endl;
-                /*                 while (tail_ > 0)
-                {
-                    tail_--;
-                    //tmp_size_--;
-                    (*SharedPointer<Type>(emptylist_[tail_])).Delete();
-                    pslab->free(sizeof(Type), emptylist_[tail_]);
-                } */
+
                 SharedPointer<Type> ptr, tmp;
-                ptr.offset = pemptylist_();
+                ptr.offset = pemptylist_;
                 while (ptr.offset != -1)
                 {
                     tmp = ptr;
@@ -198,8 +181,23 @@ namespace Foam
                     pslab->free(sizeof(Type), tmp.offset);
                 }
                 tail_ = 0;
-                pemptylist_() = -1;
-                Pout << "3" << endl;
+                pemptylist_ = -1;
+            }
+
+            inline void reuse()
+            {
+                if (reuse_tail_ < 0)
+                    reuse_tail_ = 0;
+                //tmp_size_ = 0;
+                while (reuse_tail_ < reuse_N && tail_ > 0)
+                {
+                    tail_--;
+                    reuselist_[reuse_tail_] = pemptylist_; //emptylist_[tail_];
+                    pemptylist_ = SharedPointer<Type>(pemptylist_)->next();
+                    SharedPointer<Type>(reuselist_[reuse_tail_])->reuse();
+                    reuse_tail_++;
+                }
+
                 while (reuse_tail_ < reuse_N)
                 {
                     reuselist_[reuse_tail_] = New().offset;
@@ -342,7 +340,7 @@ namespace Foam
               preAllocateNode(readLabel(ISATDict.lookup("preAllocateNode"))),
               emptylist_leaf(manager_, 100000), emptylist_node(manager_, 100000),
               pemptylist_leaf(manager_), pemptylist_node(manager_),
-              reuselist_leaf(manager_, manager_.size * preAllocateLeaf), reuselist_node(manager_, manager_.size * preAllocateNode), // 20 100
+              //reuselist_leaf(manager_, manager_.size * preAllocateLeaf), reuselist_node(manager_, manager_.size * preAllocateNode), // 20 100
               pv_(manager_),
               size_leaf_(pv_().size_leaf), head_leaf(pv_().head_leaf),
               //tail_leaf(pv_().tail_leaf),
@@ -361,8 +359,8 @@ namespace Foam
               NF4(pv_().NF4), NF5(pv_().NF5), NF6(pv_().NF6),
               NF7(pv_().NF7), */
               write_lock(manager_, sync_), mem_lock(manager_, sync_),
-              leaf_manager(emptylist_leaf, pemptylist_leaf, reuselist_leaf, in_n, out_n, stail_leaf().var, ssize_leaf().var, stmp_size_leaf().var),
-              node_manager(emptylist_node, pemptylist_node, reuselist_node, in_n, out_n, stail_node().var, ssize_node().var, stmp_size_node().var),
+              leaf_manager(pemptylist_leaf, preAllocateLeaf, in_n, out_n, stail_leaf().var, ssize_leaf().var),
+              node_manager(pemptylist_node, preAllocateNode, in_n, out_n, stail_node().var, ssize_node().var),
               n_in_(in_n), n_out_(out_n), root_(pv_().root_), NtimeTag_(readLabel(ISATDict.lookup("NtimeTag"))),
               start_s(NtimeTag_), N_s(NtimeTag_) //, size_(0) //, timeTagList_(readLabel(ISATDict.lookup("NtimeTag")))
         {

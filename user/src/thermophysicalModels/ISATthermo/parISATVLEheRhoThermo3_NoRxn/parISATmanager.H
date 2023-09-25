@@ -483,11 +483,6 @@ namespace Foam
             if (tableTree_.manager_.rank == 0)
             {
 
-                Pout << "!!!!!!!!test-x1" << endl;
-                tableTree_.leaf_manager.update();
-                //Pout << "!!!!!!!!test-x2" << endl;
-                tableTree_.node_manager.update();
-
                 //showPerformance();
                 //std::ofstream out("out.txt");
                 //print(out);
@@ -517,15 +512,28 @@ namespace Foam
                         showPerformance();
                     }
                 }
-                Pout << "!!!!!!!!test-x2" << endl;
-                tableTree_.leaf_manager.update();
                 //Pout << "!!!!!!!!test-x2" << endl;
-                tableTree_.node_manager.update();
+                //tableTree_.leaf_manager.update();
+                //Pout << "!!!!!!!!test-x2" << endl;
+                //tableTree_.node_manager.update();
                 //test("x4");
                 //out.close();
                 //Pout << "!!!!!!!!test-x3" << endl;
             }
             tableTree_.sync_.sync();
+
+            tableTree_.mem_lock.lock();
+            tableTree_.leaf_manager.reuse();
+            tableTree_.node_manager.reuse();
+            tableTree_.mem_lock.unlock();
+
+            tableTree_.sync_.sync();
+            if (tableTree_.manager_.rank == 0)
+            {
+                tableTree_.leaf_manager.clean();
+                tableTree_.node_manager.clean();
+            }
+
             tableTreeL_.updateMaxNLeaf(tableTree_.size());
         }
 
