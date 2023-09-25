@@ -181,7 +181,7 @@ namespace Foam
                     pslab->free(sizeof(Type), tmp.offset);
                 }
 
-                Pout << "tail_ =  " << tail_<<endl;
+                //Pout << "tail_ =  " << tail_<<endl;
                 
                 tail_ = 0;
                 pemptylist_ = -1;
