@@ -208,6 +208,15 @@ namespace Foam
             EOA_.Delete();
         }
 
+        void setNext(label offset)
+        {
+            node_.offset = offset;
+        }
+        label next()
+        {
+            return node_.offset;
+        }
+
         /*         inline scalarList &value()
         {
             return value_;

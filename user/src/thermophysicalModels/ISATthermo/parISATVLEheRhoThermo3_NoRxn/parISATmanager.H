@@ -482,6 +482,12 @@ namespace Foam
             tableTree_.sync_.sync();
             if (tableTree_.manager_.rank == 0)
             {
+
+                Pout << "!!!!!!!!test-x1" << endl;
+                tableTree_.leaf_manager.update();
+                //Pout << "!!!!!!!!test-x2" << endl;
+                tableTree_.node_manager.update();
+
                 //showPerformance();
                 //std::ofstream out("out.txt");
                 //print(out);
@@ -511,7 +517,7 @@ namespace Foam
                         showPerformance();
                     }
                 }
-
+                Pout << "!!!!!!!!test-x2" << endl;
                 tableTree_.leaf_manager.update();
                 //Pout << "!!!!!!!!test-x2" << endl;
                 tableTree_.node_manager.update();
