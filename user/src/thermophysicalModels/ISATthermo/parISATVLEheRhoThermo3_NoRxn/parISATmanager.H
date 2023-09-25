@@ -533,6 +533,7 @@ namespace Foam
                 tableTree_.leaf_manager.clean();
                 tableTree_.node_manager.clean();
             }
+            tableTree_.sync_.sync();
 
             tableTreeL_.updateMaxNLeaf(tableTree_.size());
         }

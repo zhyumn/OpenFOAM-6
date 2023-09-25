@@ -109,9 +109,11 @@ namespace Foam
 
         label Nbatch;
         labelField link_;
+        labelField link_rev;
         labelField N_add_;
         labelField index_;
         label head_link;
+        label tail_link;
         
         label Nsend;
         label Nreceive;

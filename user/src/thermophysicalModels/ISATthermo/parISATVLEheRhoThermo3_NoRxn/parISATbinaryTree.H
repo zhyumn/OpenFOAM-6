@@ -97,7 +97,7 @@ namespace Foam
         template <class Type>
         class Mem_manager
         {
-           // SUPstream::shared_data<label> &emptylist_;
+            // SUPstream::shared_data<label> &emptylist_;
 
             label pemptylist_;
             labelList reuselist_;
@@ -180,6 +180,9 @@ namespace Foam
                     tmp->Delete();
                     pslab->free(sizeof(Type), tmp.offset);
                 }
+
+                Pout << "tail_ =  " << tail_<<endl;
+                
                 tail_ = 0;
                 pemptylist_ = -1;
             }
