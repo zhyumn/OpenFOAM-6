@@ -490,7 +490,8 @@ namespace Foam
                     if (timeSteps_ % checkInterval_ == 0)
                     {
                         tableTree_.clean(timeSteps_);
-                        tableTree_.smaxNLeafs_() = tableTree_.maxNLeafs_;
+                        tableTree_.clean(timeSteps_);
+                        //tableTree_.smaxNLeafs_() = tableTree_.maxNLeafs_;
                     }
                     if (timeSteps_ % checkInterval_ == 0 && tableTree_.depth() * 1.0 / ceil(log2(tableTree_.size())) > maxDepthFactor_)
                     {
@@ -517,7 +518,7 @@ namespace Foam
                 //out.close();
                 //Pout << "!!!!!!!!test-x3" << endl;
             }
-            tableTree_.maxNLeafs_ = tableTree_.smaxNLeafs_();
+            //tableTree_.maxNLeafs_ = tableTree_.smaxNLeafs_();
             if (timeSteps_ % checkInterval_ == 0)
             {
                 showPerformance();
