@@ -58,8 +58,13 @@ Foam::ISATmanager<FuncType>::ISATmanager(label in_n, label out_n, FuncType &func
       nAdd_(0),
       nCall_(0),
       nRRetrieved_(0),
+      nRRetrieved2_(0),
       nRGrowth_(0),
+      nRGrowth2_(0),
+      nRGrowth3_(0),
       nRAdd_(0),
+      nRAdd2_(0),
+      nRAdd3_(0),
       nRCall_(0),
       treename_(name_in),
       muted_(ISATDict_.lookupOrDefault<bool>("muted", false))
@@ -132,6 +137,7 @@ void Foam::ISATmanager<FuncType>::addL_in(const scalarList &value, scalarList &o
             pleaf->EOA_[i][j] = pleaf_in->EOA_(i, j);
         }
     pleaf->SleafN = pleaf_in->SleafN;
+    nRAdd3_++;
     //pfunc->derive(value, out, pleaf->A(), arg...);
 
     //pleaf->EOA() = scaleIn_ * (initToleranceIn2_ + (pleaf->A()) * toleranceOut2_ * (pleaf->A().T())) * scaleIn_;
@@ -558,6 +564,8 @@ bool Foam::ISATmanager<FuncType>::call(
                     {
                         pleafL->EOA_[i][j] = pleaf_out->EOA_(i, j);
                     }
+                nRGrowth3_++;
+
                 return true;
             }
 #endif
@@ -595,7 +603,7 @@ bool Foam::ISATmanager<FuncType>::call(
     else
     {
         //tableTree_.NRetrieved++;
-        nRRetrieved_++;
+        //nRRetrieved_++;
     }
     //tableTree_.NCall++;
     nRCall_++;
@@ -623,7 +631,7 @@ void Foam::ISATmanager<FuncType>::addL(const scalarList &value, scalarList &out,
     pleaf->EOA() = scaleIn_ * (initToleranceIn2_ + (pleaf->A()) * toleranceOut2_ * (pleaf->A().T())) * scaleIn_;
     modified_ = true;
 
-    nRAdd_++;
+    nRAdd2_++;
 }
 
 template <class FuncType>
@@ -654,7 +662,7 @@ bool Foam::ISATmanager<FuncType>::growL(
         data1 = ret1;
         plf->grow(plf->value() + dvalue_m * (1 + 1e-3), scaleIn_);
         tableTreeL_.timeTagList().renew(plf->pTimeTagList());
-        nRGrowth_++;
+        nRGrowth2_++;
         modified_ = true;
         return true;
     }
@@ -710,6 +718,7 @@ bool Foam::ISATmanager<FuncType>::retrieve(
                 {
                     //retrieved = true;
                     nRRetrieved_++;
+                    nRRetrieved2_++;
                     plf->eval(value, out);
                     //plf->lastUsed = timeSteps_;
                     //plf->increaseNumRetrieve();
@@ -721,6 +730,7 @@ bool Foam::ISATmanager<FuncType>::retrieve(
                             {
                                 plfL->EOA_[i][j] = plf->EOA_(i, j);
                             }
+                        nRGrowth3_++;
                     }
                     else
                     {
@@ -921,6 +931,7 @@ void Foam::ISATmanager<FuncType>::showPerformance() const
     {
         std::cout << treename_ << ", ISAT performance: nCall = " << nCall_ << ", notCall = " << notCall << ", nRetrieved = " << nRetrieved_ << ", nGrowth = " << nGrowth_ << ", nAdd = " << nAdd_ << std::endl;
         std::cout << treename_ << ", recent info: nCall = " << nRCall_ << ", nRetrieved = " << nRRetrieved_ << ", nGrowth = " << nRGrowth_ << ", nAdd = " << nRAdd_ << std::endl;
+        std::cout << ", nRetrieved2 = " << nRRetrieved2_ << ", nGrowth2 = " << nRGrowth2_ << ", nGrowth3 = " << nRGrowth3_ << ", nAdd2 = " << nRAdd2_ << ", nAdd3 = " << nRAdd3_ << std::endl;
 
         std::cout << "tree size = " << tableTree_.size() << std::endl;
         std::cout << "tree sizeL = " << tableTreeL_.size() << std::endl;
@@ -931,6 +942,11 @@ void Foam::ISATmanager<FuncType>::showPerformance() const
         Info << "NF4 = " << tableTree_.NF4 << ", NF5 = " << tableTree_.NF5 << ", NF6 = " << tableTree_.NF6 << endl;
         Info << "NF7 = " << tableTree_.NF7 << endl; */
     }
+    nRRetrieved2_ = 0;
+    nRGrowth2_ = 0;
+    nRGrowth3_ = 0;
+    nRAdd2_ = 0;
+    nRAdd3_ = 0;
     nRCall_ = 0;
     nRRetrieved_ = 0;
     nRGrowth_ = 0;

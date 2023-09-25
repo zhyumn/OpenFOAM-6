@@ -93,8 +93,13 @@ namespace Foam
         mutable label nAdd_;
         mutable label nCall_;
         mutable label nRRetrieved_;
+        mutable label nRRetrieved2_;
         mutable label nRGrowth_;
+        mutable label nRGrowth2_;
+        mutable label nRGrowth3_;
         mutable label nRAdd_;
+        mutable label nRAdd2_;
+        mutable label nRAdd3_;
         mutable label nRCall_;
 
         word treename_;
