@@ -687,7 +687,9 @@ void Foam::parISATbinaryTree::clean(scalar timestep)
         << "test " << newmax
         << exit(FatalError); */
 
-    for (int i = newmax; i < size_leaf_; i++)
+    int local_size_leaf_ = size_leaf_;
+
+    for (int i = newmax; i < local_size_leaf_; i++)
     {
         deleteLeaf(pleaf[i]);
     }
