@@ -164,6 +164,7 @@ namespace Foam
                 if (reuse_tail_ < 0)
                     reuse_tail_ = 0;
                 //tmp_size_ = 0;
+                Pout << "1" << tail_ << endl;
                 while (reuse_tail_ < reuse_N && tail_ > 0)
                 {
                     tail_--;
@@ -171,6 +172,7 @@ namespace Foam
                     SharedPointer<Type>(reuselist_[reuse_tail_])->reuse();
                     reuse_tail_++;
                 }
+                Pout << "2" << endl;
                 while (tail_ > 0)
                 {
                     tail_--;
@@ -178,6 +180,7 @@ namespace Foam
                     (*SharedPointer<Type>(emptylist_[tail_])).Delete();
                     pslab->free(sizeof(Type), emptylist_[tail_]);
                 }
+                Pout << "3" << endl;
                 while (reuse_tail_ < reuse_N)
                 {
                     reuselist_[reuse_tail_] = New().offset;

@@ -629,6 +629,15 @@ void Foam::parISATbinaryTree::clean(scalar timestep)
     List<SharedPointer<parISATleaf>> pleaf(size_leaf_);
     int tail = 0;
     getleaflist(root_, tail, pleaf);
+
+    if (tail != size_leaf_)
+    {
+        FatalErrorInFunction
+            << "wrong leaf list"
+            << size_leaf_ << "\n"
+            << tail
+            << exit(FatalError);
+    }
     quicksort(pleaf, 0, tail - 1);
 
     if (pleaf[0]->lastUsed > timestep - 1)
