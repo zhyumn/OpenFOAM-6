@@ -142,10 +142,11 @@ void Foam::ISATmanager<FuncType>::addL_in(const scalarList &value, scalarList &o
 
 template <class FuncType>
 template <class... Args>
-void Foam::ISATmanager<FuncType>::add(const scalarList &value, scalarList &out, SharedPointer<parISATleaf> &pleaf_out, bool growflag, Args &... arg)
+void Foam::ISATmanager<FuncType>::add(const scalarList &value, scalarList &out, SharedPointer<parISATleaf> &pleaf_out, bool growflag, bool &growsuc, Args &... arg)
 {
     parISATbinaryTree &T = tableTree_;
     pleaf_out.offset = sptr_NULL;
+    growsuc = false;
     std::atomic<size_t> *root_atomic = reinterpret_cast<std::atomic<long unsigned int> *>(&T.root_.offset);
 
     static scalarRectangularMatrix A_tmp(Ninput, Noutput);
@@ -283,6 +284,7 @@ void Foam::ISATmanager<FuncType>::add(const scalarList &value, scalarList &out, 
             {
                 //pleaf_out.offset = pleaf2.offset;
                 pleaf_out->lastUsed = timeSteps_;
+                growsuc = true;
                 /*                 FatalErrorInFunction << " test!!!!!xzz\n"
                                      << exit(FatalError); */
                 //Pout << "!!!!!!herexxxzzz4" << endl;
@@ -482,6 +484,7 @@ bool Foam::ISATmanager<FuncType>::call(
 {
     SharedPointer<parISATleaf> pleaf;
     SharedPointer<parISATleaf> pleaf_out;
+    bool growsuc;
     ISATleaf *pleafL;
     if (noISAT_)
     {
@@ -510,7 +513,7 @@ bool Foam::ISATmanager<FuncType>::call(
         if (UNLIKELY(pleaf.isNULL() || pleafL == nullptr))
         {
             pfunc->value(value, out, arg...);
-            add(value, out, pleaf_out, false, arg...);
+            add(value, out, pleaf_out, false, growsuc, arg...);
             if (pleaf_out.notNULL())
                 addL_in(value, out, pleaf_out);
             else
@@ -539,13 +542,25 @@ bool Foam::ISATmanager<FuncType>::call(
             }
             pfunc->value(value, out, arg...);
 #ifdef ISATcache
-            add(value, out, pleaf_out, flag, arg...);
+            add(value, out, pleaf_out, flag, growsuc, arg...);
 #endif
             static scalarList dvalue2(value.size(), Zero);
             for (int i = 0; i < tableTree_.n_in_; i++)
             {
                 dvalue2[i] = value[i] - pleafL->value_[i];
             }
+
+#ifdef ISATcache
+            if (growsuc && pleafL->SleafN == pleaf_out->SleafN)
+            {
+                for (int i = 0; i < Ninput; i++)
+                    for (int j = 0; j < Ninput; j++)
+                    {
+                        pleafL->EOA_[i][j] = pleaf_out->EOA_(i, j);
+                    }
+                return true;
+            }
+#endif
             if (!flag || !growL(pleafL, dvalue2, out))
 #ifndef ISATcache
                 addL(value, out, arg...);

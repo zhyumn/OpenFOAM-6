@@ -233,7 +233,7 @@ namespace Foam
             return tableTree_;
         }
         template <class... Args>
-        void add(const scalarList &value, scalarList &out, SharedPointer<parISATleaf> &pleaf, bool growflag, Args &... arg);
+        void add(const scalarList &value, scalarList &out, SharedPointer<parISATleaf> &pleaf, bool growflag, bool &growsuc, Args &... arg);
 
         template <class... Args>
         void addL(const scalarList &value, scalarList &out, Args &... arg);
