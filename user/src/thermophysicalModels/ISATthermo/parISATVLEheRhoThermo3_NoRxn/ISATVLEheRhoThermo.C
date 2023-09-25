@@ -401,11 +401,11 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
                         int iter;
                         int tail;
 
-                        l_finished.lock();
+                        pl_finished[rank].lock();
                         iter_start = finished_head[rank];
                         iter = iter_start;
                         finished_head[rank] = -1;
-                        l_finished.unlock();
+                        pl_finished[rank].unlock();
 
                         tail = iter;
                         while (iter != -1)
@@ -607,10 +607,10 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
                             }
                             ja[iter].N_add = N_add;
                             Nreceive++;
-                            l_finished.lock();
+                            pl_finished[ja[iter].rank].lock();
                             ja[iter].next = finished_head[ja[iter].rank];
                             finished_head[ja[iter].rank] = iter;
-                            l_finished.unlock();
+                            pl_finished[ja[iter].rank].unlock();
                         }
                     }
                     if (finished_head[rank] != -1)
@@ -619,11 +619,11 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
                         int iter;
                         int tail;
 
-                        l_finished.lock();
+                        pl_finished[rank].lock();
                         iter_start = finished_head[rank];
                         iter = iter_start;
                         finished_head[rank] = -1;
-                        l_finished.unlock();
+                        pl_finished[rank].unlock();
 
                         tail = iter;
                         while (iter != -1)
@@ -977,6 +977,8 @@ Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::ISATVLEheRhoThermo(
       l_empty(SUPstream::node_manager, SUPstream::Sync),
       l_filled(SUPstream::node_manager, SUPstream::Sync),
       l_finished(SUPstream::node_manager, SUPstream::Sync),
+      sl_finished(SUPstream::node_manager, SUPstream::node_manager.size),
+      pl_finished(sl_finished.ptr()),
       l_receiver(SUPstream::node_manager, SUPstream::Sync), l_sender(SUPstream::node_manager, SUPstream::Sync),
       sempty_head(SUPstream::node_manager), sempty_tail(SUPstream::node_manager),
       empty_head(sempty_head()), empty_tail(sempty_tail()),

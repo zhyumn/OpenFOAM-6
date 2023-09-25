@@ -136,6 +136,9 @@ namespace Foam
         SUPstream::mpi_mutex l_filled;
         SUPstream::mpi_mutex l_finished;
 
+        SUPstream::shared_data<SUPstream::ref_mutex> sl_finished;
+        SUPstream::ref_mutex *pl_finished;
+
         SUPstream::mpi_mutex l_receiver;
         SUPstream::mpi_mutex l_sender;
 
