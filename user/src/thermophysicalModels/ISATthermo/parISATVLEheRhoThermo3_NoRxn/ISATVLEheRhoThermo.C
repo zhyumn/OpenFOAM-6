@@ -502,7 +502,8 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
 
                     if (i < nloop && spare_cpu > 0 && l_sender.try_lock())
                     {
-                        for (int ii = 0; ii <= spare_cpu && ii < 3; ii++)
+                        int loc_spare_cpu = spare_cpu;
+                        for (int ii = 0; ii <= loc_spare_cpu; ii++)
                         {
                             int size_i = batch_size;
                             if (iter_link_rev == nloop - 1)
