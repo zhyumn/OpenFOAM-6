@@ -525,15 +525,10 @@ namespace Foam
             tableTree_.mem_lock.lock();
             tableTree_.leaf_manager.reuse();
             tableTree_.node_manager.reuse();
-            tableTree_.mem_lock.unlock();
 
-            tableTree_.sync_.sync();
-            if (tableTree_.manager_.rank == 0)
-            {
-                tableTree_.leaf_manager.clean();
-                tableTree_.node_manager.clean();
-            }
-            tableTree_.sync_.sync();
+            tableTree_.leaf_manager.clean();
+            tableTree_.node_manager.clean();
+            tableTree_.mem_lock.unlock();
 
             tableTreeL_.updateMaxNLeaf(tableTree_.size());
         }
