@@ -182,7 +182,7 @@ namespace Foam
                 }
 
                 //Pout << "tail_ =  " << tail_<<endl;
-                
+
                 tail_ = 0;
                 pemptylist_ = -1;
             }
@@ -440,6 +440,7 @@ namespace Foam
                     label sum2 = 0;
                     for (int i = 0; i < maxTimeTag_; i++)
                         sum2 += N_s[i];
+                    Pout << "sum =  " << sum << "sum2 = " << sum2 << endl;
                     return min(min(max(NLeafBase_, sum * NLeafRatio_), NLeafMax_), sum2);
                 }
                 else

@@ -114,7 +114,7 @@ namespace Foam
         labelField index_;
         label head_link;
         label tail_link;
-        
+
         label Nsend;
         label Nreceive;
         label Nplan;
@@ -130,6 +130,10 @@ namespace Foam
         };
         SUPstream::shared_data<padded_atomic<int>> sspare_cpu;
         std::atomic<int> &spare_cpu;
+
+        SUPstream::shared_data<padded_atomic<int>> sn_task;
+        std::atomic<int> &n_task;
+
         int nfinished_block;
         SUPstream::shared_data<std::atomic<int>> sfinished_head;
         std::atomic<int> *finished_head;
