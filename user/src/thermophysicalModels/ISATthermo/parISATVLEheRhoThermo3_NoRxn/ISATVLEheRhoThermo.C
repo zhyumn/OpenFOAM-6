@@ -500,15 +500,11 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
                         }
                     }
 
-                    if (i < nloop && spare_cpu > 0 && l_sender.try_lock()) // (spare_cpu > 0 || n_task > 0)
+                    if (i < nloop && spare_cpu > 0 && l_sender.try_lock())
                     {
-                        //if (n_task <= 0)
-                        //    n_task = spare_cpu.load();
                         int loc_spare_cpu = spare_cpu;
                         for (int ii = 0; ii <= loc_spare_cpu; ii++)
                         {
-                            //while (n_task--)
-                            //{
                             int size_i = batch_size;
                             if (iter_link_rev == nloop - 1)
                             {
@@ -989,7 +985,6 @@ Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::ISATVLEheRhoThermo(
       index_(Nbatch, 0),
       ja(SUPstream::node_manager, n_block, sizeof(jobArray) + sizeof(jobInput) * (Batch_Size - 1)),
       sspare_cpu(SUPstream::node_manager), spare_cpu(sspare_cpu().var),
-      sn_task(SUPstream::node_manager), n_task(sn_task().var),
       sfinished_head(SUPstream::node_manager, SUPstream::node_manager.size), finished_head(&sfinished_head()),
       l_empty(SUPstream::node_manager, SUPstream::Sync),
       l_filled(SUPstream::node_manager, SUPstream::Sync),
@@ -1046,7 +1041,6 @@ Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::ISATVLEheRhoThermo(
     }
     finished_head[rank] = -1;
 
-    n_task = 0;
     SUPstream::Sync();
 
     head_link = 0;

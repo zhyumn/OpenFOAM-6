@@ -123,6 +123,7 @@ namespace Foam
         label maxNLeafs_;
         label maxTimeTag_;
         scalar maxRatio_;
+        bool maxRatio_flag_;
 
         //- Size of the BST (= number of chemPoint stored)
         label size_;
@@ -211,6 +212,7 @@ namespace Foam
                 maxNLeafs_ = NLeafMax_;
                 maxTimeTag_ = 0;
                 maxRatio_ = 1.0;
+                maxRatio_flag_ = false;
             }
             else if (word(NleafDcit.lookup("type")) == word("maxTimeTag"))
             {
@@ -223,6 +225,7 @@ namespace Foam
                 maxNLeafs_ = NLeafMax_;
                 maxTimeTag_ = readLabel(NleafDcit.lookup("maxTimeTag"));
                 maxRatio_ = 1.0;
+                maxRatio_flag_ = false;
             }
             else if (word(NleafDcit.lookup("type")) == word("maxRatio"))
             {
@@ -235,6 +238,7 @@ namespace Foam
                 maxNLeafs_ = NLeafMax_;
                 maxTimeTag_ = readLabel(NleafDcit.lookup("maxTimeTag"));
                 maxRatio_ = readScalar(NleafDcit.lookup("maxRatio"));
+                maxRatio_flag_ = true;
             }
             else
             {

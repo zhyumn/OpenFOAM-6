@@ -691,6 +691,8 @@ void Foam::parISATbinaryTree::clean(scalar timestep)
     {
         deleteLeaf(pleaf[i]);
     }
+
+    Info << "after clean, size:" << size_leaf_ << endl;
     /*     for (int i = 0; i < size_leaf_; i++)
     {
         if (pleaf[i]->lastUsed < timeN)

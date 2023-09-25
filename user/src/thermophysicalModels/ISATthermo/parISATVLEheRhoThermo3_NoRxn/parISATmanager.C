@@ -156,10 +156,10 @@ void Foam::ISATmanager<FuncType>::add(const scalarList &value, scalarList &out, 
     {
         T.deleteLeaf(T.timeTagList().pop());
     } */
-    if (T.size() >= T.maxNLeafs())
+     if (T.size() >= T.maxNLeafs())
     {
         return;
-    }
+    } 
     //pleaf = T.insertNewLeaf(value, out);
     if (T.size() == 0)
     {
