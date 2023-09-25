@@ -445,8 +445,9 @@ namespace Foam
                     for (int i = 0; i < maxTimeTag_; i++)
                         sum2 += N_s[i];
                     Pout << "sum =  " << sum << "sum2 = " << sum2 << endl;
-                    maxNLeafs_ = min(min(max(NLeafBase_, sum * NLeafRatio_), NLeafMax_), sum2);
-                    return maxNLeafs_;
+                    maxNLeafs_ = min(max(NLeafBase_, sum * NLeafRatio_), NLeafMax_);
+                    return min(min(max(NLeafBase_, sum * NLeafRatio_), NLeafMax_), sum2);
+                    ;
                 }
                 else
                 {
