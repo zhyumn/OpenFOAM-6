@@ -85,8 +85,8 @@ namespace Foam
 
         //labelList 2dlist_s;
 
-        SUPstream::shared_data<label> emptylist_leaf;
-        SUPstream::shared_data<label> emptylist_node;
+        //SUPstream::shared_data<label> emptylist_leaf;
+        //SUPstream::shared_data<label> emptylist_node;
 
         //SUPstream::shared_data<label> reuselist_leaf;
         //SUPstream::shared_data<label> reuselist_node;
@@ -342,7 +342,7 @@ namespace Foam
             : manager_(SUPstream::node_manager), sync_(SUPstream::Sync),
               preAllocateLeaf(readLabel(ISATDict.lookup("preAllocateLeaf"))),
               preAllocateNode(readLabel(ISATDict.lookup("preAllocateNode"))),
-              emptylist_leaf(manager_, 100000), emptylist_node(manager_, 100000),
+              //emptylist_leaf(manager_, 100000), emptylist_node(manager_, 100000),
               pemptylist_leaf(manager_), pemptylist_node(manager_),
               //reuselist_leaf(manager_, manager_.size * preAllocateLeaf), reuselist_node(manager_, manager_.size * preAllocateNode), // 20 100
               pv_(manager_),

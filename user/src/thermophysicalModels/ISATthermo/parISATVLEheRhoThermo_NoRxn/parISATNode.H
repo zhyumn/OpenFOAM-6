@@ -223,6 +223,15 @@ namespace Foam
             return vPhi < a_;
         }
 
+        void setNext(label offset)
+        {
+            leafLeft_.offset = offset;
+        }
+        label next()
+        {
+            return leafLeft_.offset;
+        }
+
         // Member functions
 
         //- Access

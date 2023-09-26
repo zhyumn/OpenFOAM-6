@@ -481,14 +481,22 @@ namespace Foam
                     }
                 }
 
-                tableTree_.leaf_manager.update();
+                //tableTree_.leaf_manager.update();
                 //Pout << "!!!!!!!!test-x2" << endl;
-                tableTree_.node_manager.update();
+                //tableTree_.node_manager.update();
                 //test("x4");
                 //out.close();
                 //Pout << "!!!!!!!!test-x3" << endl;
             }
             tableTree_.sync_.sync();
+
+            tableTree_.mem_lock.lock();
+            tableTree_.leaf_manager.reuse();
+            tableTree_.node_manager.reuse();
+
+            tableTree_.leaf_manager.clean();
+            tableTree_.node_manager.clean();
+            tableTree_.mem_lock.unlock();
         }
 
         label treesize()
