@@ -105,6 +105,9 @@ namespace Foam
         int Batch_Size;
         SUPstream::shared_data2<jobArray> ja;
 
+        label Nsend;
+        label Nreceive;
+        label Nplan;
         bool spare;
         template <typename T>
         struct padded_atomic

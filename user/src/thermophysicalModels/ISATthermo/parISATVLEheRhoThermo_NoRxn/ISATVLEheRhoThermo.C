@@ -313,6 +313,8 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
             }
             else
             {
+                Nsend = 0;
+                Nreceive = 0;
                 spare = false;
                 spare_cpu--;
                 nfinished_block = 0;
@@ -389,9 +391,68 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
                         }
                         l_empty.unlock();
                     }
+                    if (i < nloop && Nsend < Nplan && l_empty.try_lock())
+                    {
+                        int size_i = batch_size;
+                        if (i == nloop - 1)
+                        {
+                            size_i = last_size;
+                        }
+                        int first_i = i * batch_size;
+
+                        if (empty_head != -1)
+                        {
+                            int iter;
+                            iter = empty_head;
+                            empty_head = ja[empty_head].next;
+                            if (empty_head == -1)
+                            {
+                                empty_tail = -1;
+                            }
+                            l_empty.unlock();
+
+                            ja[iter].first_i = first_i;
+                            ja[iter].size_i = size_i;
+
+                            for (int j = 0; j < ja[iter].size_i; j++)
+                            {
+                                label celli = ja[iter].first_i + j;
+                                const typename MixtureType::thermoType &mixture_ = this->cellMixture(celli);
+                                ja[iter].jobs[j].p0 = pCells[celli];
+                                ja[iter].jobs[j].T0 = TCells[celli];
+                                for (int k = 0; k < mixture_.X().size(); k++)
+                                    ja[iter].jobs[j].in[k] = mixture_.X()[k];
+                                ja[iter].jobs[j].in[mixture_.X().size()] = hCells[celli];
+                                ja[iter].jobs[j].in[mixture_.X().size() + 1] = rhoCells[celli];
+                            }
+                            Nsend++;
+                            ja[iter].rank = rank;
+
+                            l_filled.lock();
+                            if (filled_tail == -1)
+                            {
+                                ja[iter].next = -1;
+                                filled_tail = iter;
+                                filled_head = iter;
+                            }
+                            else
+                            {
+                                ja[iter].next = -1;
+                                ja[filled_tail].next = iter;
+                                filled_tail = iter;
+                            }
+                            l_filled.unlock();
+                            i++;
+                        }
+                        else
+                        {
+                            l_empty.unlock();
+                        }
+                    }
                     if (i < nloop && spare_cpu > 0 && l_sender.try_lock())
                     {
-                        for (int ii = 0; ii <= spare_cpu; ii++)
+                        int loc_spare_cpu = spare_cpu;
+                        for (int ii = 0; ii <= loc_spare_cpu; ii++)
                         {
                             int size_i = batch_size;
                             if (i == nloop - 1)
@@ -404,45 +465,53 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
                             {
                                 int iter;
                                 l_empty.lock();
-                                iter = empty_head;
-                                empty_head = ja[empty_head].next;
-                                if (empty_head == -1)
+                                if (empty_head != -1)
                                 {
-                                    empty_tail = -1;
-                                }
-                                l_empty.unlock();
+                                    iter = empty_head;
+                                    empty_head = ja[empty_head].next;
+                                    if (empty_head == -1)
+                                    {
+                                        empty_tail = -1;
+                                    }
+                                    l_empty.unlock();
 
-                                ja[iter].first_i = first_i;
-                                ja[iter].size_i = size_i;
+                                    ja[iter].first_i = first_i;
+                                    ja[iter].size_i = size_i;
 
-                                for (int j = 0; j < ja[iter].size_i; j++)
-                                {
-                                    label celli = ja[iter].first_i + j;
-                                    const typename MixtureType::thermoType &mixture_ = this->cellMixture(celli);
-                                    ja[iter].jobs[j].p0 = pCells[celli];
-                                    ja[iter].jobs[j].T0 = TCells[celli];
-                                    for (int k = 0; k < mixture_.X().size(); k++)
-                                        ja[iter].jobs[j].in[k] = mixture_.X()[k];
-                                    ja[iter].jobs[j].in[mixture_.X().size()] = hCells[celli];
-                                    ja[iter].jobs[j].in[mixture_.X().size() + 1] = rhoCells[celli];
-                                }
-                                ja[iter].rank = rank;
+                                    for (int j = 0; j < ja[iter].size_i; j++)
+                                    {
+                                        label celli = ja[iter].first_i + j;
+                                        const typename MixtureType::thermoType &mixture_ = this->cellMixture(celli);
+                                        ja[iter].jobs[j].p0 = pCells[celli];
+                                        ja[iter].jobs[j].T0 = TCells[celli];
+                                        for (int k = 0; k < mixture_.X().size(); k++)
+                                            ja[iter].jobs[j].in[k] = mixture_.X()[k];
+                                        ja[iter].jobs[j].in[mixture_.X().size()] = hCells[celli];
+                                        ja[iter].jobs[j].in[mixture_.X().size() + 1] = rhoCells[celli];
+                                    }
+                                    Nsend++;
+                                    ja[iter].rank = rank;
 
-                                l_filled.lock();
-                                if (filled_tail == -1)
-                                {
-                                    ja[iter].next = -1;
-                                    filled_tail = iter;
-                                    filled_head = iter;
+                                    l_filled.lock();
+                                    if (filled_tail == -1)
+                                    {
+                                        ja[iter].next = -1;
+                                        filled_tail = iter;
+                                        filled_head = iter;
+                                    }
+                                    else
+                                    {
+                                        ja[iter].next = -1;
+                                        ja[filled_tail].next = iter;
+                                        filled_tail = iter;
+                                    }
+                                    l_filled.unlock();
+                                    i++;
                                 }
                                 else
                                 {
-                                    ja[iter].next = -1;
-                                    ja[filled_tail].next = iter;
-                                    filled_tail = iter;
+                                    l_empty.unlock();
                                 }
-                                l_filled.unlock();
-                                i++;
                             }
                             else
                                 break;
@@ -480,6 +549,7 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
                                 const typename MixtureType::thermoType &mixture_ = this->cellMixture(0);
                                 std::tie(ja[iter].jobs[j].out[0], ja[iter].jobs[j].out[1], ja[iter].jobs[j].out[2], ja[iter].jobs[j].out[3]) = mixture_.TPvfc_XErho(ja[iter].jobs[j].in, ja[iter].jobs[j].T0, ja[iter].jobs[j].p0);
                             }
+                            Nreceive++;
                             l_finished.lock();
                             ja[iter].next = finished_head[ja[iter].rank];
                             finished_head[ja[iter].rank] = iter;
@@ -537,6 +607,7 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
                         break;
                     }
                 }
+                Nplan = Nsend - Nreceive;
                 SUPstream::Sync();
             }
         }
@@ -865,6 +936,7 @@ Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::ISATVLEheRhoThermo(
     }
     finished_head[rank] = -1;
     SUPstream::Sync();
+    Nplan = 0;
 
     forAll(Dimix_, i)
     {
