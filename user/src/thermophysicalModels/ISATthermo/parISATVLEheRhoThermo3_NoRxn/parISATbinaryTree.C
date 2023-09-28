@@ -672,20 +672,7 @@ void Foam::parISATbinaryTree::clean(scalar timestep)
     }
     label newmax = maxNLeaf();
     Info << "newmax:" << newmax << endl;
-    /*    i = 0;
-     for (; i < NtimeTag_; i++)
-    {
-        Info << start_s[i] << "," << N_s[i] << endl;
-    }
 
-    for (int i = 0; i < size_leaf_; i++)
-    {
-
-        Info << pleaf[i]->lastUsed << ",";
-    } */
-    /*     FatalErrorInFunction
-        << "test " << newmax
-        << exit(FatalError); */
 
     int local_size_leaf_ = size_leaf_;
 
@@ -695,16 +682,6 @@ void Foam::parISATbinaryTree::clean(scalar timestep)
     }
 
     Info << "after clean, size:" << size_leaf_ << endl;
-    /*     for (int i = 0; i < size_leaf_; i++)
-    {
-        if (pleaf[i]->lastUsed < timeN)
-        {
-            timeN--;
-            start_s[j + 1] = i;
-            N_s[j] = start_s[j + 1] - start_s[j];
-        }
-        Info << pleaf[i]->lastUsed << ",";
-    } */
 }
 
 void Foam::parISATbinaryTree::balance(scalarRectangularMatrix &scaleIn)
@@ -712,18 +689,6 @@ void Foam::parISATbinaryTree::balance(scalarRectangularMatrix &scaleIn)
     if (size() <= 2)
         return;
 
-    /*     int nleaf1 = 0;
-    int nleaf2 = 0;
-    Nleaflist(root_, nleaf1);
-
-    if (nleaf1 != size_leaf_)
-    {
-        FatalErrorInFunction
-            << "wrong leaf listXX"
-            << size_leaf_ << "\n"
-            << nleaf1
-            << exit(FatalError);
-    } */
 
     List<SharedPointer<parISATleaf>> pleaf(size_leaf_);
     int tail = 0;
@@ -737,26 +702,10 @@ void Foam::parISATbinaryTree::balance(scalarRectangularMatrix &scaleIn)
             << tail
             << exit(FatalError);
     }
-    /*     for (int i = 0; i < size_leaf_; i++)
-    {
-        out << "(" << pleaf[i].offset << "," << pleaf[i]->value_.size() << ")";
-        out.flush();
-    }
-    out << std::endl; */
 
-    //timeTagList_.leaflist(pleaf.data());
     deleteSubTree_Node();
     root_ = balance_build(scaleIn, SharedPointer<parISATNode>(sptr_NULL), 0, size_leaf_ - 1, pleaf);
-    /*     Nleaflist(root_, nleaf2);
 
-    if (nleaf2 != size_leaf_)
-    {
-        FatalErrorInFunction
-            << "wrong leaf listYY"
-            << size_leaf_ << "\n"
-            << nleaf2
-            << exit(FatalError);
-    } */
 }
 
 // ************************************************************************* //

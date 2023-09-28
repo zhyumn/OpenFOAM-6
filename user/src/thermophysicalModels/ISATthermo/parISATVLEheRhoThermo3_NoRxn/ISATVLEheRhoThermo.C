@@ -572,7 +572,6 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
                         l_sender.unlock();
                     }
                 }
-                //Pout << "2nd loop" << endl;
                 while (1)
                 {
 
@@ -666,25 +665,12 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
                     {
                         break;
                     }
-                    /*                     if (filled_head != -1)
-                    {
-                        Pout << "1" << endl;
-                    }
-                    if (spare_cpu.load() != n_cpu)
-                    {
-                        Pout << "2" << endl;
-                    }
-                    if (nfinished_block != nloop)
-                    {
-                        Pout << "3" << endl;
-                    } */
                 }
 
                 for (int iter = 0; iter < Nbatch; iter++)
                 {
                     index_[iter] = iter;
                 }
-                //Pout << N_add_ << endl;
                 my_quicksort(N_add_, index_, 0, Nbatch - 1);
                 head_link = index_[0];
                 label iter_ = head_link;
@@ -705,7 +691,6 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
                 link_rev[iter_] = -1;
 
                 Nplan = Nsend - Nreceive;
-                //Pout << link_ << endl;
                 SUPstream::Sync();
             }
         }
