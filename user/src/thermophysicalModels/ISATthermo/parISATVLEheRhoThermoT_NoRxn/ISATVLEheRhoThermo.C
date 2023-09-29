@@ -574,7 +574,7 @@ void Foam::ISATVLEheRhoThermo<BasicPsiThermo, MixtureType>::calculate()
                 << ",    " << VLEtime << endl;
             tree_size_()
                 << this->time().timeOutputValue()
-                << ",    " << this->cellMixture(0).TPvfc_XErho_treesize() << endl;
+                << ",    " << this->cellMixture(0).TPvfc_XErho_treesize()<< ",    " << this->cellMixture(0).TPvfc_XErho_treesize_loc() << endl;
 
             /*             cpuISAT_VLE_()
                 << this->time().timeOutputValue()
