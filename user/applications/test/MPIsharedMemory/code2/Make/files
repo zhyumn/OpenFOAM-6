@@ -1,3 +1,0 @@
-Test-mpitest2.C
-
-EXE = $(FOAM_USER_APPBIN)/Test-mpitest2
