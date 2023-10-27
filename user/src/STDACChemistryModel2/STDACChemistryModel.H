@@ -72,23 +72,22 @@ SourceFiles
 
 #define DateSize1 53
 #define DateSize2 56
-//#define Batch_Size 100 
+//#define Batch_Size 100
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 namespace Foam
 {
 
-/*---------------------------------------------------------------------------*\
+    /*---------------------------------------------------------------------------*\
                       Class STDACChemistryModel Declaration
 \*---------------------------------------------------------------------------*/
 
-template<class ReactionThermo, class ThermoType>
-class STDACChemistryModel
-:
-    public StandardChemistryModel<ReactionThermo, ThermoType>
-{
-    // Private member data
+    template <class ReactionThermo, class ThermoType>
+    class STDACChemistryModel
+        : public StandardChemistryModel<ReactionThermo, ThermoType>
+    {
+        // Private member data
 
         bool variableTimeStep_;
 
@@ -135,42 +134,36 @@ class STDACChemistryModel
         // 2 -> retrieve
         volScalarField tabulationResults_;
 
-
-    // Private Member Functions
+        // Private Member Functions
 
         //- Disallow copy constructor
-        STDACChemistryModel(const STDACChemistryModel&);
+        STDACChemistryModel(const STDACChemistryModel &);
 
         //- Disallow default bitwise assignment
-        void operator=(const STDACChemistryModel&);
+        void operator=(const STDACChemistryModel &);
 
         //- Solve the reaction system for the given time step
         //  of given type and return the characteristic time
         //  Variable number of species added
-        template<class DeltaTType>
-        scalar solve(const DeltaTType& deltaT);
+        template <class DeltaTType>
+        scalar solve(const DeltaTType &deltaT);
 
-        template<class DeltaTType>
-        scalar solve2(const DeltaTType& deltaT);
+        template <class DeltaTType>
+        scalar solve2(const DeltaTType &deltaT);
 
+    public:
+        //- Runtime type information
+        TypeName("STDAC");
 
-public:
-
-    //- Runtime type information
-    TypeName("STDAC");
-
-
-    // Constructors
+        // Constructors
 
         //- Construct from thermo
-        STDACChemistryModel(ReactionThermo& thermo);
+        STDACChemistryModel(ReactionThermo &thermo);
 
+        //- Destructor
+        virtual ~STDACChemistryModel();
 
-    //- Destructor
-    virtual ~STDACChemistryModel();
-
-
-    // Member Functions
+        // Member Functions
 
         //- Return true if the time-step is variable and/or non-uniform
         inline bool variableTimeStep() const;
@@ -179,242 +172,275 @@ public:
         inline label timeSteps() const;
 
         //- Create and return a STDAC log file of the given name
-        inline autoPtr<OFstream> logFile(const word& name) const;
+        inline autoPtr<OFstream> logFile(const word &name) const;
 
-        inline PtrList<volScalarField>& Y();
+        inline PtrList<volScalarField> &Y();
 
         //- dc/dt = omega, rate of change in concentration, for each species
-        virtual void omega
-        (
-            const scalarField& c,
+        virtual void omega(
+            const scalarField &c,
             const scalar T,
             const scalar p,
-            scalarField& dcdt
-        ) const;
+            scalarField &dcdt) const;
 
         //- Return the reaction rate for reaction r and the reference
         //  species and charateristic times
-        virtual scalar omega
-        (
-            const Reaction<ThermoType>& r,
-            const scalarField& c,
+        virtual scalar omega(
+            const Reaction<ThermoType> &r,
+            const scalarField &c,
             const scalar T,
             const scalar p,
-            scalar& pf,
-            scalar& cf,
-            label& lRef,
-            scalar& pr,
-            scalar& cr,
-            label& rRef
-        ) const;
-
+            scalar &pf,
+            scalar &cf,
+            label &lRef,
+            scalar &pr,
+            scalar &cr,
+            label &rRef) const;
 
         // Chemistry model functions (overriding functions in
         // StandardChemistryModel to use the private solve function)
 
-            //- Solve the reaction system for the given time step
-            //  and return the characteristic time
-            virtual scalar solve(const scalar deltaT);
+        //- Solve the reaction system for the given time step
+        //  and return the characteristic time
+        virtual scalar solve(const scalar deltaT);
 
-            //- Solve the reaction system for the given time step
-            //  and return the characteristic time
-            virtual scalar solve(const scalarField& deltaT);
-
+        //- Solve the reaction system for the given time step
+        //  and return the characteristic time
+        virtual scalar solve(const scalarField &deltaT);
 
         // ODE functions (overriding functions in StandardChemistryModel to take
         // into account the variable number of species)
 
-            virtual void derivatives
-            (
-                const scalar t,
-                const scalarField& c,
-                scalarField& dcdt
-            ) const;
+        virtual void derivatives(
+            const scalar t,
+            const scalarField &c,
+            scalarField &dcdt) const;
 
-            virtual void jacobian
-            (
-                const scalar t,
-                const scalarField& c,
-                scalarField& dcdt,
-                scalarSquareMatrix& J
-            ) const;
+        virtual void jacobian(
+            const scalar t,
+            const scalarField &c,
+            scalarField &dcdt,
+            scalarSquareMatrix &J) const;
 
-            virtual void solve
-            (
-                scalarField& c,
-                scalar& T,
-                scalar& p,
-                scalar& deltaT,
-                scalar& subDeltaT
-            ) const = 0;
+        virtual void solve(
+            scalarField &c,
+            scalar &T,
+            scalar &p,
+            scalar &deltaT,
+            scalar &subDeltaT) const = 0;
 
-            struct jobdata
+        struct jobdata
+        {
+            scalar rho;
+            scalar p;
+            scalar T;
+            FixedList<scalar, DateSize1> c;
+            FixedList<scalar, DateSize1> c0;
+            FixedList<scalar, DateSize2> phiq;
+            FixedList<scalar, DateSize2> Rphiq;
+            scalar deltaTChem_;
+            scalar deltaT;
+            label growOrAdd;
+            label celli;
+            FixedList<scalar, DateSize1> RR;
+        };
+
+        struct jobInput
+        {
+            scalar rho;
+            scalar p;
+            scalar T;
+            FixedList<scalar, DateSize1> c;
+            FixedList<scalar, DateSize1> c0;
+            FixedList<scalar, DateSize2> phiq;
+            FixedList<scalar, DateSize2> Rphiq;
+            scalar deltaTChem_;
+            scalar deltaT;
+            label growOrAdd;
+            //label celli;
+            FixedList<scalar, DateSize1> RR;
+        };
+
+        struct jobArray
+        {
+            //bool finished;
+            //bool filled;
+            label rank;
+            label next;
+            label first_i;
+            //label last_i;
+            label size_i;
+            //jobInput jobs[Batch_Size];
+            label N_add;
+            label N_batch;
+            jobInput jobs[1];
+            //label celli;
+        };
+
+        struct jobArray2
+        {
+            //bool finished;
+            //bool filled;
+            label rank;
+            label next;
+            label first_i;
+            //label last_i;
+            label size_i;
+            //jobInput jobs[Batch_Size];
+            jobInput *jobs;
+
+            jobArray2(int size) { jobs = new jobInput[size]; }
+            ~jobArray2() { delete[] jobs; }
+            //label celli;
+        };
+        label n_block;
+        int Batch_Size;
+        //SUPstream::shared_data<jobArray> sja_;
+        SUPstream::shared_data2<jobArray> ja;
+        //jobArray *ja;
+        label ja_size;
+        jobArray2 ja_loc;
+        template <typename T>
+        struct padded_atomic
+        {
+            std::atomic<T> var;
+            char m_pad[CacheLineSize - sizeof(std::atomic<T>)];
+        };
+        SUPstream::shared_data<padded_atomic<int>> sspare_cpu;
+        std::atomic<int> &spare_cpu;
+        SUPstream::shared_data<int> sempty_head, sempty_tail;
+        int &empty_head, &empty_tail;
+        SUPstream::shared_data<int> sfilled_head, sfilled_tail;
+        int &filled_head, &filled_tail;
+        SUPstream::shared_data<int> sfinished_head;
+        int *finished_head;
+        int &rank;
+        int nfinished_block;
+        bool loadBalance_;
+
+        SUPstream::mpi_mutex l_empty;
+        SUPstream::mpi_mutex l_filled;
+        SUPstream::mpi_mutex l_finished;
+
+        label Nbatch;
+        labelField link_;
+        labelField link_rev;
+        labelField N_add_;
+        labelField index_;
+        label head_link;
+        label tail_link;
+
+        label Nsend;
+        label Nreceive;
+        label Nplan;
+
+        SUPstream::shared_data<SUPstream::ref_mutex> sl_finished;
+        SUPstream::ref_mutex *pl_finished;
+
+        bool spare;
+        label n_cpu;
+        //SUPstream::shared_data<jobArray> sja_;
+        //jobArray ja;
+        SUPstream::mpi_mutex l_receiver;
+        SUPstream::mpi_mutex l_sender;
+        scalar solve(
+            const scalar rho,
+            scalar p,
+            scalar T,
+            scalarField &c,
+            scalarField &c0,
+            scalarField &phiq,
+            scalarField &Rphiq,
+            scalar &deltaTChem_,
+            const scalar &deltaT,
+            label &growOrAdd,
+            label &celli,
+            scalarField &RR);
+        scalar solve(
+            jobdata &in);
+
+        scalar solve(
+            jobInput &in);
+
+        scalar solve(
+            jobInput &in, bool &ret_fail);
+
+        static void my_quicksort(labelField &arrays1, labelField &arrays2, int left, int right)
+        {
+            if (left >= right)
             {
-                scalar rho;
-                scalar p;
-                scalar T;
-                FixedList<scalar, DateSize1> c;
-                FixedList<scalar, DateSize1> c0; 
-                FixedList<scalar, DateSize2> phiq;
-                FixedList<scalar, DateSize2> Rphiq;
-                scalar deltaTChem_; 
-                scalar deltaT;
-                label growOrAdd; 
-                label celli;
-                FixedList<scalar, DateSize1> RR;
-            };
+                return;
+            }
+            int i = left, j = right;
+            Foam::label init1 = arrays1[i];
+            Foam::label init2 = arrays2[i];
 
-            struct jobInput
+            while (j > i)
             {
-                scalar rho;
-                scalar p;
-                scalar T;
-                FixedList<scalar, DateSize1> c;
-                FixedList<scalar, DateSize1> c0; 
-                FixedList<scalar, DateSize2> phiq;
-                FixedList<scalar, DateSize2> Rphiq;
-                scalar deltaTChem_; 
-                scalar deltaT;
-                label growOrAdd; 
-                //label celli;
-                FixedList<scalar, DateSize1> RR;
-            };
-
-            struct jobArray
-            {
-                //bool finished;
-                //bool filled;
-                label rank;
-                label next;
-                label first_i;
-                //label last_i;
-                label size_i;
-                //jobInput jobs[Batch_Size];
-                jobInput jobs[1];
-                //label celli;
-            };
-
-            struct jobArray2
-            {
-                //bool finished;
-                //bool filled;
-                label rank;
-                label next;
-                label first_i;
-                //label last_i;
-                label size_i;
-                //jobInput jobs[Batch_Size];
-                jobInput *jobs;
-
-                 jobArray2(int size){jobs=new jobInput[size];}
-                 ~jobArray2(){delete[] jobs;}
-                //label celli;
-            };
-            label n_block;
-            int  Batch_Size;
-            //SUPstream::shared_data<jobArray> sja_;
-            SUPstream::shared_data2<jobArray> ja;
-            //jobArray *ja;
-            label ja_size;
-            jobArray2 ja_loc;
-            template<typename T>
-            struct padded_atomic
-            {
-                std::atomic<T> var;
-                char m_pad[CacheLineSize - sizeof(std::atomic<T>)];
-            };
-            SUPstream::shared_data<padded_atomic<int>> sspare_cpu;
-            std::atomic<int> &spare_cpu;
-            SUPstream::shared_data<int> sempty_head,sempty_tail;
-            int & empty_head, & empty_tail;
-            SUPstream::shared_data<int> sfilled_head, sfilled_tail;
-            int &filled_head, &filled_tail;
-            SUPstream::shared_data<int>  sfinished_head;
-            int *finished_head;
-            int & rank;
-            int nfinished_block ;
-            bool loadBalance_;
-
-            SUPstream::mpi_mutex l_empty;
-            SUPstream::mpi_mutex l_filled;
-            SUPstream::mpi_mutex l_finished;
-
-            bool spare;
-            label n_cpu;
-            //SUPstream::shared_data<jobArray> sja_;
-            //jobArray ja;
-            SUPstream::mpi_mutex l_receiver;
-            SUPstream::mpi_mutex l_sender;
-            scalar solve
-            (
-                const scalar rho,
-                scalar p, 
-                scalar T,
-                scalarField &c,
-                scalarField &c0, 
-                scalarField &phiq,
-                scalarField &Rphiq,
-                scalar &deltaTChem_, 
-                const scalar &deltaT, 
-                label &growOrAdd, 
-                label &celli, 
-                scalarField &RR
-            );
-            scalar solve
-            (
-                jobdata& in
-            );
-
-            scalar solve
-            (
-                jobInput& in
-            );
-
-
+                for (; arrays1[j] > init1 && j > i; j--)
+                    ;
+                if (i < j)
+                {
+                    arrays1[i] = arrays1[j];
+                    arrays2[i] = arrays2[j];
+                    i++;
+                }
+                for (; arrays1[i] < init1 && j > i; i++)
+                    ;
+                if (i < j)
+                {
+                    arrays1[j] = arrays1[i];
+                    arrays2[j] = arrays2[i];
+                    j--;
+                }
+            }
+            arrays1[i] = init1;
+            arrays2[i] = init2;
+            my_quicksort(arrays1, arrays2, left, i - 1);
+            my_quicksort(arrays1, arrays2, i + 1, right);
+        }
         // Mechanism reduction access functions
 
-            inline void setNsDAC(const label newNsDAC);
+        inline void setNsDAC(const label newNsDAC);
 
-            inline void setNSpecie(const label newNs);
+        inline void setNSpecie(const label newNs);
 
-            inline scalarField& completeC();
+        inline scalarField &completeC();
 
-            inline scalarField& simplifiedC();
+        inline scalarField &simplifiedC();
 
-            inline Field<bool>& reactionsDisabled();
+        inline Field<bool> &reactionsDisabled();
 
-            inline bool active(const label i) const;
+        inline bool active(const label i) const;
 
-            inline void setActive(const label i);
+        inline void setActive(const label i);
 
-            inline DynamicList<label>& simplifiedToCompleteIndex();
+        inline DynamicList<label> &simplifiedToCompleteIndex();
 
-            inline Field<label>& completeToSimplifiedIndex();
+        inline Field<label> &completeToSimplifiedIndex();
 
-            inline const Field<label>& completeToSimplifiedIndex() const;
+        inline const Field<label> &completeToSimplifiedIndex() const;
 
-            inline List<List<specieElement>>& specieComp();
+        inline List<List<specieElement>> &specieComp();
 
-            inline
-                autoPtr<chemistryReductionMethodS<ReactionThermo, ThermoType>>&
-                mechRed();
+        inline autoPtr<chemistryReductionMethodS<ReactionThermo, ThermoType>> &
+        mechRed();
 
-            tmp<volScalarField> tabulationResults() const
-            {
-                return tabulationResults_;
-            }
+        tmp<volScalarField> tabulationResults() const
+        {
+            return tabulationResults_;
+        }
 
-            void setTabulationResultsAdd(const label celli);
+        void setTabulationResultsAdd(const label celli);
 
-            void setTabulationResultsGrow(const label celli);
+        void setTabulationResultsGrow(const label celli);
 
-            void setTabulationResultsRetrieve(const label celli);
+        void setTabulationResultsRetrieve(const label celli);
 
-            inline void resetTabulationResults();
-};
+        inline void resetTabulationResults();
+    };
 
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 } // End namespace Foam
 
@@ -425,7 +451,7 @@ public:
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "STDACChemistryModel.C"
+#include "STDACChemistryModel.C"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

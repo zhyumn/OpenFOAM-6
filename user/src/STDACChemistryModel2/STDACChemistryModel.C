@@ -71,8 +71,17 @@ Foam::STDACChemistryModel<ReactionThermo, ThermoType>::STDACChemistryModel(
       l_empty(SUPstream::node_manager, SUPstream::Sync),
       l_filled(SUPstream::node_manager, SUPstream::Sync),
       l_finished(SUPstream::node_manager, SUPstream::Sync),
+      Nbatch(this->thermo().rho()().size() / Batch_Size + (this->thermo().rho()().size() % Batch_Size > 0 ? 1 : 0)),
+      link_(Nbatch, 0),
+      link_rev(Nbatch, 0),
+      N_add_(Nbatch, 0),
+      index_(Nbatch, 0),
+      sl_finished(SUPstream::node_manager, SUPstream::node_manager.size),
+      pl_finished(sl_finished.ptr()),
       l_receiver(SUPstream::node_manager, SUPstream::Sync), l_sender(SUPstream::node_manager, SUPstream::Sync)
+
 {
+
     SUPstream::Sync();
     n_cpu = SUPstream::node_manager.size;
     if (SUPstream::node_manager.rank == 0)
@@ -94,6 +103,20 @@ Foam::STDACChemistryModel<ReactionThermo, ThermoType>::STDACChemistryModel(
     }
     finished_head[rank] = -1;
     SUPstream::Sync();
+
+    head_link = 0;
+    //head_add = -1;
+    tail_link = Nbatch - 1;
+    for (int i = 0; i < Nbatch; i++)
+    {
+        link_[i] = i + 1;
+        link_rev[i] = i - 1;
+        N_add_[i] = 0;
+    }
+    link_[link_.size() - 1] = -1;
+    link_rev[link_.size() - 1] = link_.size() - 2;
+    Nplan = 0;
+
     loadBalance_ = this->subDict("tabulation").lookupOrDefault("loadBalance", true);
     Info << "STDACChemistryModel!!!! variableTimeStep_=" << variableTimeStep_ << endl;
     basicSpecieMixture &composition = this->thermo().composition();
@@ -965,11 +988,201 @@ Foam::scalar Foam::STDACChemistryModel<ReactionThermo, ThermoType>::solve(
 }
 
 template <class ReactionThermo, class ThermoType>
+Foam::scalar Foam::STDACChemistryModel<ReactionThermo, ThermoType>::solve(
+    jobInput &in, bool &ret_success)
+{
+    scalar &rho = in.rho;
+    scalar &p = in.p;
+    scalar &T = in.T;
+    //FixedList<scalar, DateSize1> &c = in.c;
+    FixedList<scalar, DateSize1> &c0 = in.c0;
+    //FixedList<scalar, DateSize2> &phiq = in.phiq;
+    //FixedList<scalar, DateSize2> &Rphiq = in.Rphiq;
+
+    scalarField phiq(in.phiq.size()), Rphiq(in.phiq.size());
+    scalarField c(in.c.size());
+    for (label i = 0; i < phiq.size(); i++)
+    {
+        phiq[i] = in.phiq[i];
+        Rphiq[i] = in.Rphiq[i];
+    }
+    for (label i = 0; i < c.size(); i++)
+    {
+        c[i] = in.c[i];
+    }
+
+    scalar &deltaTChem_ = in.deltaTChem_;
+    scalar &deltaT = in.deltaT;
+    label &growOrAdd = in.growOrAdd;
+    //label &celli = in.celli;
+    FixedList<scalar, DateSize1> &RR = in.RR;
+
+    const bool reduced = mechRed_->active();
+    scalar timeLeft = deltaT;
+    scalar deltaTMin = great;
+    // When tabulation is active (short-circuit evaluation for retrieve)
+    // It first tries to retrieve the solution of the system with the
+    // information stored through the tabulation method
+    if (tabulation_->retrieve(phiq, Rphiq))
+    {
+        // Retrieved solution stored in Rphiq
+        for (label i = 0; i < this->nSpecie(); i++)
+        {
+            c[i] = rho * Rphiq[i] / this->specieThermo_[i].W();
+        }
+        ret_success = true;
+
+        //searchISATCpuTime_ += clockTime_.timeIncrement();
+    }
+    // This position is reached when tabulation is not used OR
+    // if the solution is not retrieved.
+    // In the latter case, it adds the information to the tabulation
+    // (it will either expand the current data or add a new stored point).
+    else
+    {
+        ret_success = false;
+        // Store total time waiting to attribute to add or grow
+        //scalar timeTmp = clockTime_.timeIncrement();
+
+        if (reduced)
+        {
+            // Reduce mechanism change the number of species (only active)
+            mechRed_->reduceMechanism(c, T, p);
+            //nActiveSpecies += mechRed_->NsSimp();
+            //nAvg++;
+            //scalar timeIncr = clockTime_.timeIncrement();
+            //reduceMechCpuTime_ += timeIncr;
+            //timeTmp += timeIncr;
+        }
+
+        // Calculate the chemical source terms
+        while (timeLeft > small)
+        {
+            scalar dt = timeLeft;
+            if (reduced)
+            {
+                // completeC_ used in the overridden ODE methods
+                // to update only the active species
+                completeC_ = c;
+
+                // Solve the reduced set of ODE
+                this->solve(
+                    simplifiedC_, T, p, dt, deltaTChem_);
+
+                for (label i = 0; i < NsDAC_; i++)
+                {
+                    c[simplifiedToCompleteIndex_[i]] = simplifiedC_[i];
+                }
+            }
+            else
+            {
+                this->solve(c, T, p, dt, deltaTChem_);
+            }
+            timeLeft -= dt;
+        }
+
+        {
+            //scalar timeIncr = clockTime_.timeIncrement();
+            //solveChemistryCpuTime_ += timeIncr;
+            //timeTmp += timeIncr;
+        }
+
+        // If tabulation is used, we add the information computed here to
+        // the stored points (either expand or add)
+
+        forAll(c, i)
+        {
+            Rphiq[i] = c[i] / rho * this->specieThermo_[i].W();
+        }
+        if (tabulation_->variableTimeStep())
+        {
+            Rphiq[Rphiq.size() - 3] = T;
+            Rphiq[Rphiq.size() - 2] = p;
+            Rphiq[Rphiq.size() - 1] = deltaT;
+        }
+        else
+        {
+            Rphiq[Rphiq.size() - 2] = T;
+            Rphiq[Rphiq.size() - 1] = p;
+        }
+        //Info<< SUPstream::node_manager.rank << "," << phiq << endl;
+        growOrAdd =
+            tabulation_->add(phiq, Rphiq, rho, deltaT);
+        //if (growOrAdd)
+        //{
+        //    this->setTabulationResultsAdd(celli);
+        //addNewLeafCpuTime_ += clockTime_.timeIncrement() + timeTmp;
+        // }
+        //else
+        //{
+        //    this->setTabulationResultsGrow(celli);
+        //growCpuTime_ += clockTime_.timeIncrement() + timeTmp;
+        //}
+
+        // When operations are done and if mechanism reduction is active,
+        // the number of species (which also affects nEqns) is set back
+        // to the total number of species (stored in the mechRed object)
+        if (reduced)
+        {
+            this->nSpecie_ = mechRed_->nSpecie();
+        }
+        deltaTMin = deltaTChem_;
+        //deltaTMin = min(deltaTChem_, deltaTMin);
+
+        deltaTChem_ = min(deltaTChem_, this->deltaTChemMax_);
+    }
+
+    // Set the RR vector (used in the solver)
+    for (label i = 0; i < this->nSpecie_; i++)
+    {
+        RR[i] =
+            (c[i] - c0[i]) * this->specieThermo_[i].W() / deltaT;
+    }
+    return deltaTMin;
+}
+/* template <class ReactionThermo, class ThermoType>
+void my_quicksort(Foam::labelField &arrays1, Foam::labelField &arrays2, int left, int right)
+{
+    if (left >= right)
+    {
+        return;
+    }
+    int i = left, j = right;
+    Foam::label init1 = arrays1[i];
+    Foam::label init2 = arrays2[i];
+
+    while (j > i)
+    {
+        for (; arrays1[j] > init1 && j > i; j--)
+            ;
+        if (i < j)
+        {
+            arrays1[i] = arrays1[j];
+            arrays2[i] = arrays2[j];
+            i++;
+        }
+        for (; arrays1[i] < init1 && j > i; i++)
+            ;
+        if (i < j)
+        {
+            arrays1[j] = arrays1[i];
+            arrays2[j] = arrays2[i];
+            j--;
+        }
+    }
+    arrays1[i] = init1;
+    arrays2[i] = init2;
+    my_quicksort(arrays1, arrays2, left, i - 1);
+    my_quicksort(arrays1, arrays2, i + 1, right);
+}  */
+
+template <class ReactionThermo, class ThermoType>
 template <class DeltaTType>
 Foam::scalar Foam::STDACChemistryModel<ReactionThermo, ThermoType>::solve(
     const DeltaTType &deltaT)
 {
-
+    bool ret_sucess;
+    label N_add_tmp;
     // Increment counter of time-step
     timeSteps_++;
 
@@ -1033,6 +1246,8 @@ Foam::scalar Foam::STDACChemistryModel<ReactionThermo, ThermoType>::solve(
     {
         if (loadBalance_)
         {
+            Nsend = 0;
+            Nreceive = 0;
 
             spare = false;
             spare_cpu--;
@@ -1050,14 +1265,19 @@ Foam::scalar Foam::STDACChemistryModel<ReactionThermo, ThermoType>::solve(
                 last_size = batch_size;
             }
 
+            int iter_link = head_link;
+            int iter_link_rev = tail_link;
+
             for (int i = 0; i < nloop;)
             {
                 int size_i = batch_size;
-                if (i == nloop - 1)
+                if (iter_link == nloop - 1)
                 {
                     size_i = last_size;
                 }
-                int first_i = i * batch_size;
+                int first_i = iter_link * batch_size;
+
+                N_add_tmp = size_i;
 
                 ja_loc.first_i = first_i;
                 ja_loc.size_i = size_i;
@@ -1095,7 +1315,8 @@ Foam::scalar Foam::STDACChemistryModel<ReactionThermo, ThermoType>::solve(
 
                 for (int j = 0; j < ja_loc.size_i; j++)
                 {
-                    deltaTMin = min(solve(ja_loc.jobs[j]), deltaTMin);
+                    deltaTMin = min(solve(ja_loc.jobs[j], ret_sucess), deltaTMin);
+                    N_add_tmp -= ret_sucess;
                     this->deltaTChem_[j + ja_loc.first_i] = ja_loc.jobs[j].deltaTChem_;
                     if (ja_loc.jobs[j].growOrAdd)
                     {
@@ -1112,8 +1333,9 @@ Foam::scalar Foam::STDACChemistryModel<ReactionThermo, ThermoType>::solve(
                         this->RR_[k][j + ja_loc.first_i] = ja_loc.jobs[j].RR[k];
                     }
                 }
-
+                N_add_[i] = N_add_tmp;
                 nfinished_block++;
+                iter_link = link_[iter_link];
                 i++;
 
                 if (finished_head[rank] != -1)
@@ -1122,11 +1344,11 @@ Foam::scalar Foam::STDACChemistryModel<ReactionThermo, ThermoType>::solve(
                     int iter;
                     int tail;
 
-                    l_finished.lock();
+                    pl_finished[rank].lock();
                     iter_start = finished_head[rank];
                     iter = iter_start;
                     finished_head[rank] = -1;
-                    l_finished.unlock();
+                    pl_finished[rank].unlock();
 
                     tail = iter;
                     while (iter != -1)
@@ -1151,12 +1373,10 @@ Foam::scalar Foam::STDACChemistryModel<ReactionThermo, ThermoType>::solve(
                             }
                         }
                         tail = iter;
+                        N_add_[ja[iter].N_batch] = ja[iter].N_add;
                         iter = ja[iter].next;
                         nfinished_block++;
                     }
-
-                    //ja[0].finished = false;
-                    //ja[0].filled = false;
 
                     l_empty.lock();
 
@@ -1173,84 +1393,176 @@ Foam::scalar Foam::STDACChemistryModel<ReactionThermo, ThermoType>::solve(
                     l_empty.unlock();
                 }
 
+                if (i < nloop && Nsend < Nplan && l_empty.try_lock())
+                {
+
+                    int size_i = batch_size;
+                    if (iter_link_rev == nloop - 1)
+                    {
+                        size_i = last_size;
+                    }
+                    int first_i = iter_link_rev * batch_size;
+
+                    if (empty_head != -1)
+                    {
+                        int iter;
+
+                        iter = empty_head;
+                        empty_head = ja[empty_head].next;
+                        if (empty_head == -1)
+                        {
+                            empty_tail = -1;
+                        }
+                        l_empty.unlock();
+
+                        ja[iter].first_i = first_i;
+                        ja[iter].size_i = size_i;
+
+                        for (int j = 0; j < ja[iter].size_i; j++)
+                        {
+                            //ja[iter].finished = false;
+                            ja[iter].jobs[j].rho = rho[j + ja[iter].first_i];
+                            ja[iter].jobs[j].p = p[j + ja[iter].first_i];
+                            ja[iter].jobs[j].T = T[j + ja[iter].first_i];
+                            ja[iter].jobs[j].deltaT = deltaT[j + ja[iter].first_i];
+
+                            for (label k = 0; k < this->nSpecie_; k++)
+                            {
+                                ja[iter].jobs[j].c[k] = ja[iter].jobs[j].rho * this->Y_[k][j + ja[iter].first_i] / this->specieThermo_[k].W();
+                                ja[iter].jobs[j].c0[k] = ja[iter].jobs[j].c[k];
+                                ja[iter].jobs[j].phiq[k] = this->Y()[k][j + ja[iter].first_i];
+                            }
+
+                            ja[iter].jobs[j].phiq[this->nSpecie()] = ja[iter].jobs[j].T;
+                            ja[iter].jobs[j].phiq[this->nSpecie() + 1] = ja[iter].jobs[j].p;
+                            if (tabulation_->variableTimeStep())
+                            {
+                                ja[iter].jobs[j].phiq[this->nSpecie() + 2] = deltaT[j + ja[iter].first_i];
+                            }
+
+                            // Initialise time progress
+
+                            // Not sure if this is necessary
+                            ja[iter].jobs[j].Rphiq = Zero;
+
+                            //clockTime_.timeIncrement();
+
+                            //label growOrAdd;
+                            ja[iter].jobs[j].deltaTChem_ = this->deltaTChem_[j + ja[iter].first_i];
+                        }
+                        Nsend++;
+                        ja[iter].rank = rank;
+                        ja[iter].N_batch = iter_link_rev;
+
+                        l_filled.lock();
+                        if (filled_tail == -1)
+                        {
+                            ja[iter].next = -1;
+                            filled_tail = iter;
+                            filled_head = iter;
+                        }
+                        else
+                        {
+                            ja[iter].next = -1;
+                            ja[filled_tail].next = iter;
+                            filled_tail = iter;
+                        }
+                        l_filled.unlock();
+                        iter_link_rev = link_rev[iter_link_rev];
+                        i++;
+                    }
+                    else
+                    {
+                        l_empty.unlock();
+                    }
+                }
+
                 if (i < nloop && spare_cpu > 0 && l_sender.try_lock())
                 {
-                    for (int ii = 0; ii <= spare_cpu; ii++)
+                    int loc_spare_cpu = spare_cpu;
+                    for (int ii = 0; ii <= loc_spare_cpu; ii++)
                     {
                         int size_i = batch_size;
-                        if (i == nloop - 1)
+                        if (iter_link_rev == nloop - 1)
                         {
                             size_i = last_size;
                         }
-                        int first_i = i * batch_size;
+                        int first_i = iter_link_rev * batch_size;
 
                         if (empty_head != -1 && i < nloop)
                         {
                             int iter;
-
                             l_empty.lock();
-                            iter = empty_head;
-                            empty_head = ja[empty_head].next;
-                            if (empty_head == -1)
+                            if (empty_head != -1)
                             {
-                                empty_tail = -1;
-                            }
-                            l_empty.unlock();
-
-                            ja[iter].first_i = first_i;
-                            ja[iter].size_i = size_i;
-                            for (int j = 0; j < ja[iter].size_i; j++)
-                            {
-                                //ja[iter].finished = false;
-                                ja[iter].jobs[j].rho = rho[j + ja[iter].first_i];
-                                ja[iter].jobs[j].p = p[j + ja[iter].first_i];
-                                ja[iter].jobs[j].T = T[j + ja[iter].first_i];
-                                ja[iter].jobs[j].deltaT = deltaT[j + ja[iter].first_i];
-
-                                for (label k = 0; k < this->nSpecie_; k++)
+                                iter = empty_head;
+                                empty_head = ja[empty_head].next;
+                                if (empty_head == -1)
                                 {
-                                    ja[iter].jobs[j].c[k] = ja[iter].jobs[j].rho * this->Y_[k][j + ja[iter].first_i] / this->specieThermo_[k].W();
-                                    ja[iter].jobs[j].c0[k] = ja[iter].jobs[j].c[k];
-                                    ja[iter].jobs[j].phiq[k] = this->Y()[k][j + ja[iter].first_i];
+                                    empty_tail = -1;
                                 }
+                                l_empty.unlock();
 
-                                ja[iter].jobs[j].phiq[this->nSpecie()] = ja[iter].jobs[j].T;
-                                ja[iter].jobs[j].phiq[this->nSpecie() + 1] = ja[iter].jobs[j].p;
-                                if (tabulation_->variableTimeStep())
+                                ja[iter].first_i = first_i;
+                                ja[iter].size_i = size_i;
+
+                                for (int j = 0; j < ja[iter].size_i; j++)
                                 {
-                                    ja[iter].jobs[j].phiq[this->nSpecie() + 2] = deltaT[j + ja[iter].first_i];
+                                    //ja[iter].finished = false;
+                                    ja[iter].jobs[j].rho = rho[j + ja[iter].first_i];
+                                    ja[iter].jobs[j].p = p[j + ja[iter].first_i];
+                                    ja[iter].jobs[j].T = T[j + ja[iter].first_i];
+                                    ja[iter].jobs[j].deltaT = deltaT[j + ja[iter].first_i];
+
+                                    for (label k = 0; k < this->nSpecie_; k++)
+                                    {
+                                        ja[iter].jobs[j].c[k] = ja[iter].jobs[j].rho * this->Y_[k][j + ja[iter].first_i] / this->specieThermo_[k].W();
+                                        ja[iter].jobs[j].c0[k] = ja[iter].jobs[j].c[k];
+                                        ja[iter].jobs[j].phiq[k] = this->Y()[k][j + ja[iter].first_i];
+                                    }
+
+                                    ja[iter].jobs[j].phiq[this->nSpecie()] = ja[iter].jobs[j].T;
+                                    ja[iter].jobs[j].phiq[this->nSpecie() + 1] = ja[iter].jobs[j].p;
+                                    if (tabulation_->variableTimeStep())
+                                    {
+                                        ja[iter].jobs[j].phiq[this->nSpecie() + 2] = deltaT[j + ja[iter].first_i];
+                                    }
+
+                                    // Initialise time progress
+
+                                    // Not sure if this is necessary
+                                    ja[iter].jobs[j].Rphiq = Zero;
+
+                                    //clockTime_.timeIncrement();
+
+                                    //label growOrAdd;
+                                    ja[iter].jobs[j].deltaTChem_ = this->deltaTChem_[j + ja[iter].first_i];
                                 }
+                                Nsend++;
+                                ja[iter].rank = rank;
+                                ja[iter].N_batch = iter_link_rev;
 
-                                // Initialise time progress
-
-                                // Not sure if this is necessary
-                                ja[iter].jobs[j].Rphiq = Zero;
-
-                                //clockTime_.timeIncrement();
-
-                                //label growOrAdd;
-                                ja[iter].jobs[j].deltaTChem_ = this->deltaTChem_[j + ja[iter].first_i];
-                            }
-
-                            ja[iter].rank = rank;
-                            //ja[0].finished = false;
-                            //ja[iter].filled = true;
-
-                            l_filled.lock();
-                            if (filled_tail == -1)
-                            {
-                                ja[iter].next = -1;
-                                filled_tail = iter;
-                                filled_head = iter;
+                                l_filled.lock();
+                                if (filled_tail == -1)
+                                {
+                                    ja[iter].next = -1;
+                                    filled_tail = iter;
+                                    filled_head = iter;
+                                }
+                                else
+                                {
+                                    ja[iter].next = -1;
+                                    ja[filled_tail].next = iter;
+                                    filled_tail = iter;
+                                }
+                                l_filled.unlock();
+                                iter_link_rev = link_rev[iter_link_rev];
+                                i++;
                             }
                             else
                             {
-                                ja[iter].next = -1;
-                                ja[filled_tail].next = iter;
-                                filled_tail = iter;
+                                l_empty.unlock();
                             }
-                            l_filled.unlock();
-                            i++;
                         }
                         else
                             break;
@@ -1258,21 +1570,16 @@ Foam::scalar Foam::STDACChemistryModel<ReactionThermo, ThermoType>::solve(
                     l_sender.unlock();
                 }
             }
-            //int xx = 0;
-
-            //std::cout << SUPstream::node_manager.rank << "!!!!!!!!!!!!!!!!!!!0 " << std::endl;
             while (1)
             {
-                //l_receiver.lock();
                 if (l_receiver.try_lock())
                 {
                     int iter = -1;
                     if (filled_head != -1)
                     {
-
                         l_filled.lock();
                         iter = filled_head;
-                        //std::cout << SUPstream::node_manager.rank << "," << filled_head << "," << ja[iter].first_i << std::endl;
+
                         filled_head = ja[filled_head].next;
                         if (filled_head == -1)
                         {
@@ -1288,19 +1595,19 @@ Foam::scalar Foam::STDACChemistryModel<ReactionThermo, ThermoType>::solve(
                             spare = false;
                             spare_cpu--;
                         }
+                        int N_add = ja[iter].size_i;
                         for (int j = 0; j < ja[iter].size_i; j++)
                         {
-                            deltaTMin = min(solve(ja[iter].jobs[j]), deltaTMin);
+                            deltaTMin = min(solve(ja[iter].jobs[j], ret_sucess), deltaTMin);
+                            N_add -= ret_sucess;
                         }
-
-                        l_finished.lock();
+                        ja[iter].N_add = N_add;
+                        Nreceive++;
+                        pl_finished[ja[iter].rank].lock();
                         ja[iter].next = finished_head[ja[iter].rank];
                         finished_head[ja[iter].rank] = iter;
-                        //ja[iter].finished = true;
-                        l_finished.unlock();
+                        pl_finished[ja[iter].rank].unlock();
                     }
-
-                    //
                 }
                 if (finished_head[rank] != -1)
                 {
@@ -1308,11 +1615,11 @@ Foam::scalar Foam::STDACChemistryModel<ReactionThermo, ThermoType>::solve(
                     int iter;
                     int tail;
 
-                    l_finished.lock();
+                    pl_finished[rank].lock();
                     iter_start = finished_head[rank];
                     iter = iter_start;
                     finished_head[rank] = -1;
-                    l_finished.unlock();
+                    pl_finished[rank].unlock();
 
                     tail = iter;
                     while (iter != -1)
@@ -1339,14 +1646,11 @@ Foam::scalar Foam::STDACChemistryModel<ReactionThermo, ThermoType>::solve(
                                 this->RR_[k][j + ja[iter].first_i] = ja[iter].jobs[j].RR[k];
                             }
                         }
+                        N_add_[ja[iter].N_batch] = ja[iter].N_add;
                         tail = iter;
                         iter = ja[iter].next;
                         nfinished_block++;
                     }
-
-                    //ja[0].finished = false;
-                    //ja[0].filled = false;
-
                     l_empty.lock();
 
                     if (empty_tail == -1)
@@ -1366,19 +1670,40 @@ Foam::scalar Foam::STDACChemistryModel<ReactionThermo, ThermoType>::solve(
                     spare = true;
                     spare_cpu++;
                 }
-                //std::cout << SUPstream::node_manager.rank << "!!!!!!!!!!!!!!!!!!!nfinished_block= "<< nfinished_block << std::endl;
-                if (spare_cpu.load() == n_cpu && nfinished_block == nloop)
+                if (spare_cpu.load() == n_cpu && nfinished_block == nloop && filled_head == -1)
                 {
                     break;
                 }
-
-                //l_sender.unlock();
             }
+            for (int iter = 0; iter < Nbatch; iter++)
+            {
+                index_[iter] = iter;
+            }
+            my_quicksort(N_add_, index_, 0, Nbatch - 1);
+            head_link = index_[0];
+            label iter_ = head_link;
+            for (int iter = 0; iter < Nbatch - 1; iter++)
+            {
+                link_[iter_] = index_[iter + 1];
+                iter_ = link_[iter_];
+            }
+            link_[iter_] = -1;
+
+            tail_link = index_[Nbatch - 1];
+            iter_ = tail_link;
+            for (int iter = Nbatch - 1; iter > 0; iter--)
+            {
+                link_rev[iter_] = index_[iter - 1];
+                iter_ = link_rev[iter_];
+            }
+            link_rev[iter_] = -1;
+
             //std::cout << SUPstream::node_manager.rank << "!!!!!!!!!!!!!!!!!!!1 " << std::endl;
             //SUPstream::Sync.sync();
             //clockTime_.timeIncrement();
             //solveCpuTime_ += clockTime_.timeIncrement();
             //SUPstream::Sync.sync();
+            Nplan = Nsend - Nreceive;
             tabulation_->sync();
             //solveCpuTime_ += clockTime_.timeIncrement();
         }
@@ -1648,7 +1973,7 @@ Foam::scalar Foam::STDACChemistryModel<ReactionThermo, ThermoType>::solve(
             }
         }
     }
-    
+
     //if (loadBalance_)
     //    tabulation_->sync();
     solveCpuTime_ += clockTime_.timeIncrement();
@@ -1657,7 +1982,7 @@ Foam::scalar Foam::STDACChemistryModel<ReactionThermo, ThermoType>::solve(
     scalar endtime = MPI_Wtime();
     if (loadBalance_)
         solveCpuTime_ = endtime - starttime;
-        //solveCpuTime_ += tmp;
+    //solveCpuTime_ += tmp;
     //SUPstream::Sync();
 
     //
