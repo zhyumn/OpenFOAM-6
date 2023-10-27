@@ -229,7 +229,7 @@ namespace Foam
 
         struct jobInput
         {
-            typedef chemistryTabulationMethodSs::SList<scalar> listType;
+            //typedef chemistryTabulationMethodSs::SList<scalar> listType;
             scalar rho;
             scalar p;
             scalar T;
@@ -238,16 +238,16 @@ namespace Foam
             //FixedList<scalar, DateSize2> phiq;
             //FixedList<scalar, DateSize2> Rphiq;
 
-            listType Y;
+            //listType Y;
             //SList<scalar> Y;
             scalar deltaTChem_;
             scalar deltaT;
             label growOrAdd;
             //label celli;
-            listType RR;
+            //listType RR;
         };
 
-        struct jobInput2
+        /*         struct jobInput2
         {
             typedef scalarList listType;
             scalar rho;
@@ -259,7 +259,7 @@ namespace Foam
             scalar deltaT;
             label growOrAdd;
             listType RR;
-        };
+        }; */
 
         struct jobArray
         {
@@ -289,9 +289,9 @@ namespace Foam
             //label last_i;
             label size_i;
             //jobInput jobs[Batch_Size];
-            jobInput2 *jobs;
+            jobInput *jobs;
 
-            jobArray2(int size) { jobs = new jobInput2[size]; }
+            jobArray2(int size) { jobs = new jobInput[size]; }
             ~jobArray2() { delete[] jobs; }
             //label celli;
         };
@@ -299,9 +299,12 @@ namespace Foam
         int Batch_Size;
         //SUPstream::shared_data<jobArray> sja_;
         SUPstream::shared_data2<jobArray> ja;
+
+        SUPstream::shared_data2<scalar []> ja_RY;
         //jobArray *ja;
         label ja_size;
         jobArray2 ja_loc;
+        scalar *ja_loc_RY;
         template <typename T>
         struct padded_atomic
         {
@@ -353,9 +356,7 @@ namespace Foam
 
         //scalar solve(jobInput &in);
 
-        template <class jobT>
-        scalar solve(
-            jobT &in, bool &ret_fail);
+        scalar solve(jobInput &in, scalar RY[], bool &ret_fail);
 
         static void my_quicksort(labelField &arrays1, labelField &arrays2, int left, int right)
         {

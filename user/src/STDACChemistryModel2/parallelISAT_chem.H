@@ -38,6 +38,7 @@ SourceFiles
 
 #include "parallelISAT.H"
 #include <iostream>
+#include "parData.H"
 //#include "FixedSquareMatrix.H"
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 #define Datasize 56
@@ -54,7 +55,7 @@ namespace Foam
         template <class CompType, class ThermoType>
         class parallelISAT_chem;
 
-        template <class Type>
+        /* template <class Type>
         struct SList
         {
             int size_;
@@ -76,19 +77,19 @@ namespace Foam
             }
             inline Type &operator[](int x)
             {
-                /*                 if (x >= size_)
-                    FatalErrorInFunction
-                        << abort(FatalError); */
+                //                 if (x >= size_)
+                //    FatalErrorInFunction
+                //        << abort(FatalError);
                 //assert(x < size_);
                 return v_()[x];
             }
             inline const Type &operator[](int x) const
             {
-                /*                 if (x >= size_)
-                    FatalErrorInFunction
-                        << "x=" << x
-                        << ",size=" << size_
-                        << abort(FatalError); */
+                //                 if (x >= size_)
+                //    FatalErrorInFunction
+                //        << "x=" << x
+                //        << ",size=" << size_
+                //        << abort(FatalError);
                 //assert(x < size_);
                 return v_()[x];
             }
@@ -116,18 +117,18 @@ namespace Foam
             inline void setSize(int size_in)
             {
                 SharedPointer<Type> tmp;
-                /*if (UNLIKELY(size_in > size_))
-                {
-                    tmp = pslab->alloc(sizeof(Type) * size_in);
-                    size_t ms = min(size_in, size_);
-                    memcpy(tmp(), v_(), ms * sizeof(Type));
-                    //for (size_t i = 0; i < ms; i++)
-                    //    tmp()[i] = v_()[i];
-                    Delete();
+                // if (UNLIKELY(size_in > size_))
+                //{
+                //    tmp = pslab->alloc(sizeof(Type) * size_in);
+                //    size_t ms = min(size_in, size_);
+                //    memcpy(tmp(), v_(), ms * sizeof(Type));
+                //   //for (size_t i = 0; i < ms; i++)
+                //    //    tmp()[i] = v_()[i];
+                //    Delete();
 
-                    size_ = size_in;
-                    v_ = tmp;
-                }*/
+                //    size_ = size_in;
+                //    v_ = tmp;
+                //}
                 //init(size_in);
             }
             const int &size() const
@@ -243,7 +244,7 @@ namespace Foam
             {
                 return total_size_;
             }
-        };
+        }; */
 
         /*---------------------------------------------------------------------------*\
                                  Class parallelISAT_chem Declaration

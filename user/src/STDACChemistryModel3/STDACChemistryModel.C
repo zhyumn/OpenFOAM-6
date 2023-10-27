@@ -60,6 +60,7 @@ Foam::STDACChemistryModel<ReactionThermo, ThermoType>::STDACChemistryModel(
       //ja(&sja_()),
       Batch_Size(this->subDict("tabulation").lookupOrDefault("batchSize", 100)),
       ja(SUPstream::node_manager, n_block, sizeof(jobArray) + sizeof(jobInput) * (Batch_Size - 1)),
+      ja_RY(SUPstream::node_manager, n_block, sizeof(scalar) * this->nSpecie_ * Batch_Size),
       ja_loc(Batch_Size),
       sspare_cpu(SUPstream::node_manager), spare_cpu(sspare_cpu().var),
       sempty_head(SUPstream::node_manager), sempty_tail(SUPstream::node_manager),
@@ -91,11 +92,11 @@ Foam::STDACChemistryModel<ReactionThermo, ThermoType>::STDACChemistryModel(
             //ja[i].filled = false;
             //ja[i].finished = false;
 
-            for (int j = 0; j < Batch_Size; j++)
-            {
-                ja[i].jobs[j].Y.init(this->nSpecie_);
-                ja[i].jobs[j].RR.init(this->nSpecie_);
-            }
+            //for (int j = 0; j < Batch_Size; j++)
+            //{
+            //    ja[i].jobs[j].Y.init(this->nSpecie_);
+            //    ja[i].jobs[j].RR.init(this->nSpecie_);
+            //}
         }
         ja[n_block - 1].next = -1;
         empty_head = 0;
@@ -108,11 +109,11 @@ Foam::STDACChemistryModel<ReactionThermo, ThermoType>::STDACChemistryModel(
     finished_head[rank] = -1;
     SUPstream::Sync();
 
-    for (int i = 0; i < Batch_Size; i++)
-    {
-        ja_loc.jobs[i].Y.setSize(this->nSpecie_);
-        ja_loc.jobs[i].RR.setSize(this->nSpecie_);
-    }
+    //for (int i = 0; i < Batch_Size; i++)
+    //{
+    //    ja_loc.jobs[i].Y.setSize(this->nSpecie_);
+    //    ja_loc.jobs[i].RR.setSize(this->nSpecie_);
+    //}
 
     head_link = 0;
     //head_add = -1;
@@ -126,6 +127,8 @@ Foam::STDACChemistryModel<ReactionThermo, ThermoType>::STDACChemistryModel(
     link_[link_.size() - 1] = -1;
     link_rev[link_.size() - 1] = link_.size() - 2;
     Nplan = 0;
+
+    ja_loc_RY = new scalar[this->nSpecie_ * Batch_Size];
 
     loadBalance_ = this->subDict("tabulation").lookupOrDefault("loadBalance", true);
     Info << "STDACChemistryModel!!!! variableTimeStep_=" << variableTimeStep_ << endl;
@@ -682,11 +685,10 @@ Foam::scalar Foam::STDACChemistryModel<ReactionThermo, ThermoType>::solve(
 } */
 
 template <class ReactionThermo, class ThermoType>
-template <class jobT>
 Foam::scalar Foam::STDACChemistryModel<ReactionThermo, ThermoType>::solve(
-    jobT &in, bool &ret_success)
+    jobInput &in, scalar RY[], bool &ret_success)
 {
-/*     static label nAdditionalEqn = (tabulation_->variableTimeStep() ? 1 : 0);
+    /*     static label nAdditionalEqn = (tabulation_->variableTimeStep() ? 1 : 0);
     static scalarField c(this->nSpecie_);
     static scalarField c0(this->nSpecie_);
     static scalarField phiq(this->nEqns() + nAdditionalEqn);
@@ -697,14 +699,17 @@ Foam::scalar Foam::STDACChemistryModel<ReactionThermo, ThermoType>::solve(
     scalar deltaT = in.deltaT;
     scalar deltaTChem_ = in.deltaTChem_;
     label &growOrAdd = in.growOrAdd;
-    typename jobT::listType &RR = in.RR;
-    typename jobT::listType &Y = in.Y;
-
+    //typename jobT::listType &RR = in.RR;
+    //typename jobT::listType &Y = in.Y;
     for (label i = 0; i < this->nSpecie_; i++)
     {
-        c_tmp[i] = rho * Y[i] / this->specieThermo_[i].W();
+        phiq_tmp[i] = RY[i];
+    }
+    for (label i = 0; i < this->nSpecie_; i++)
+    {
+        c_tmp[i] = rho * phiq_tmp[i] / this->specieThermo_[i].W();
         c0_tmp[i] = c_tmp[i];
-        phiq_tmp[i] = Y[i];
+        //phiq_tmp[i] = Y[i];
     }
     phiq_tmp[this->nSpecie()] = T;
     phiq_tmp[this->nSpecie() + 1] = p;
@@ -786,7 +791,7 @@ Foam::scalar Foam::STDACChemistryModel<ReactionThermo, ThermoType>::solve(
 
     for (label i = 0; i < this->nSpecie_; i++)
     {
-        RR[i] =
+        RY[i] =
             (c_tmp[i] - c0_tmp[i]) * this->specieThermo_[i].W() / deltaT;
     }
     return deltaTMin;
@@ -909,14 +914,17 @@ Foam::scalar Foam::STDACChemistryModel<ReactionThermo, ThermoType>::solve(
 
                     for (label k = 0; k < this->nSpecie_; k++)
                     {
-                        ja_loc.jobs[j].Y[k] = this->Y()[k][celli];
+                        ja_loc_RY[j * this->nSpecie_ + k] = this->Y()[k][celli];
+                        //ja_loc.jobs[j].Y[k] = this->Y()[k][celli];
                     }
                 }
 
                 for (int j = 0; j < ja_loc.size_i; j++)
                 {
                     label celli = j + ja_loc.first_i;
-                    deltaTMin = min(solve(ja_loc.jobs[j], ret_sucess), deltaTMin);
+
+                    deltaTMin = min(solve(ja_loc.jobs[j], ja_loc_RY + j * this->nSpecie_, ret_sucess), deltaTMin);
+
                     N_add_tmp -= ret_sucess;
                     this->deltaTChem_[celli] = ja_loc.jobs[j].deltaTChem_;
                     //if (ja_loc.jobs[j].growOrAdd)
@@ -930,7 +938,8 @@ Foam::scalar Foam::STDACChemistryModel<ReactionThermo, ThermoType>::solve(
 
                     for (label k = 0; k < this->nSpecie_; k++)
                     {
-                        this->RR_[k][celli] = ja_loc.jobs[j].RR[k];
+                        this->RR_[k][celli] = ja_loc_RY[j * this->nSpecie_ + k];
+                        //this->RR_[k][celli] = ja_loc.jobs[j].RR[k];
                     }
                 }
                 N_add_[i] = N_add_tmp;
@@ -968,7 +977,8 @@ Foam::scalar Foam::STDACChemistryModel<ReactionThermo, ThermoType>::solve(
                             //}
                             for (label k = 0; k < this->nSpecie_; k++)
                             {
-                                this->RR_[k][celli] = ja[iter].jobs[j].RR[k];
+                                this->RR_[k][celli] = ja_RY[iter][j * this->nSpecie_ + k];
+                                //this->RR_[k][celli] = ja[iter].jobs[j].RR[k];
                             }
                         }
                         tail = iter;
@@ -1027,7 +1037,8 @@ Foam::scalar Foam::STDACChemistryModel<ReactionThermo, ThermoType>::solve(
                             ja[iter].jobs[j].deltaTChem_ = this->deltaTChem_[celli];
                             for (label k = 0; k < this->nSpecie_; k++)
                             {
-                                ja[iter].jobs[j].Y[k] = this->Y()[k][celli];
+                                ja_RY[iter][j * this->nSpecie_ + k] = this->Y()[k][celli];
+                                //ja[iter].jobs[j].Y[k] = this->Y()[k][celli];
                             }
                         }
                         Nsend++;
@@ -1096,7 +1107,9 @@ Foam::scalar Foam::STDACChemistryModel<ReactionThermo, ThermoType>::solve(
                                     ja[iter].jobs[j].deltaTChem_ = this->deltaTChem_[celli];
                                     for (label k = 0; k < this->nSpecie_; k++)
                                     {
-                                        ja[iter].jobs[j].Y[k] = this->Y()[k][celli];
+                                        //Pout << "here " << j * this->nSpecie_ + k << endl;
+                                        ja_RY[iter][j * this->nSpecie_ + k] = this->Y()[k][celli];
+                                        //ja[iter].jobs[j].Y[k] = this->Y()[k][celli];
                                     }
                                 }
                                 Nsend++;
@@ -1159,7 +1172,7 @@ Foam::scalar Foam::STDACChemistryModel<ReactionThermo, ThermoType>::solve(
                         int N_add = ja[iter].size_i;
                         for (int j = 0; j < ja[iter].size_i; j++)
                         {
-                            deltaTMin = min(solve(ja[iter].jobs[j], ret_sucess), deltaTMin);
+                            deltaTMin = min(solve(ja[iter].jobs[j], ja_RY[iter] + j * this->nSpecie_, ret_sucess), deltaTMin);
                             N_add -= ret_sucess;
                         }
                         ja[iter].N_add = N_add;
@@ -1200,7 +1213,8 @@ Foam::scalar Foam::STDACChemistryModel<ReactionThermo, ThermoType>::solve(
                             //}
                             for (label k = 0; k < this->nSpecie_; k++)
                             {
-                                this->RR_[k][celli] = ja[iter].jobs[j].RR[k];
+                                this->RR_[k][celli] = ja_RY[iter][j * this->nSpecie_ + k];
+                                //this->RR_[k][celli] = ja[iter].jobs[j].RR[k];
                             }
                         }
                         N_add_[ja[iter].N_batch] = ja[iter].N_add;
@@ -1305,8 +1319,8 @@ Foam::scalar Foam::STDACChemistryModel<ReactionThermo, ThermoType>::solve(
 
                     for (label k = 0; k < this->nSpecie_; k++)
                     {
-
-                        ja_loc.jobs[j].Y[k] = this->Y()[k][celli];
+                        ja_loc_RY[j * this->nSpecie_ + k] = this->Y()[k][celli];
+                        //ja_loc.jobs[j].Y[k] = this->Y()[k][celli];
                     }
 
                     ja_loc.jobs[j].deltaTChem_ = this->deltaTChem_[celli];
@@ -1314,7 +1328,7 @@ Foam::scalar Foam::STDACChemistryModel<ReactionThermo, ThermoType>::solve(
 
                 for (int j = 0; j < ja_loc.size_i; j++)
                 {
-                    deltaTMin = min(solve(ja_loc.jobs[j], ret_sucess), deltaTMin);
+                    deltaTMin = min(solve(ja_loc.jobs[j], ja_loc_RY + j * this->nSpecie_, ret_sucess), deltaTMin);
                     this->deltaTChem_[j + ja_loc.first_i] = ja_loc.jobs[j].deltaTChem_;
                     if (ja_loc.jobs[j].growOrAdd)
                     {
@@ -1326,7 +1340,8 @@ Foam::scalar Foam::STDACChemistryModel<ReactionThermo, ThermoType>::solve(
                     }
                     for (label k = 0; k < this->nSpecie_; k++)
                     {
-                        this->RR_[k][j + ja_loc.first_i] = ja_loc.jobs[j].RR[k];
+                        this->RR_[k][j + ja_loc.first_i] = ja_loc_RY[j * this->nSpecie_ + k];
+                        //this->RR_[k][j + ja_loc.first_i] = ja_loc.jobs[j].RR[k];
                     }
                 }
             }
