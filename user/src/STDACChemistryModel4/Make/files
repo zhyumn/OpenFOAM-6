@@ -1,0 +1,12 @@
+
+SBasicChemistryModels.C
+
+makeChemistrySolversS.C
+
+
+reduction/makeChemistryReductionMethodSs.C
+tabulation/makeChemistryTabulationMethodSs.C
+
+makeParallelISAT.C
+
+LIB = $(FOAM_USER_LIBBIN)/libchemistryModelS4
