@@ -1048,5 +1048,5 @@ bool Foam::chemistryTabulationMethodSs::binaryTreeS<CompType, ThermoType>::clean
         }
     }
 
-    return treeModified;
+    return (treeModified && isFull());
 }

@@ -40,7 +40,7 @@ SourceFiles
 #include "parISATleaf.H"
 #include "binaryTreeS2.H"
 #include "chemPointISATS.H"
-#define ISATcache
+//#define ISATcache
 //#include "FixedSquareMatrix.H"
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 //#define Datasize 56
@@ -70,8 +70,9 @@ namespace Foam
             parallelISAT<ISAT_manager<CompType, ThermoType>> tree;
 #ifdef ISATcache
             binaryTreeS<CompType, ThermoType> chemisTree_;
-            bool cleaningRequired_;
+
 #endif
+            bool cleaningRequired_;
 
             //- Number of equations in addition to the species eqs.
             label nAdditionalEqns_;

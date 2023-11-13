@@ -36,15 +36,16 @@ template <typename T>
 template <typename... Args>
 Foam::chemistryTabulationMethodSs::parallelISAT<T>::parallelISAT(T &ISATmanager_in, SUPstream::mpi_manager &manager_in, label nmem, label maxNleafs, SUPstream::mpi_sync &sync_in, Args... args)
     : ISATmanager(ISATmanager_in), manager_(manager_in), sync_(sync_in), maxNLeafs_(maxNleafs), nmem_leaf_(nmem), nmem_node_(nmem),
-      emptylist_leaf(manager_in, 100000), emptylist_node(manager_in, 100000), pv_(manager_in),
+      //emptylist_leaf(manager_in, 100000), emptylist_node(manager_in, 100000),
+      pv_(manager_in),
       size_leaf_(pv_().size_leaf), head_leaf(pv_().head_leaf),
       tail_leaf(pv_().tail_leaf), temp_tail_leaf(pv_().temp_tail_leaf),
       size_node(pv_().size_node), head_node(pv_().heaf_node),
       tail_node(pv_().tail_node), temp_tail_node(pv_().temp_tail_node),
       root_(pv_().root_), totalGrowth_(pv_().totalGrowth), //,root_atomic((std::atomic<long unsigned int>*)&pv_().root_.offset)
       write_lock(manager_in, sync_in), mem_lock(manager_in, sync_in),
-      leaf_manager(emptylist_leaf, tail_leaf, pv_().m_size_leaf, pv_().tmp_size_leaf),
-      node_manager(emptylist_node, tail_node, pv_().m_size_node, pv_().tmp_size_node),
+      leaf_manager(tail_leaf, pv_().m_size_leaf, pv_().tmp_size_leaf),
+      node_manager(tail_node, pv_().m_size_node, pv_().tmp_size_node),
       nRetrieved_(0),
       nGrowth_(0),
       nAdd_(0)

@@ -74,8 +74,9 @@ Foam::chemistryTabulationMethodSs::ISAT_manager<CompType, ThermoType>::ISAT_mana
            SUPstream::Sync),
 #ifdef ISATcache
       chemisTree_(chemistry, this->coeffsDict_, *this),
-      cleaningRequired_(false),
+
 #endif
+      cleaningRequired_(false),
       runTime_(chemistry.time()),
       completeSpaceSize_(chemistry.nEqns() + ((this->variableTimeStep()) ? 1 : 0)),
       scaleFactor_(completeSpaceSize_, 1),
@@ -957,31 +958,7 @@ bool Foam::chemistryTabulationMethodSs::ISAT_manager<CompType, ThermoType>::clea
     bool treeModified(false);
 
 #ifdef ISATcache
-    {
-        chemPointISATS<CompType, ThermoType> *x = chemisTree_.treeMin();
-        while (x != nullptr)
-        {
-            chemPointISATS<CompType, ThermoType> *xtmp =
-                chemisTree_.treeSuccessor(x);
-
-            scalar elapsedTimeSteps = this->chemistry_.timeSteps() - x->timeTag();
-
-            if ((elapsedTimeSteps > chPMaxLifeTime_) || (x->nGrowth() > maxGrowth_))
-            {
-                chemisTree_.deleteLeaf(x);
-                treeModified = true;
-            }
-            x = xtmp;
-        }
-
-        if (
-            chemisTree_.size() > minBalanceThreshold_ && chemisTree_.depth() >
-                                                             maxDepthFactor_ * log(scalar(chemisTree_.size())) / log(2.0))
-        {
-            chemisTree_.balance();
-            treeModified = true;
-        }
-    }
+    treeModified = chemisTree_.cleanAndBalance();
 
 #endif
 
@@ -1026,7 +1003,7 @@ bool Foam::chemistryTabulationMethodSs::ISAT_manager<CompType, ThermoType>::clea
 
     // Return a bool to specify if the tree structure has been modified and is
     // now below the user specified limit (true if not full)
-    return (treeModified && !tree.isFull() && !chemisTree_.isFull());
+    return (treeModified && !tree.isFull());
 }
 
 template <class CompType, class ThermoType>

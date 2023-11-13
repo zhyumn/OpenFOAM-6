@@ -125,19 +125,20 @@ namespace Foam
                 //- Number of equations in addition to the species eqs.
             }; */
 
-            SUPstream::shared_data<label> emptylist_leaf;
-            SUPstream::shared_data<label> emptylist_node;
+            //SUPstream::shared_data<label> emptylist_leaf;
+            //SUPstream::shared_data<label> emptylist_node;
 
             template <class Type>
             class Mem_manager
             {
-                SUPstream::shared_data<label> &emptylist_;
+                label pemptylist_;
+                //SUPstream::shared_data<label> &emptylist_;
                 label &tail_;
                 label &size_;
                 label &tmp_size_;
 
             public:
-                Mem_manager(SUPstream::shared_data<label> &emptylist_in, label &tail_in, label &size_in, label &tmp_size_in) : emptylist_(emptylist_in), tail_(tail_in), size_(size_in), tmp_size_(tmp_size_in) { tail_ = 0; }
+                Mem_manager(label &tail_in, label &size_in, label &tmp_size_in) : pemptylist_(-1), tail_(tail_in), size_(size_in), tmp_size_(tmp_size_in) { tail_ = 0; }
                 inline SharedPointer<Type> New(int size_in)
                 {
                     size_++;
@@ -165,19 +166,29 @@ namespace Foam
                 inline void Delete(SharedPointer<Type> &in)
                 {
                     size_--;
-                    tmp_size_++;
-                    emptylist_[tail_] = in.offset;
-                    tail_++;
+                    //tmp_size_++;
+                    ///emptylist_[tail_] = in.offset;
+                    //tail_++;
+                    in->setNext(pemptylist_);
+                    pemptylist_ = in.offset;
                 }
                 inline void update()
                 {
-                    tmp_size_ = 0;
-                    while (tail_ > 0)
+
+                    SharedPointer<Type> ptr, tmp;
+                    ptr.offset = pemptylist_;
+                    while (ptr.offset != -1)
                     {
-                        tail_--;
-                        (*SharedPointer<Type>(emptylist_[tail_])).Delete();
-                        pslab->free(sizeof(Type), emptylist_[tail_]);
+                        tmp = ptr;
+                        ptr.offset = ptr->next();
+                        tmp->Delete();
+                        pslab->free(sizeof(Type), tmp.offset);
                     }
+
+                    //Pout << "tail_ =  " << tail_<<endl;
+
+                    //tail_ = 0;
+                    pemptylist_ = -1;
                 }
                 inline void report()
                 {

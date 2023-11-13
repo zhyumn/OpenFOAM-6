@@ -126,7 +126,7 @@ Description
 //#include "List2D.H"
 #include "slab.H"
 #include "parData.H"
-#include  "staticData.H"
+#include "staticData.H"
 
 //#define Datasize 56
 namespace Foam
@@ -135,7 +135,7 @@ namespace Foam
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
     namespace chemistryTabulationMethodSs
     {
-/*         struct static_data
+        /*         struct static_data
         {
             static bool mechRedActive;
             static label nAdditionalEqns_;
@@ -269,6 +269,14 @@ namespace Foam
             friend Node;
             template <class CompType_, class ThermoType_>
             friend std::ostream &operator<<(std::ostream &out, Leaf &A);
+            void setNext(label offset)
+            {
+                node_2.offset = offset;
+            }
+            label next()
+            {
+                return node_2.offset;
+            }
         };
 
         struct Node
@@ -349,6 +357,14 @@ namespace Foam
             void init(int size_in)
             {
                 v_.init(size_in);
+            }
+            void setNext(label offset)
+            {
+                leafLeft_.offset = offset;
+            }
+            label next()
+            {
+                return leafLeft_.offset;
             }
             friend Leaf;
             template <class CompType_, class ThermoType_>
