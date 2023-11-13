@@ -47,103 +47,103 @@ Description
 
 #include "binaryNode.H"
 #include "chemPointISAT.H"
+#include "staticData.H"
 
 namespace Foam
 {
 
-template<class CompType, class ThermoType>
-class STDACChemistryModel;
+    template <class CompType, class ThermoType>
+    class STDACChemistryModel;
 
-template<class CompType, class ThermoType>
-class binaryTree
-{
-
-public:
-    typedef binaryNode<CompType, ThermoType> bn;
-    typedef chemPointISAT<CompType, ThermoType> chP;
-
-private:
-
-    //- Reference to the chemistryModel
-    STDACChemistryModel<CompType, ThermoType>& chemistry_;
-
-    //- Root node of the binary tree
-    bn *root_;
-
-    //- Maximum number of elements in the binary tree
-    label maxNLeafs_;
-
-    //- Size of the BST (= number of chemPoint stored)
-    label size_;
-
-    //- Secondary retrieve search variables
-    label n2ndSearch_;
-    label max2ndSearch_;
-
-    //- Insert new node at the position of phi0
-    //  phi0 should be already attached to another node or the pointer to it
-    //  will be lost
-    void insertNode
-    (
-        chP*& phi0,
-        bn*& newNode
-    );
-
-    //- Perform a search in the subtree starting from the subtree node y
-    //  This search continue to use the hyperplan to walk the tree
-    //  If covering EOA is found return true and x points to the chemPoint
-    bool inSubTree
-    (
-        const scalarField& phiq,
-        bn* y,
-        chP* x
-    );
-
-    void deleteSubTree(binaryNode<CompType, ThermoType>* subTreeRoot);
-
-    inline void deleteSubTree()
+    template <class CompType, class ThermoType>
+    class binaryTree
     {
-        deleteSubTree(root_);
-    }
 
-    //- Replace the binaryNode u with v
-    void transplant(bn* u, bn* v);
+    public:
+        typedef binaryNode<CompType, ThermoType> bn;
+        typedef chemPointISAT<CompType, ThermoType> chP;
 
-    chP* chemPSibling(bn* y);
-    chP* chemPSibling(chP* x);
+    private:
+        //- Reference to the chemistryModel
+        STDACChemistryModel<CompType, ThermoType> &chemistry_;
 
-    bn* nodeSibling(bn* y);
-    bn* nodeSibling(chP* x);
+        //- Root node of the binary tree
+        bn *root_;
 
-    void deleteAllNode(bn* subTreeRoot);
+        //- Maximum number of elements in the binary tree
+        label maxNLeafs_;
 
-    dictionary coeffsDict_;
+        //- Size of the BST (= number of chemPoint stored)
+        label size_;
 
-public:
-    //- Constructors
+        //- Secondary retrieve search variables
+        label n2ndSearch_;
+        label max2ndSearch_;
+
+        label nRetrieved_;
+        label nGrowth_;
+        label nAdd_;
+        bool cleaningRequired_;
+        //- Insert new node at the position of phi0
+        //  phi0 should be already attached to another node or the pointer to it
+        //  will be lost
+        void insertNode(
+            chP *&phi0,
+            bn *&newNode);
+
+        //- Perform a search in the subtree starting from the subtree node y
+        //  This search continue to use the hyperplan to walk the tree
+        //  If covering EOA is found return true and x points to the chemPoint
+        bool inSubTree(
+            const scalarField &phiq,
+            bn *y,
+            chP *x);
+
+        void deleteSubTree(binaryNode<CompType, ThermoType> *subTreeRoot);
+
+        inline void deleteSubTree()
+        {
+            deleteSubTree(root_);
+        }
+
+        //- Replace the binaryNode u with v
+        void transplant(bn *u, bn *v);
+
+        chP *chemPSibling(bn *y);
+        chP *chemPSibling(chP *x);
+
+        bn *nodeSibling(bn *y);
+        bn *nodeSibling(chP *x);
+
+        void deleteAllNode(bn *subTreeRoot);
+
+        dictionary coeffsDict_;
+
+    public:
+        //- Constructors
 
         //- Construct from dictionary and chemistryOnLineLibrary
-        binaryTree
-        (
-            STDACChemistryModel<CompType, ThermoType>& chemistry,
-            dictionary coeffsDict
-        );
+        binaryTree(
+            STDACChemistryModel<CompType, ThermoType> &chemistry,
+            dictionary coeffsDict);
 
-    //- Member functions
+        label chPMaxLifeTime_;
+
+        //- Member functions
         inline label size()
         {
             return size_;
         }
 
         //- Computes iteratively the depth of the subTree
-        label depth(bn* subTreeRoot);
+        label depth(bn *subTreeRoot);
 
         inline label depth()
         {
             return depth(root_);
         }
 
-        inline bn* root()
+        inline bn *root()
         {
             return root_;
         }
@@ -153,6 +153,24 @@ public:
             return maxNLeafs_;
         }
 
+        inline label &nRetrieved()
+        {
+            return nRetrieved_;
+        }
+
+        inline label &nAdd()
+        {
+            return nAdd_;
+        }
+
+        inline label &nGrowth()
+        {
+            return nGrowth_;
+        }
+
+        bool retrieve(
+            const scalarField &phiq,
+            scalarField &Rphiq);
         // Insert a new leaf starting from the parent node of phi0
         // Parameters: phi0 the leaf to replace by a node
         // phiq the new composition to store
@@ -169,38 +187,32 @@ public:
         // leaf of phi0. This new node is constructed with phi0 on the left
         // and phiq on the right (the hyperplane is computed inside the
         // binaryNode constructor)
-        void insertNewLeaf
-        (
-            const scalarField& phiq,
-            const scalarField& Rphiq,
-            const scalarSquareMatrix& A,
-            const scalarField& scaleFactor,
-            const scalar& epsTol,
+        void insertNewLeaf(
+            const scalarField &phiq,
+            const scalarField &Rphiq,
+            const scalarSquareMatrix &A,
+            const scalarField &scaleFactor,
+            const scalar &epsTol,
             const label nCols,
-            chP*& phi0
-        );
-
-
+            chP *&phi0);
 
         // Search the binaryTree until the nearest leaf of a specified
         // leaf is found.
-        void binaryTreeSearch
-        (
-            const scalarField& phiq,
-            bn* node,
-            chP*& nearest
-        );
+        void binaryTreeSearch(
+            const scalarField &phiq,
+            bn *node,
+            chP *&nearest);
 
         // Perform a secondary binary tree search starting from a failed
         // chemPoint x, with a depth-first search algorithm
         // If another candidate is found return true and x points to the chemP
-        bool secondaryBTSearch(const scalarField& phiq, chP*& x);
+        bool secondaryBTSearch(const scalarField &phiq, chP *&x);
 
         //- Delete a leaf from the binary tree and reshape the binary tree for
         //  the following binary tree search
         //  Return the index in the nodeList of the removed node
         //  (-1 when no node)
-        void deleteLeaf(chP*& phi0);
+        void deleteLeaf(chP *&phi0);
 
         //- Cheap balance function
         //  This function just roughly separate the space in two parts
@@ -216,14 +228,14 @@ public:
             deleteAllNode(root_);
         }
 
-        chP* treeMin(bn* subTreeRoot);
+        chP *treeMin(bn *subTreeRoot);
 
-        inline chP* treeMin()
+        inline chP *treeMin()
         {
             return treeMin(root_);
         }
 
-        chP* treeSuccessor(chP* x);
+        chP *treeSuccessor(chP *x);
 
         //- Removes every entries of the tree and delete the associated objects
         void clear();
@@ -232,17 +244,16 @@ public:
         bool isFull();
 
         void resetNumRetrieve();
-};
+    };
 
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 } // End namespace Foam
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "binaryTree.C"
+#include "binaryTreeS.C"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

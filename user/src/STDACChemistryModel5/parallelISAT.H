@@ -87,7 +87,7 @@ namespace Foam
 
             //- Disallow default bitwise assignment
             void operator=(const parallelISAT &);
-            struct Node;
+            /* struct Node;
             struct Leaf : public leafData
             {
                 SharedPointer<Node> node_2;
@@ -123,7 +123,7 @@ namespace Foam
                 SUPstream::ref_mutex mutex;
 
                 //- Number of equations in addition to the species eqs.
-            };
+            }; */
 
             SUPstream::shared_data<label> emptylist_leaf;
             SUPstream::shared_data<label> emptylist_node;
@@ -273,14 +273,14 @@ namespace Foam
             SharedPointer<Leaf> binaryTreeSearch(const scalarField &value, SharedPointer<Node> node_index, SharedPointer<Node> &node_ret, int &side);
             void writeDot(string name);
             void writeDot(label nodeindex, std::ofstream &fout);
-            scalar leafvalue(SharedPointer<Leaf> index)
+            /*             scalar leafvalue(SharedPointer<Leaf> index)
             {
                 if (index.isNULL())
                 {
                     return -1;
                 };
                 return index->v;
-            };
+            }; */
 
             bool retrieve(const scalarField &x, scalarField &y);
 
@@ -391,11 +391,11 @@ namespace Foam
                         // << abort(FatalError);
                         return false;
                     }
-                    ret = (!root_->leafLeft_.isNUL());
-                    ret = ret && (root_->nodeLeft_.isNUL());
-                    ret = ret && (root_->nodeRight_.isNUL());
-                    ret = ret && (root_->leafRight_.isNUL());
-                    ret = ret && (root_->parent_.isNUL());
+                    ret = (!root_->leafLeft_.isNULL());
+                    ret = ret && (root_->nodeLeft_.isNULL());
+                    ret = ret && (root_->nodeRight_.isNULL());
+                    ret = ret && (root_->leafRight_.isNULL());
+                    ret = ret && (root_->parent_.isNULL());
                     ret = ret && (root_->leafLeft_->node_2 == root_);
                     if (ret == false)
                     {

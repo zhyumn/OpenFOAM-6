@@ -73,14 +73,16 @@ Foam::chemistryTabulationMethodSs::parallelISAT<T>::~parallelISAT()
 
 // * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
 template <typename T>
-Foam::SharedPointer<typename Foam::chemistryTabulationMethodSs::parallelISAT<T>::Leaf> Foam::chemistryTabulationMethodSs::parallelISAT<T>::binaryTreeSearch(const scalarField &value)
+Foam::SharedPointer<typename Foam::chemistryTabulationMethodSs::Leaf>
+Foam::chemistryTabulationMethodSs::parallelISAT<T>::binaryTreeSearch(
+    const scalarField &value)
 {
     auto ret = binaryTreeSearch(value, root_);
     return ret;
 }
 
 template <typename T>
-Foam::SharedPointer<typename Foam::chemistryTabulationMethodSs::parallelISAT<T>::Leaf> Foam::chemistryTabulationMethodSs::parallelISAT<T>::binaryTreeSearch(
+Foam::SharedPointer<typename Foam::chemistryTabulationMethodSs::Leaf> Foam::chemistryTabulationMethodSs::parallelISAT<T>::binaryTreeSearch(
     const scalarField &value,
     SharedPointer<Node> node_ptr)
 {
@@ -124,7 +126,7 @@ Foam::SharedPointer<typename Foam::chemistryTabulationMethodSs::parallelISAT<T>:
 }
 
 template <typename T>
-Foam::SharedPointer<typename Foam::chemistryTabulationMethodSs::parallelISAT<T>::Leaf> Foam::chemistryTabulationMethodSs::parallelISAT<T>::binaryTreeSearch(
+Foam::SharedPointer<typename Foam::chemistryTabulationMethodSs::Leaf> Foam::chemistryTabulationMethodSs::parallelISAT<T>::binaryTreeSearch(
     const scalarField &value,
     SharedPointer<Node> node_ptr, SharedPointer<Node> &node_ret, int &side)
 {
@@ -177,7 +179,7 @@ Foam::SharedPointer<typename Foam::chemistryTabulationMethodSs::parallelISAT<T>:
 }
 
 template <typename T>
-Foam::SharedPointer<typename Foam::chemistryTabulationMethodSs::parallelISAT<T>::Leaf> Foam::chemistryTabulationMethodSs::parallelISAT<T>::binaryTreeSearch(
+Foam::SharedPointer<typename Foam::chemistryTabulationMethodSs::Leaf> Foam::chemistryTabulationMethodSs::parallelISAT<T>::binaryTreeSearch(
     const SList<scalar> &value,
     SharedPointer<Node> node_ptr)
 {
@@ -565,7 +567,7 @@ Foam::label Foam::chemistryTabulationMethodSs::parallelISAT<T>::add(
 }
 
 template <typename T>
-Foam::SharedPointer<typename Foam::chemistryTabulationMethodSs::parallelISAT<T>::Leaf> Foam::chemistryTabulationMethodSs::parallelISAT<T>::treeMin(SharedPointer<Node> subTreeRoot)
+Foam::SharedPointer<typename Foam::chemistryTabulationMethodSs::Leaf> Foam::chemistryTabulationMethodSs::parallelISAT<T>::treeMin(SharedPointer<Node> subTreeRoot)
 {
 
     if (subTreeRoot.notNULL())
@@ -587,7 +589,7 @@ Foam::SharedPointer<typename Foam::chemistryTabulationMethodSs::parallelISAT<T>:
 }
 
 template <typename T>
-Foam::SharedPointer<typename Foam::chemistryTabulationMethodSs::parallelISAT<T>::Leaf> Foam::chemistryTabulationMethodSs::parallelISAT<T>::treeSuccessor(SharedPointer<Leaf> x)
+Foam::SharedPointer<typename Foam::chemistryTabulationMethodSs::Leaf> Foam::chemistryTabulationMethodSs::parallelISAT<T>::treeSuccessor(SharedPointer<Leaf> x)
 {
     SharedPointer<Leaf> ret;
     ret.setNULL();
@@ -641,7 +643,8 @@ Foam::SharedPointer<typename Foam::chemistryTabulationMethodSs::parallelISAT<T>:
     return ret;
 }
 template <typename T>
-Foam::SharedPointer<typename Foam::chemistryTabulationMethodSs::parallelISAT<T>::Leaf> Foam::chemistryTabulationMethodSs::parallelISAT<T>::leafPSibling(SharedPointer<Leaf> x)
+Foam::SharedPointer<typename Foam::chemistryTabulationMethodSs::Leaf>
+Foam::chemistryTabulationMethodSs::parallelISAT<T>::leafPSibling(SharedPointer<Leaf> x)
 {
     if (size_leaf_ > 1)
     {
@@ -673,7 +676,8 @@ Foam::SharedPointer<typename Foam::chemistryTabulationMethodSs::parallelISAT<T>:
 }
 
 template <typename T>
-Foam::SharedPointer<typename Foam::chemistryTabulationMethodSs::parallelISAT<T>::Node> Foam::chemistryTabulationMethodSs::parallelISAT<T>::nodeSibling_node(SharedPointer<Node> y)
+Foam::SharedPointer<typename Foam::chemistryTabulationMethodSs::Node>
+Foam::chemistryTabulationMethodSs::parallelISAT<T>::nodeSibling_node(SharedPointer<Node> y)
 {
     if (y->parent_.notNULL())
     {
@@ -702,7 +706,7 @@ Foam::SharedPointer<typename Foam::chemistryTabulationMethodSs::parallelISAT<T>:
 }
 
 template <typename T>
-Foam::SharedPointer<typename Foam::chemistryTabulationMethodSs::parallelISAT<T>::Node> Foam::chemistryTabulationMethodSs::parallelISAT<T>::nodeSibling_leaf(SharedPointer<Leaf> x)
+Foam::SharedPointer<typename Foam::chemistryTabulationMethodSs::Node> Foam::chemistryTabulationMethodSs::parallelISAT<T>::nodeSibling_leaf(SharedPointer<Leaf> x)
 {
     if (size_leaf_ > 1)
     {

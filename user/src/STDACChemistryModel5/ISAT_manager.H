@@ -38,12 +38,15 @@ SourceFiles
 #include "parData.H"
 #include "slab.H"
 #include "parISATleaf.H"
+#include "binaryTreeS.H"
+#include "chemPointISAT.H"
+#define ISATcache
 //#include "FixedSquareMatrix.H"
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-#define Datasize 56
+//#define Datasize 56
 
-#define DateSize1 53
-#define DateSize2 56
+//#define DateSize1 53
+//#define DateSize2 56
 #define LIKELY(exp) __builtin_expect(exp, 1)
 #define UNLIKELY(exp) __builtin_expect(exp, 0)
 namespace Foam
@@ -54,46 +57,21 @@ namespace Foam
         template <class CompType, class ThermoType>
         class ISAT_manager;
 
-
-
         /*---------------------------------------------------------------------------*\
                                  Class ISAT_manager Declaration
         \*---------------------------------------------------------------------------*/
         //template <class CompType, class ThermoType>
-        //struct ISAT_chem
-        //{
-        //typedef SList<scalar> SList<scalar>;
-        //typedef SList<label> SList<label>;
-        //typedef SList<scalar> SList<scalar>;
-        //typedef SSquareMatrix<scalar> SSquareMatrix<scalar>;
-
-        //static ISAT_manager<CompType, ThermoType> *pISAT;
-
-        //static label out;
-        
-        
-        //};
-        /*         template <class CompType, class ThermoType>
-        std::ostream &operator<<(std::ostream &out, typename ISAT_chem<CompType, ThermoType>::leafData &A);
-        template <class CompType, class ThermoType>
-        std::ostream &operator<<(std::ostream &out, typename ISAT_chem<CompType, ThermoType>::nodeData &A); */
 
         template <class CompType, class ThermoType>
         class ISAT_manager
-            : public chemistryTabulationMethodS<CompType, ThermoType> //,public parallelISAT<ISAT_chem<CompType, ThermoType>, emptyClass>
+            : public chemistryTabulationMethodS<CompType, ThermoType>
         {
         public:
-            //typedef SList<scalar> SList<scalar>;
-            //typedef SList<label> SList<label>;
-            //typedef SList<scalar> SList<scalar>;
-            //typedef SSquareMatrix<scalar> SSquareMatrix<scalar>;
-
-            //typedef ISAT_chem<CompType, ThermoType> ISAT_tmp;
-            // Private data
-            typedef nodeData leafData_in;
-            typedef leafData nodeData_in;
-            parallelISAT<ISAT_manager<CompType, ThermoType>>
-                tree;
+            parallelISAT<ISAT_manager<CompType, ThermoType>> tree;
+#ifdef ISATcache
+            binaryTree<CompType, ThermoType> chemisTree_;
+            bool cleaningRequired_;
+#endif
 
             //- Number of equations in addition to the species eqs.
             label nAdditionalEqns_;
@@ -131,8 +109,6 @@ namespace Foam
         public:
             TypeName("parallelISAT");
 
-            //typedef ISAT_chem<CompType, ThermoType> DataType;
-
             //- Construct from components
             ISAT_manager(const dictionary &dict, STDACChemistryModel<CompType, ThermoType> &chemistry);
 
@@ -166,7 +142,7 @@ namespace Foam
                 return ret;
             }
             void setLeaf(
-                leafData &leaf_input,
+                Leaf &leaf_input,
                 const scalarField &x,
                 const scalarField &y,
                 SUPstream::mpi_mutex &mem_mutex,
@@ -181,13 +157,13 @@ namespace Foam
                 const scalar rhoi,
                 const scalar dt, SUPstream::mpi_mutex &mem_mutex);
 
-            void computeLT(leafData &leaf_input, scalarSquareMatrix &A, SUPstream::mpi_mutex &mem_mutex);
+            void computeLT(Leaf &leaf_input, scalarSquareMatrix &A, SUPstream::mpi_mutex &mem_mutex);
             void qrDecompose(
                 const label nCols,
                 scalarSquareMatrix &R);
 
-            bool grow(leafData &leaf_input, const scalarField &phiq, SUPstream::mpi_mutex &mem_mutex);
-
+            bool grow(Leaf &leaf_input, const scalarField &phiq, SUPstream::mpi_mutex &mem_mutex);
+            bool grow(chemPointISAT<CompType, ThermoType> *phi0, const scalarField &phiq, const scalarField &Rphiq);
             bool sync()
             {
                 bool ret = false;
@@ -222,15 +198,90 @@ namespace Foam
                 }
             }
             bool retrieve(
-                const scalarField &phiQ,
-                scalarField &RphiQ)
+                const scalarField &phiq,
+                scalarField &Rphiq)
             {
+
+#ifdef ISATcache
+
+                chemisTree_.retrieve(phiq, Rphiq);
+                bool retrieved(false);
+                chemPointISAT<CompType, ThermoType> *phi0;
+                // If the tree is not empty
+                if (chemisTree_.size())
+                {
+                    chemisTree_.binaryTreeSearch(phiq, chemisTree_.root(), phi0);
+
+                    // lastSearch keeps track of the chemPoint we obtain by the regular
+                    // binary tree search
+                    //lastSearch_ = phi0;
+                    if (phi0->inEOA(phiq))
+                    {
+                        retrieved = true;
+                    }
+                    // After a successful secondarySearch, phi0 store a pointer to the
+                    // found chemPoint
+                    else if (chemisTree_.secondaryBTSearch(phiq, phi0))
+                    {
+                        retrieved = true;
+                    }
+                    //else if (MRURetrieve_)
+                    //{
+                    //    typename SLList<
+                    //        chemPointISAT<CompType, ThermoType> *>::iterator iter = MRUList_.begin();
+                    //    for (; iter != MRUList_.end(); ++iter)
+                    //    {
+                    //        phi0 = iter();
+                    //        if (phi0->inEOA(phiq))
+                    //        {
+                    //            retrieved = true;
+                    //            break;
+                    //        }
+                    //    }
+                    //}
+                }
+                // The tree is empty, retrieved is still false
+                //else
+                //{
+                // There is no chempoints that we can try to grow
+                //lastSearch_ = nullptr;
+                //}
+
+                if (retrieved)
+                {
+                    phi0->increaseNumRetrieve();
+                    scalar elapsedTimeSteps =
+                        this->chemistry_.timeSteps() - phi0->timeTag();
+
+                    // Raise a flag when the chemPoint has been used more than the allowed
+                    // number of time steps
+                    if (elapsedTimeSteps > chPMaxLifeTime_ && !phi0->toRemove())
+                    {
+                        cleaningRequired_ = true;
+                        phi0->toRemove() = true;
+                    }
+                    //lastSearch_->lastTimeUsed() = this->chemistry_.timeSteps();
+                    //addToMRU(phi0);
+                    //calcNewC(phi0, phiq, Rphiq);
+                    phi0->retrieve(phiq, Rphiq);
+                    chemisTree_.nRetrieved()++;
+                    return true;
+                }
+                else
+                {
+                    // This point is reached when every retrieve trials have failed
+                    // or if the tree is empty
+                    return false;
+                }
+
+#endif
+
                 //bool flag = parallelISAT<ISAT_chem<CompType, ThermoType>, emptyClass>::retrieve(phiQ, RphiQ);
                 //return parallelISAT<ISAT_chem<CompType, ThermoType>, emptyClass>::retrieve(phiQ, RphiQ);
-                return tree.retrieve(phiQ, RphiQ);
+                return tree.retrieve(phiq, Rphiq);
             };
 
-            bool retrieve(
+            /*             bool retrieve(
                 const FixedList<scalar, DateSize2> &phiQ,
                 FixedList<scalar, DateSize2> &RphiQ)
             {
@@ -250,20 +301,116 @@ namespace Foam
                 }
                 //bool flag = parallelISAT<ISAT_chem<CompType, ThermoType>, emptyClass>::retrieve(phiQ, RphiQ);
                 return ret;
-            };
-
+            }; */
+            void computeA(
+                scalarSquareMatrix &A,
+                const scalarField &Rphiq,
+                const scalar rho,
+                const scalar dt);
             label add(
-                const scalarField &phiQ,
-                const scalarField &RphiQ,
+                const scalarField &phiq,
+                const scalarField &Rphiq,
                 const scalar rho,
                 const scalar deltaT)
             {
+
+#ifdef ISATcache
+
+                label growthOrAddFlag = 1;
+                // If lastSearch_ holds a valid pointer to a chemPoint AND the growPoints_
+                // option is on, the code first tries to grow the point hold by lastSearch_
+                //if (lastSearch_ && growPoints_)
+                //{
+                chemPointISAT<CompType, ThermoType> *phi0 = nullptr;
+                chemisTree_.binaryTreeSearch(phiq, chemisTree_.root(), phi0);
+                if (grow(phi0, phiq, Rphiq))
+                {
+                    chemisTree_.nGrowth()++;
+                    growthOrAddFlag = 0;
+                    //addToMRU(lastSearch_);
+                    //the structure of the tree is not modified, return false
+                    return growthOrAddFlag;
+                }
+                //}
+
+                // If the code reach this point, it is either because lastSearch_ is not
+                // valid, OR because growPoints_ is not on, OR because the grow operation
+                // has failed. In the three cases, a new point is added to the tree.
+                /* if (chemisTree_.isFull())
+                {
+                    // If cleanAndBalance operation do not result in a reduction of the tree
+                    // size, the last possibility is to delete completely the tree.
+                    // It can be partially rebuild with the MRU list if this is used.
+                    if (!cleanAndBalance())
+                    {
+                        DynamicList<chemPointISAT<CompType, ThermoType> *> tempList;
+                        if (maxMRUSize_ > 0)
+                        {
+                            // Create a copy of each chemPointISAT of the MRUList_ before
+                            // they are deleted
+                            typename SLList<
+                                chemPointISAT<CompType, ThermoType> *>::iterator iter = MRUList_.begin();
+                            for (; iter != MRUList_.end(); ++iter)
+                            {
+                                tempList.append(
+                                    new chemPointISAT<CompType, ThermoType>(*iter()));
+                            }
+                        }
+                        chemisTree_.clear();
+
+                        // Pointers to chemPoint are not valid anymore, clear the list
+                        //MRUList_.clear();
+
+                        // Construct the tree without giving a reference to attach to it
+                        // since the structure has been completely discarded
+                        chemPointISAT<CompType, ThermoType> *nulPhi = 0;
+                        forAll(tempList, i)
+                        {
+                            chemisTree_.insertNewLeaf(
+                                tempList[i]->phi(),
+                                tempList[i]->Rphi(),
+                                tempList[i]->A(),
+                                scaleFactor_,
+                                this->tolerance(),
+                                scaleFactor_.size(),
+                                nulPhi);
+                            deleteDemandDrivenData(tempList[i]);
+                        }
+                    }
+
+                    // The structure has been changed, it will force the binary tree to
+                    // perform a new search and find the most appropriate point still stored
+                    //lastSearch_ = nullptr;
+                } */
+
+                // Compute the A matrix needed to store the chemPoint.
+                label ASize = this->chemistry_.nEqns() + nAdditionalEqns_ - 2;
+                scalarSquareMatrix A(ASize, Zero);
+                computeA(A, Rphiq, rho, deltaT);
+                chemPointISAT<CompType, ThermoType> *NP = nullptr;
+                chemisTree_.insertNewLeaf(
+                    phiq,
+                    Rphiq,
+                    A,
+                    scaleFactor_,
+                    this->tolerance(),
+                    scaleFactor_.size(),
+                    NP // lastSearch_ may be nullptr (handled by binaryTree)
+                );
+                /*                 if (lastSearch_ != nullptr)
+                {
+                    addToMRU(lastSearch_);
+                } */
+                chemisTree_.nAdd()++;
+
+                return growthOrAddFlag;
+#endif
                 //label ret = parallelISAT<ISAT_chem<CompType, ThermoType>, emptyClass>::add(phiQ, RphiQ, rho, deltaT);
                 //return parallelISAT<ISAT_chem<CompType, ThermoType>, emptyClass>::add(phiQ, RphiQ, rho, deltaT);
-                return tree.add(phiQ, RphiQ, rho, deltaT);
+                return tree.add(phiq, Rphiq, rho, deltaT);
             };
 
-            label add(
+            /*             label add(
                 const FixedList<scalar, DateSize2> &phiQ,
                 const FixedList<scalar, DateSize2> &RphiQ,
                 const scalar rho,
@@ -285,7 +432,7 @@ namespace Foam
                 }
 
                 return ret;
-            };
+            }; */
 
             //friend ISAT_chem<CompType, ThermoType>;
         };

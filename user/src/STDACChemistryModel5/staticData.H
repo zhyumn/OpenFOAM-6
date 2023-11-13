@@ -116,17 +116,16 @@ Description
 
 \*---------------------------------------------------------------------------*/
 
-#ifndef PARISATleaf_H
-#define PARISATleaf_H
+#ifndef staticdata_H
+#define staticdata_H
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 #include "scalarList.H"
-#include "scalarMatrices.H"
-#include "messageStream.H"
+//#include "scalarMatrices.H"
+//#include "messageStream.H"
 //#include "List2D.H"
-#include "slab.H"
-#include "parData.H"
-#include  "staticData.H"
+//#include "slab.H"
+//#include "parData.H"
 
 //#define Datasize 56
 namespace Foam
@@ -135,7 +134,7 @@ namespace Foam
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
     namespace chemistryTabulationMethodSs
     {
-/*         struct static_data
+        struct static_data
         {
             static bool mechRedActive;
             static label nAdditionalEqns_;
@@ -146,7 +145,9 @@ namespace Foam
             static label idT_;
             static label idp_;
             static label iddeltaT_;
-        }; */
+        };
+
+
         // class parISATNode;
 
         //template<class CompType, class ThermoType>
@@ -155,206 +156,6 @@ namespace Foam
         /*---------------------------------------------------------------------------*\
                        Class ISATleaf Declaration
 \*---------------------------------------------------------------------------*/
-        class Node;
-        struct Leaf
-        {
-        public:
-            SList<scalar> phi_;
-            SList<scalar> Rphi_;
-            SSquareMatrix<scalar> A_; //gradient
-            SSquareMatrix<scalar> LT_;
-
-            SList<label> simplifiedToCompleteIndex_;
-            SList<label> completeToSimplifiedIndex_;
-
-            label nActiveSpecies_;
-            SList<scalar> scaleFactor_;
-            label nGrowth_;
-            scalar timeTag_;
-            scalar EOA;
-
-            SharedPointer<Node> node_2;
-            /*             void init(const Leaf &x)
-            {
-                Leaf::init(x);
-                node_2 = x.node_2;
-            } */
-            /*             void init(int x)
-            {
-                Leaf::init(x);
-            } */
-
-        public:
-            //void set(const scalarField &x, const scalarField &y, SUPstream::mpi_mutex &mem_mutex, const scalar rhoi, const scalar dt);
-
-            void init(const Leaf &x)
-            {
-                phi_.init(x.phi_);
-                Rphi_.init(x.Rphi_);
-                A_.init(x.A_);
-                LT_.init(x.LT_);
-
-                simplifiedToCompleteIndex_.init(x.simplifiedToCompleteIndex_);
-                completeToSimplifiedIndex_.init(x.completeToSimplifiedIndex_);
-
-                nActiveSpecies_ = x.nActiveSpecies_;
-                scaleFactor_.init(x.scaleFactor_);
-                nGrowth_ = x.nGrowth_;
-                timeTag_ = x.timeTag_;
-                EOA = x.EOA;
-
-                node_2 = x.node_2;
-            }
-
-            static void computeA(
-                const scalarField &phiq,
-                const scalarField &Rphiq,
-                SSquareMatrix<scalar> &A_out,
-                scalarSquareMatrix &A,
-                const scalar rhoi,
-                const scalar dt, SUPstream::mpi_mutex &mem_mutex);
-
-            void qrDecompose(
-                const label nCols,
-                scalarSquareMatrix &R);
-            //template <class M>
-            void qrUpdate(
-                FSSquareMatrix<scalar> &R,
-                const label n,
-                const Foam::scalarField &u,
-                const Foam::scalarField &v);
-            template <class M>
-            void rotate(
-                M &R,
-                const label i,
-                const scalar a,
-                const scalar b,
-                label n);
-
-            bool checkSolution(
-                const scalarField &phiq,
-                const scalarField &Rphiq);
-
-            bool grow(const scalarField &x, SUPstream::mpi_mutex &mem_mutex);
-            static SList<scalar> func(const SList<scalar> &x);
-            static SSquareMatrix<scalar> gradFunc(const SList<scalar> &x);
-            void retrieve(const scalarField &x, scalarField &y);
-            void Delete()
-            {
-                phi_.Delete();
-                Rphi_.Delete();
-                A_.Delete();
-                LT_.Delete();
-                simplifiedToCompleteIndex_.Delete();
-                completeToSimplifiedIndex_.Delete();
-                scaleFactor_.Delete();
-            }
-            void init(int size_in)
-            {
-                phi_.init(size_in);
-                Rphi_.init(size_in);
-                A_.init();
-                LT_.init();
-                simplifiedToCompleteIndex_.init(size_in);
-                completeToSimplifiedIndex_.init(size_in);
-                scaleFactor_.init(size_in);
-            }
-            bool inEOA(const scalarField &x);
-
-            void computeLT(scalarSquareMatrix &A, SUPstream::mpi_mutex &mem_mutex);
-            label simplifiedToCompleteIndex(const label i);
-            inline const scalar &timeTag() { return timeTag_; }
-            inline const label &nGrowth() { return nGrowth_; }
-            inline const SList<scalar> &phi() { return phi_; };
-            friend Node;
-            template <class CompType_, class ThermoType_>
-            friend std::ostream &operator<<(std::ostream &out, Leaf &A);
-        };
-
-        struct Node
-        {
-        private:
-        public:
-            SList<scalar> v_;
-            scalar a_;
-            SharedPointer<Leaf> leafLeft_;
-
-            //- Element on the right
-            SharedPointer<Leaf> leafRight_;
-
-            //- Node which follows on the left
-
-            //first check node
-            SharedPointer<Node> nodeLeft_;
-
-            //- Node which follows on the right
-            SharedPointer<Node> nodeRight_;
-
-            //- Parent node  Only for write
-            SharedPointer<Node> parent_;
-
-            SUPstream::ref_mutex mutex;
-
-            void set() {}
-
-            void set(Leaf &x, Leaf &y, SUPstream::mpi_mutex &mem_mutex)
-            {
-                calcV(x, y, v_, mem_mutex);
-                a_ = calcA(x, y);
-            }
-            void set(Leaf &x, Leaf &y)
-            {
-                calcV(x, y, v_);
-                a_ = calcA(x, y);
-            }
-            void calcV(
-                Leaf &elementLeft,
-                Leaf &elementRight,
-                SList<scalar> &v, SUPstream::mpi_mutex &mem_mutex);
-            void calcV(
-                Leaf &elementLeft,
-                Leaf &elementRight,
-                SList<scalar> &v);
-            scalar calcA(
-                const Leaf &elementLeft,
-                const Leaf &elementRight);
-
-            bool goLeft(const SList<scalar> &x)
-            {
-                scalar vPhi = 0.0;
-                for (label i = 0; i < v_.size_; i++)
-                    vPhi += x[i] * v_[i];
-                return vPhi < a_;
-            }
-
-            bool goLeft(const scalarField &x)
-            {
-                scalar vPhi = 0.0;
-                for (label i = 0; i < x.size(); i++)
-                    vPhi += x[i] * v_[i];
-                return vPhi < a_;
-            }
-            bool goLeft(Leaf &x)
-            {
-                scalar vPhi = 0.0;
-                for (label i = 0; i < v_.size_; i++)
-                    vPhi += x.phi_[i] * v_[i];
-                return vPhi < a_;
-                //return true;
-            }
-            void Delete()
-            {
-                v_.Delete();
-            }
-            void init(int size_in)
-            {
-                v_.init(size_in);
-            }
-            friend Leaf;
-            template <class CompType_, class ThermoType_>
-            friend std::ostream &operator<<(std::ostream &out, Node &A);
-        };
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
     }
 } // End namespace Foam
 

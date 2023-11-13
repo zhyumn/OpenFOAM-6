@@ -124,26 +124,25 @@ Description
 namespace Foam
 {
 
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-template<class CompType, class ThermoType>
-class binaryNode;
+    template <class CompType, class ThermoType>
+    class binaryNode;
 
-template<class CompType, class ThermoType>
-class STDACChemistryModel;
+    template <class CompType, class ThermoType>
+    class STDACChemistryModel;
 
-
-/*---------------------------------------------------------------------------*\
+    /*---------------------------------------------------------------------------*\
                        Class chemPointISAT Declaration
 \*---------------------------------------------------------------------------*/
 
-template<class CompType, class ThermoType>
-class chemPointISAT
-{
-    // Private data
+    template <class CompType, class ThermoType>
+    class chemPointISAT
+    {
+        // Private data
 
         //- Pointer to the chemistryModel object
-        STDACChemistryModel<CompType, ThermoType>& chemistry_;
+        STDACChemistryModel<CompType, ThermoType> &chemistry_;
 
         //- Vector storing the composition, temperature and pressure
         //  and deltaT if a variable time step is set on
@@ -163,7 +162,7 @@ class chemPointISAT
         scalarField scaleFactor_;
 
         //- Reference to the node in the binary tree holding this chemPoint
-        binaryNode<CompType, ThermoType>* node_;
+        binaryNode<CompType, ThermoType> *node_;
 
         //- The size of the composition space (size of the vector phi)
         label completeSpaceSize_;
@@ -213,67 +212,52 @@ class chemPointISAT
         //  QT an empty matrix that stores the transpose of the Q matrix
         //  R is returned in the given R matrix
         //  which is used to store the ellipsoid of accuracy
-        void qrDecompose
-        (
+        void qrDecompose(
             const label nCols,
-            scalarSquareMatrix& R
-        );
+            scalarSquareMatrix &R);
 
         //- QR update of the matrix A
-        void qrUpdate
-        (
-            scalarSquareMatrix& R,
+        void qrUpdate(
+            scalarSquareMatrix &R,
             const label n,
-            const scalarField& u,
-            const scalarField& v
-        );
+            const scalarField &u,
+            const scalarField &v);
 
-        void rotate
-        (
-            scalarSquareMatrix& R,
+        void rotate(
+            scalarSquareMatrix &R,
             const label i,
             const scalar a,
             const scalar b,
-            label n
-        );
+            label n);
 
-
-public:
-
-    // Constructors
+    public:
+        // Constructors
 
         //- Construct from components
-        chemPointISAT
-        (
-            STDACChemistryModel<CompType, ThermoType>& chemistry,
-            const scalarField& phi,
-            const scalarField& Rphi,
-            const scalarSquareMatrix& A,
-            const scalarField& scaleFactor,
-            const scalar& tolerance,
-            const label& completeSpaceSize,
-            const dictionary& coeffsDict,
-            binaryNode<CompType, ThermoType>* node = nullptr
-        );
+        chemPointISAT(
+            STDACChemistryModel<CompType, ThermoType> &chemistry,
+            const scalarField &phi,
+            const scalarField &Rphi,
+            const scalarSquareMatrix &A,
+            const scalarField &scaleFactor,
+            const scalar &tolerance,
+            const label &completeSpaceSize,
+            const dictionary &coeffsDict,
+            binaryNode<CompType, ThermoType> *node = nullptr);
 
         //- Construct from another chemPoint and reference to a binary node
-        chemPointISAT
-        (
-            const chemPointISAT<CompType, ThermoType>& p,
-            binaryNode<CompType, ThermoType>* node
-        );
+        chemPointISAT(
+            const chemPointISAT<CompType, ThermoType> &p,
+            binaryNode<CompType, ThermoType> *node);
 
         //- Construct from another chemPoint
-        chemPointISAT
-        (
-            chemPointISAT<CompType, ThermoType>& p
-        );
+        chemPointISAT(
+            chemPointISAT<CompType, ThermoType> &p);
 
-
-    // Member functions
+        // Member functions
 
         //- Access to the STDACChemistryModel
-        inline STDACChemistryModel<CompType, ThermoType>& chemistry()
+        inline STDACChemistryModel<CompType, ThermoType> &chemistry()
         {
             return chemistry_;
         }
@@ -283,27 +267,27 @@ public:
             return nGrowth_;
         }
 
-        inline label& completeSpaceSize()
+        inline label &completeSpaceSize()
         {
             return completeSpaceSize_;
         }
 
-        inline const scalarField& phi() const
+        inline const scalarField &phi() const
         {
             return phi_;
         }
 
-        inline const scalarField& Rphi() const
+        inline const scalarField &Rphi() const
         {
             return Rphi_;
         }
 
-        inline const scalarField& scaleFactor()
+        inline const scalarField &scaleFactor()
         {
             return scaleFactor_;
         }
 
-        inline const scalar& tolerance()
+        inline const scalar &tolerance()
         {
             return tolerance_;
         }
@@ -313,27 +297,27 @@ public:
             tolerance_ = newTol;
         }
 
-        inline binaryNode<CompType, ThermoType>*& node()
+        inline binaryNode<CompType, ThermoType> *&node()
         {
             return node_;
         }
 
-        inline const scalarSquareMatrix& A() const
+        inline const scalarSquareMatrix &A() const
         {
             return A_;
         }
 
-        inline scalarSquareMatrix& A()
+        inline scalarSquareMatrix &A()
         {
             return A_;
         }
 
-        inline const scalarSquareMatrix& LT() const
+        inline const scalarSquareMatrix &LT() const
         {
             return LT_;
         }
 
-        inline scalarSquareMatrix& LT()
+        inline scalarSquareMatrix &LT()
         {
             return LT_;
         }
@@ -343,12 +327,12 @@ public:
             return nActiveSpecies_;
         }
 
-        inline List<label>& completeToSimplifiedIndex()
+        inline List<label> &completeToSimplifiedIndex()
         {
             return completeToSimplifiedIndex_;
         }
 
-        inline List<label>& simplifiedToCompleteIndex()
+        inline List<label> &simplifiedToCompleteIndex()
         {
             return simplifiedToCompleteIndex_;
         }
@@ -364,32 +348,32 @@ public:
 
         label simplifiedToCompleteIndex(const label i);
 
-        inline const label& timeTag()
+        inline const label &timeTag()
         {
             return timeTag_;
         }
 
-        inline label& lastTimeUsed()
+        inline label &lastTimeUsed()
         {
             return lastTimeUsed_;
         }
 
-        inline bool& toRemove()
+        inline bool &toRemove()
         {
             return toRemove_;
         }
 
-        inline label& maxNumNewDim()
+        inline label &maxNumNewDim()
         {
             return maxNumNewDim_;
         }
 
-        inline const label& numRetrieve()
+        inline const label &numRetrieve()
         {
             return numRetrieve_;
         }
 
-        inline const label& nLifeTime()
+        inline const label &nLifeTime()
         {
             return nLifeTime_;
         }
@@ -401,56 +385,55 @@ public:
 
         // ISAT functions
 
-            //- To RETRIEVE the mapping from the stored chemPoint phi, the query
-            // point phiq has to be in the EOA of phi.
-            // To test if phiq is in the ellipsoid:
-            // ||L^T.dphi|| <= 1
-            bool inEOA(const scalarField& phiq);
+        //- To RETRIEVE the mapping from the stored chemPoint phi, the query
+        // point phiq has to be in the EOA of phi.
+        // To test if phiq is in the ellipsoid:
+        // ||L^T.dphi|| <= 1
+        bool inEOA(const scalarField &phiq);
 
-            //- More details about the minimum-volume ellipsoid covering an
-            //  ellispoid E and a point p are found in [1].
-            //  Here is the main steps to obtain the
-            //  modified matrix L' describind the new ellipsoid.
-            //  1) calculate the point p' in the transformed space :
-            //  p' = L^T.(p-phi)
-            //  2) compute the rank-one decomposition:
-            //  G = I + gamma.p'.p'^T,
-            //  with gamma = (1/|p'|-1)*1/|p'|^2
-            //  3) compute L':
-            //  L'L'^T = (L.G)(L.G)^T,
-            //  L'^T is then obtained by QR decomposition of (L.G)^T = G^T.L^T
-            //  [1] Stephen B. Pope, "Algorithms for ellipsoids", FDA 08-01,
-            //  Cornell University, 2008
-            bool grow(const scalarField& phiq);
+        //- More details about the minimum-volume ellipsoid covering an
+        //  ellispoid E and a point p are found in [1].
+        //  Here is the main steps to obtain the
+        //  modified matrix L' describind the new ellipsoid.
+        //  1) calculate the point p' in the transformed space :
+        //  p' = L^T.(p-phi)
+        //  2) compute the rank-one decomposition:
+        //  G = I + gamma.p'.p'^T,
+        //  with gamma = (1/|p'|-1)*1/|p'|^2
+        //  3) compute L':
+        //  L'L'^T = (L.G)(L.G)^T,
+        //  L'^T is then obtained by QR decomposition of (L.G)^T = G^T.L^T
+        //  [1] Stephen B. Pope, "Algorithms for ellipsoids", FDA 08-01,
+        //  Cornell University, 2008
+        bool grow(const scalarField &phiq);
 
-            //- If phiq is not in the EOA, then the mapping is computed.
-            //  But as the EOA is a conservative approximation of the region of
-            //  accuracy surrounding the point phi, we could expand it by
-            //  comparing thecomputed results with the one obtained by linear
-            //  interpolation.  The error eps is calculated:
-            //  eps = ||B.(dR - dRl)||,
-            //  with dR = Rphiq - Rphi, dRl = A.dphi and B the diagonal scale
-            //  factor matrix.
-            //  If eps <= tolerance, the EOA is too conservative and a GROW is
-            //  performed,
-            //  otherwise, the newly computed mapping is associated to the
-            //  initial composition and added to the tree.
-            bool checkSolution
-            (
-                const scalarField& phiq,
-                const scalarField& Rphiq
-            );
-};
+        //- If phiq is not in the EOA, then the mapping is computed.
+        //  But as the EOA is a conservative approximation of the region of
+        //  accuracy surrounding the point phi, we could expand it by
+        //  comparing thecomputed results with the one obtained by linear
+        //  interpolation.  The error eps is calculated:
+        //  eps = ||B.(dR - dRl)||,
+        //  with dR = Rphiq - Rphi, dRl = A.dphi and B the diagonal scale
+        //  factor matrix.
+        //  If eps <= tolerance, the EOA is too conservative and a GROW is
+        //  performed,
+        //  otherwise, the newly computed mapping is associated to the
+        //  initial composition and added to the tree.
+        bool checkSolution(
+            const scalarField &phiq,
+            const scalarField &Rphiq);
 
+        void retrieve(const scalarField &x, scalarField &y);
+    };
 
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 } // End namespace Foam
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #ifdef NoRepository
-    #include "chemPointISAT.C"
+#include "chemPointISAT.C"
 #endif
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

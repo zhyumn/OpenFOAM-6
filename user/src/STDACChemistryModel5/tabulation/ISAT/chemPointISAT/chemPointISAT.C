@@ -30,28 +30,26 @@ License
 
 // Defined as static to be able to dynamically change it during simulations
 // (all chemPoints refer to the same object)
-template<class CompType, class ThermoType>
+template <class CompType, class ThermoType>
 Foam::scalar Foam::chemPointISAT<CompType, ThermoType>::tolerance_;
 
 // * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * * //
 
-template<class CompType, class ThermoType>
-void Foam::chemPointISAT<CompType, ThermoType>::qrDecompose
-(
+template <class CompType, class ThermoType>
+void Foam::chemPointISAT<CompType, ThermoType>::qrDecompose(
     const label nCols,
-    scalarSquareMatrix& R
-)
+    scalarSquareMatrix &R)
 {
     scalarField c(nCols);
     scalarField d(nCols);
     scalar scale, sigma, sum;
 
-    for (label k=0; k<nCols-1; k++)
+    for (label k = 0; k < nCols - 1; k++)
     {
         scale = 0;
-        for (label i=k; i<nCols; i++)
+        for (label i = k; i < nCols; i++)
         {
-            scale=max(scale, mag(R(i, k)));
+            scale = max(scale, mag(R(i, k)));
         }
         if (scale == 0)
         {
@@ -59,62 +57,59 @@ void Foam::chemPointISAT<CompType, ThermoType>::qrDecompose
         }
         else
         {
-            for (label i=k; i<nCols; i++)
+            for (label i = k; i < nCols; i++)
             {
                 R(i, k) /= scale;
             }
             sum = 0;
-            for (label i=k; i<nCols; i++)
+            for (label i = k; i < nCols; i++)
             {
                 sum += sqr(R(i, k));
             }
-            sigma = sign(R(k, k))*sqrt(sum);
+            sigma = sign(R(k, k)) * sqrt(sum);
             R(k, k) += sigma;
-            c[k] = sigma*R(k, k);
-            d[k] = -scale*sigma;
-            for (label j=k+1; j<nCols; j++)
+            c[k] = sigma * R(k, k);
+            d[k] = -scale * sigma;
+            for (label j = k + 1; j < nCols; j++)
             {
                 sum = 0;
-                for ( label i=k; i<nCols; i++)
+                for (label i = k; i < nCols; i++)
                 {
-                    sum += R(i, k)*R(i, j);
+                    sum += R(i, k) * R(i, j);
                 }
-                scalar tau = sum/c[k];
-                for ( label i=k; i<nCols; i++)
+                scalar tau = sum / c[k];
+                for (label i = k; i < nCols; i++)
                 {
-                    R(i, j) -= tau*R(i, k);
+                    R(i, j) -= tau * R(i, k);
                 }
             }
         }
     }
 
-    d[nCols-1] = R(nCols-1, nCols-1);
+    d[nCols - 1] = R(nCols - 1, nCols - 1);
 
     // form R
-    for (label i=0; i<nCols; i++)
+    for (label i = 0; i < nCols; i++)
     {
         R(i, i) = d[i];
-        for ( label j=0; j<i; j++)
+        for (label j = 0; j < i; j++)
         {
-            R(i, j)=0;
+            R(i, j) = 0;
         }
     }
 }
 
-
-template<class CompType, class ThermoType>
-void Foam::chemPointISAT<CompType, ThermoType>::qrUpdate
-(
-    scalarSquareMatrix& R,
+template <class CompType, class ThermoType>
+void Foam::chemPointISAT<CompType, ThermoType>::qrUpdate(
+    scalarSquareMatrix &R,
     const label n,
     const Foam::scalarField &u,
-    const Foam::scalarField &v
-)
+    const Foam::scalarField &v)
 {
     label k;
 
     scalarField w(u);
-    for (k=n-1; k>=0; k--)
+    for (k = n - 1; k >= 0; k--)
     {
         if (w[k] != 0)
         {
@@ -127,44 +122,41 @@ void Foam::chemPointISAT<CompType, ThermoType>::qrUpdate
         k = 0;
     }
 
-    for (label i=k-1; i>=0; i--)
+    for (label i = k - 1; i >= 0; i--)
     {
-        rotate(R, i, w[i],-w[i+1], n);
+        rotate(R, i, w[i], -w[i + 1], n);
         if (w[i] == 0)
         {
-            w[i] = mag(w[i+1]);
+            w[i] = mag(w[i + 1]);
         }
-        else if (mag(w[i]) > mag(w[i+1]))
+        else if (mag(w[i]) > mag(w[i + 1]))
         {
-            w[i] = mag(w[i])*sqrt(1.0 + sqr(w[i+1]/w[i]));
+            w[i] = mag(w[i]) * sqrt(1.0 + sqr(w[i + 1] / w[i]));
         }
         else
         {
-            w[i] = mag(w[i+1])*sqrt(1.0 + sqr(w[i]/w[i+1]));
+            w[i] = mag(w[i + 1]) * sqrt(1.0 + sqr(w[i] / w[i + 1]));
         }
     }
 
-    for (label i=0; i<n; i++)
+    for (label i = 0; i < n; i++)
     {
-        R(0, i) += w[0]*v[i];
+        R(0, i) += w[0] * v[i];
     }
 
-    for (label i=0; i<k; i++)
+    for (label i = 0; i < k; i++)
     {
-        rotate(R, i, R(i, i), -R(i+1, i), n);
+        rotate(R, i, R(i, i), -R(i + 1, i), n);
     }
 }
 
-
-template<class CompType, class ThermoType>
-void Foam::chemPointISAT<CompType, ThermoType>::rotate
-(
-    scalarSquareMatrix& R,
+template <class CompType, class ThermoType>
+void Foam::chemPointISAT<CompType, ThermoType>::rotate(
+    scalarSquareMatrix &R,
     const label i,
     const scalar a,
     const scalar b,
-    label n
-)
+    label n)
 {
     scalar c, fact, s, w, y;
     if (a == 0)
@@ -174,63 +166,57 @@ void Foam::chemPointISAT<CompType, ThermoType>::rotate
     }
     else if (mag(a) > mag(b))
     {
-        fact = b/a;
-        c = sign(a)/sqrt(1.0 + sqr(fact));
-        s = fact*c;
+        fact = b / a;
+        c = sign(a) / sqrt(1.0 + sqr(fact));
+        s = fact * c;
     }
     else
     {
-        fact = a/b;
-        s = sign(b)/sqrt(1.0 + sqr(fact));
-        c = fact*s;
+        fact = a / b;
+        s = sign(b) / sqrt(1.0 + sqr(fact));
+        c = fact * s;
     }
-    for (label j=i;j<n;j++)
+    for (label j = i; j < n; j++)
     {
         y = R(i, j);
-        w = R(i+1, j);
-        R(i, j) = c*y-s*w;
-        R(i+1, j) = s*y+c*w;
+        w = R(i + 1, j);
+        R(i, j) = c * y - s * w;
+        R(i + 1, j) = s * y + c * w;
     }
 }
 
-
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-template<class CompType, class ThermoType>
-Foam::chemPointISAT<CompType, ThermoType>::chemPointISAT
-(
-    STDACChemistryModel<CompType, ThermoType>& chemistry,
-    const scalarField& phi,
-    const scalarField& Rphi,
-    const scalarSquareMatrix& A,
-    const scalarField& scaleFactor,
-    const scalar& tolerance,
-    const label& completeSpaceSize,
-    const dictionary& coeffsDict,
-    binaryNode<CompType, ThermoType>* node
-)
-:
-    chemistry_(chemistry),
-    phi_(phi),
-    Rphi_(Rphi),
-    A_(A),
-    scaleFactor_(scaleFactor),
-    node_(node),
-    completeSpaceSize_(completeSpaceSize),
-    nGrowth_(0),
-    nActiveSpecies_(chemistry.mechRed()->NsSimp()),
-    simplifiedToCompleteIndex_(nActiveSpecies_),
-    timeTag_(chemistry_.timeSteps()),
-    lastTimeUsed_(chemistry_.timeSteps()),
-    toRemove_(false),
-    maxNumNewDim_(coeffsDict.lookupOrDefault("maxNumNewDim",0)),
-    printProportion_(coeffsDict.lookupOrDefault("printProportion",false)),
-    numRetrieve_(0),
-    nLifeTime_(0),
-    completeToSimplifiedIndex_
-    (
-        completeSpaceSize - (2 + (variableTimeStep() == 1 ? 1 : 0))
-    )
+template <class CompType, class ThermoType>
+Foam::chemPointISAT<CompType, ThermoType>::chemPointISAT(
+    STDACChemistryModel<CompType, ThermoType> &chemistry,
+    const scalarField &phi,
+    const scalarField &Rphi,
+    const scalarSquareMatrix &A,
+    const scalarField &scaleFactor,
+    const scalar &tolerance,
+    const label &completeSpaceSize,
+    const dictionary &coeffsDict,
+    binaryNode<CompType, ThermoType> *node)
+    : chemistry_(chemistry),
+      phi_(phi),
+      Rphi_(Rphi),
+      A_(A),
+      scaleFactor_(scaleFactor),
+      node_(node),
+      completeSpaceSize_(completeSpaceSize),
+      nGrowth_(0),
+      nActiveSpecies_(chemistry.mechRed()->NsSimp()),
+      simplifiedToCompleteIndex_(nActiveSpecies_),
+      timeTag_(chemistry_.timeSteps()),
+      lastTimeUsed_(chemistry_.timeSteps()),
+      toRemove_(false),
+      maxNumNewDim_(coeffsDict.lookupOrDefault("maxNumNewDim", 0)),
+      printProportion_(coeffsDict.lookupOrDefault("printProportion", false)),
+      numRetrieve_(0),
+      nLifeTime_(0),
+      completeToSimplifiedIndex_(
+          completeSpaceSize - (2 + (variableTimeStep() == 1 ? 1 : 0)))
 {
     tolerance_ = tolerance;
 
@@ -251,12 +237,12 @@ Foam::chemPointISAT<CompType, ThermoType>::chemPointISAT
     bool isMechRedActive = chemistry_.mechRed()->active();
     if (isMechRedActive)
     {
-        for (label i=0; i<completeSpaceSize-nAdditionalEqns_; i++)
+        for (label i = 0; i < completeSpaceSize - nAdditionalEqns_; i++)
         {
             completeToSimplifiedIndex_[i] =
                 chemistry.completeToSimplifiedIndex()[i];
         }
-        for (label i=0; i<nActiveSpecies_; i++)
+        for (label i = 0; i < nActiveSpecies_; i++)
         {
             simplifiedToCompleteIndex_[i] =
                 chemistry.simplifiedToCompleteIndex()[i];
@@ -266,17 +252,17 @@ Foam::chemPointISAT<CompType, ThermoType>::chemPointISAT
     label reduOrCompDim = completeSpaceSize;
     if (isMechRedActive)
     {
-        reduOrCompDim = nActiveSpecies_+nAdditionalEqns_;
+        reduOrCompDim = nActiveSpecies_ + nAdditionalEqns_;
     }
 
     // SVD decomposition A = U*D*V^T
     SVD svdA(A);
 
     scalarDiagonalMatrix D(reduOrCompDim);
-    const scalarDiagonalMatrix& S = svdA.S();
+    const scalarDiagonalMatrix &S = svdA.S();
 
     // Replace the value of vector D by max(D, 1/2), first ISAT paper
-    for (label i=0; i<reduOrCompDim; i++)
+    for (label i = 0; i < reduOrCompDim; i++)
     {
         D[i] = max(S[i], 0.5);
     }
@@ -287,9 +273,9 @@ Foam::chemPointISAT<CompType, ThermoType>::chemPointISAT
     // Result stored in Atilde
     multiply(Atilde, svdA.U(), D, svdA.V().T());
 
-    for (label i=0; i<reduOrCompDim; i++)
+    for (label i = 0; i < reduOrCompDim; i++)
     {
-        for (label j=0; j<reduOrCompDim; j++)
+        for (label j = 0; j < reduOrCompDim; j++)
         {
             label compi = i;
 
@@ -302,7 +288,7 @@ Foam::chemPointISAT<CompType, ThermoType>::chemPointISAT
             // (where SF is diagonal with inverse of scale factors)
             // SF*A is the same as dividing each line by the scale factor
             // corresponding to the species of this line
-            Atilde(i, j) /= (tolerance*scaleFactor[compi]);
+            Atilde(i, j) /= (tolerance * scaleFactor[compi]);
         }
     }
 
@@ -314,31 +300,27 @@ Foam::chemPointISAT<CompType, ThermoType>::chemPointISAT
     qrDecompose(reduOrCompDim, LT_);
 }
 
-
-template<class CompType, class ThermoType>
-Foam::chemPointISAT<CompType, ThermoType>::chemPointISAT
-(
-    Foam::chemPointISAT<CompType, ThermoType>& p
-)
-:
-    chemistry_(p.chemistry()),
-    phi_(p.phi()),
-    Rphi_(p.Rphi()),
-    LT_(p.LT()),
-    A_(p.A()),
-    scaleFactor_(p.scaleFactor()),
-    node_(p.node()),
-    completeSpaceSize_(p.completeSpaceSize()),
-    nGrowth_(p.nGrowth()),
-    nActiveSpecies_(p.nActiveSpecies()),
-    simplifiedToCompleteIndex_(p.simplifiedToCompleteIndex()),
-    timeTag_(p.timeTag()),
-    lastTimeUsed_(p.lastTimeUsed()),
-    toRemove_(p.toRemove()),
-    maxNumNewDim_(p.maxNumNewDim()),
-    numRetrieve_(0),
-    nLifeTime_(0),
-    completeToSimplifiedIndex_(p.completeToSimplifiedIndex())
+template <class CompType, class ThermoType>
+Foam::chemPointISAT<CompType, ThermoType>::chemPointISAT(
+    Foam::chemPointISAT<CompType, ThermoType> &p)
+    : chemistry_(p.chemistry()),
+      phi_(p.phi()),
+      Rphi_(p.Rphi()),
+      LT_(p.LT()),
+      A_(p.A()),
+      scaleFactor_(p.scaleFactor()),
+      node_(p.node()),
+      completeSpaceSize_(p.completeSpaceSize()),
+      nGrowth_(p.nGrowth()),
+      nActiveSpecies_(p.nActiveSpecies()),
+      simplifiedToCompleteIndex_(p.simplifiedToCompleteIndex()),
+      timeTag_(p.timeTag()),
+      lastTimeUsed_(p.lastTimeUsed()),
+      toRemove_(p.toRemove()),
+      maxNumNewDim_(p.maxNumNewDim()),
+      numRetrieve_(0),
+      nLifeTime_(0),
+      completeToSimplifiedIndex_(p.completeToSimplifiedIndex())
 {
     tolerance_ = p.tolerance();
 
@@ -358,13 +340,12 @@ Foam::chemPointISAT<CompType, ThermoType>::chemPointISAT
     }
 }
 
-
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
-template<class CompType, class ThermoType>
-bool Foam::chemPointISAT<CompType, ThermoType>::inEOA(const scalarField& phiq)
+template <class CompType, class ThermoType>
+bool Foam::chemPointISAT<CompType, ThermoType>::inEOA(const scalarField &phiq)
 {
-    scalarField dphi(phiq-phi());
+    scalarField dphi(phiq - phi());
     bool isMechRedActive = chemistry_.mechRed()->active();
     label dim(0);
     if (isMechRedActive)
@@ -379,37 +360,34 @@ bool Foam::chemPointISAT<CompType, ThermoType>::inEOA(const scalarField& phiq)
     scalar epsTemp = 0;
     List<scalar> propEps(completeSpaceSize(), scalar(0));
 
-    for (label i=0; i<completeSpaceSize()-nAdditionalEqns_; i++)
+    for (label i = 0; i < completeSpaceSize() - nAdditionalEqns_; i++)
     {
         scalar temp = 0;
 
         // When mechanism reduction is inactive OR on active species multiply L
         // by dphi to get the distance in the active species direction else (for
         // inactive species), just multiply the diagonal element and dphi
-        if
-        (
-            !(isMechRedActive)
-          ||(isMechRedActive && completeToSimplifiedIndex_[i] != -1)
-        )
+        if (
+            !(isMechRedActive) || (isMechRedActive && completeToSimplifiedIndex_[i] != -1))
         {
-            label si=(isMechRedActive) ? completeToSimplifiedIndex_[i] : i;
+            label si = (isMechRedActive) ? completeToSimplifiedIndex_[i] : i;
 
-            for (label j=si; j<dim; j++)// LT is upper triangular
+            for (label j = si; j < dim; j++) // LT is upper triangular
             {
-                label sj=(isMechRedActive) ? simplifiedToCompleteIndex_[j] : j;
-                temp += LT_(si, j)*dphi[sj];
+                label sj = (isMechRedActive) ? simplifiedToCompleteIndex_[j] : j;
+                temp += LT_(si, j) * dphi[sj];
             }
 
-            temp += LT_(si, dim)*dphi[idT_];
-            temp += LT_(si, dim+1)*dphi[idp_];
+            temp += LT_(si, dim) * dphi[idT_];
+            temp += LT_(si, dim + 1) * dphi[idp_];
             if (variableTimeStep())
             {
-                temp += LT_(si, dim+2)*dphi[iddeltaT_];
+                temp += LT_(si, dim + 2) * dphi[iddeltaT_];
             }
         }
         else
         {
-            temp = dphi[i]/(tolerance_*scaleFactor_[i]);
+            temp = dphi[i] / (tolerance_ * scaleFactor_[i]);
         }
 
         epsTemp += sqr(temp);
@@ -424,60 +402,46 @@ bool Foam::chemPointISAT<CompType, ThermoType>::inEOA(const scalarField& phiq)
     if (variableTimeStep())
     {
         epsTemp +=
-            sqr
-            (
-                LT_(dim, dim)*dphi[idT_]
-               +LT_(dim, dim+1)*dphi[idp_]
-               +LT_(dim, dim+2)*dphi[iddeltaT_]
-            );
+            sqr(
+                LT_(dim, dim) * dphi[idT_] + LT_(dim, dim + 1) * dphi[idp_] + LT_(dim, dim + 2) * dphi[iddeltaT_]);
     }
     else
     {
         epsTemp +=
-            sqr
-            (
-                LT_(dim, dim)*dphi[idT_]
-               +LT_(dim, dim+1)*dphi[idp_]
-            );
+            sqr(
+                LT_(dim, dim) * dphi[idT_] + LT_(dim, dim + 1) * dphi[idp_]);
     }
 
     // Pressure
     if (variableTimeStep())
     {
         epsTemp +=
-            sqr
-            (
-                LT_(dim+1, dim+1)*dphi[idp_]
-               +LT_(dim+1, dim+2)*dphi[iddeltaT_]
-            );
+            sqr(
+                LT_(dim + 1, dim + 1) * dphi[idp_] + LT_(dim + 1, dim + 2) * dphi[iddeltaT_]);
     }
     else
     {
-        epsTemp += sqr(LT_(dim+1, dim+1)*dphi[idp_]);
+        epsTemp += sqr(LT_(dim + 1, dim + 1) * dphi[idp_]);
     }
 
     if (variableTimeStep())
     {
-        epsTemp += sqr(LT_[dim+2][dim+2]*dphi[iddeltaT_]);
+        epsTemp += sqr(LT_[dim + 2][dim + 2] * dphi[iddeltaT_]);
     }
 
     if (printProportion_)
     {
-        propEps[idT_] = sqr
-        (
-            LT_(dim, dim)*dphi[idT_]
-          + LT_(dim, dim+1)*dphi[idp_]
-        );
+        propEps[idT_] = sqr(
+            LT_(dim, dim) * dphi[idT_] + LT_(dim, dim + 1) * dphi[idp_]);
 
         propEps[idp_] =
-            sqr(LT_(dim+1, dim+1)*dphi[idp_]);
+            sqr(LT_(dim + 1, dim + 1) * dphi[idp_]);
 
         if (variableTimeStep())
         {
             propEps[iddeltaT_] =
-                sqr(LT_[dim+2][dim+2]*dphi[iddeltaT_]);
+                sqr(LT_[dim + 2][dim + 2] * dphi[iddeltaT_]);
         }
-
     }
 
     if (sqrt(epsTemp) > 1 + tolerance_)
@@ -486,9 +450,9 @@ bool Foam::chemPointISAT<CompType, ThermoType>::inEOA(const scalarField& phiq)
         {
             scalar max = -1;
             label maxIndex = -1;
-            for (label i=0; i<completeSpaceSize(); i++)
+            for (label i = 0; i < completeSpaceSize(); i++)
             {
-                if(max < propEps[i])
+                if (max < propEps[i])
                 {
                     max = propEps[i];
                     maxIndex = i;
@@ -514,10 +478,10 @@ bool Foam::chemPointISAT<CompType, ThermoType>::inEOA(const scalarField& phiq)
             {
                 propName = chemistry_.Y()[maxIndex].member();
             }
-            Info<< "Direction maximum impact to error in ellipsoid: "
-                << propName << endl;
-            Info<< "Proportion to the total error on the retrieve: "
-                << max/(epsTemp+small) << endl;
+            Info << "Direction maximum impact to error in ellipsoid: "
+                 << propName << endl;
+            Info << "Proportion to the total error on the retrieve: "
+                 << max / (epsTemp + small) << endl;
         }
         return false;
     }
@@ -527,22 +491,19 @@ bool Foam::chemPointISAT<CompType, ThermoType>::inEOA(const scalarField& phiq)
     }
 }
 
-
-template<class CompType, class ThermoType>
-bool Foam::chemPointISAT<CompType, ThermoType>::checkSolution
-(
-    const scalarField& phiq,
-    const scalarField& Rphiq
-)
+template <class CompType, class ThermoType>
+bool Foam::chemPointISAT<CompType, ThermoType>::checkSolution(
+    const scalarField &phiq,
+    const scalarField &Rphiq)
 {
     scalar eps2 = 0;
     scalarField dR(Rphiq - Rphi());
     scalarField dphi(phiq - phi());
-    const scalarField& scaleFactorV(scaleFactor());
-    const scalarSquareMatrix& Avar(A());
+    const scalarField &scaleFactorV(scaleFactor());
+    const scalarSquareMatrix &Avar(A());
     bool isMechRedActive = chemistry_.mechRed()->active();
     scalar dRl = 0;
-    label dim = completeSpaceSize()-2;
+    label dim = completeSpaceSize() - 2;
     if (isMechRedActive)
     {
         dim = nActiveSpecies_;
@@ -550,7 +511,7 @@ bool Foam::chemPointISAT<CompType, ThermoType>::checkSolution
 
     // Since we build only the solution for the species, T and p are not
     // included
-    for (label i=0; i<completeSpaceSize()-nAdditionalEqns_; i++)
+    for (label i = 0; i < completeSpaceSize() - nAdditionalEqns_; i++)
     {
         dRl = 0;
         if (isMechRedActive)
@@ -560,16 +521,16 @@ bool Foam::chemPointISAT<CompType, ThermoType>::checkSolution
             // If this species is active
             if (si != -1)
             {
-                for (label j=0; j<dim; j++)
+                for (label j = 0; j < dim; j++)
                 {
-                    label sj=simplifiedToCompleteIndex_[j];
-                    dRl += Avar(si, j)*dphi[sj];
+                    label sj = simplifiedToCompleteIndex_[j];
+                    dRl += Avar(si, j) * dphi[sj];
                 }
-                dRl += Avar(si, nActiveSpecies_)*dphi[idT_];
-                dRl += Avar(si, nActiveSpecies_+1)*dphi[idp_];
+                dRl += Avar(si, nActiveSpecies_) * dphi[idT_];
+                dRl += Avar(si, nActiveSpecies_ + 1) * dphi[idp_];
                 if (variableTimeStep())
                 {
-                    dRl += Avar(si, nActiveSpecies_+2)*dphi[iddeltaT_];
+                    dRl += Avar(si, nActiveSpecies_ + 2) * dphi[iddeltaT_];
                 }
             }
             else
@@ -579,12 +540,12 @@ bool Foam::chemPointISAT<CompType, ThermoType>::checkSolution
         }
         else
         {
-            for (label j=0; j<completeSpaceSize(); j++)
+            for (label j = 0; j < completeSpaceSize(); j++)
             {
-                dRl += Avar(i, j)*dphi[j];
+                dRl += Avar(i, j) * dphi[j];
             }
         }
-        eps2 += sqr((dR[i]-dRl)/scaleFactorV[i]);
+        eps2 += sqr((dR[i] - dRl) / scaleFactorV[i]);
     }
 
     eps2 = sqrt(eps2);
@@ -599,9 +560,8 @@ bool Foam::chemPointISAT<CompType, ThermoType>::checkSolution
     }
 }
 
-
-template<class CompType, class ThermoType>
-bool Foam::chemPointISAT<CompType, ThermoType>::grow(const scalarField& phiq)
+template <class CompType, class ThermoType>
+bool Foam::chemPointISAT<CompType, ThermoType>::grow(const scalarField &phiq)
 {
     scalarField dphi(phiq - phi());
     label dim = completeSpaceSize();
@@ -615,26 +575,20 @@ bool Foam::chemPointISAT<CompType, ThermoType>::grow(const scalarField& phiq)
 
         // check if the difference of active species is lower than the maximum
         // number of new dimensions allowed
-        for (label i=0; i<completeSpaceSize()-nAdditionalEqns_; i++)
+        for (label i = 0; i < completeSpaceSize() - nAdditionalEqns_; i++)
         {
             // first test if the current chemPoint has an inactive species
             // corresponding to an active one in the query point
-            if
-            (
-                completeToSimplifiedIndex_[i] == -1
-             && chemistry_.completeToSimplifiedIndex()[i]!=-1
-            )
+            if (
+                completeToSimplifiedIndex_[i] == -1 && chemistry_.completeToSimplifiedIndex()[i] != -1)
             {
                 activeAdded++;
                 dimToAdd.append(i);
             }
             // then test if an active species in the current chemPoint
             // corresponds to an inactive on the query side
-            if
-            (
-                completeToSimplifiedIndex_[i] != -1
-             && chemistry_.completeToSimplifiedIndex()[i] == -1
-            )
+            if (
+                completeToSimplifiedIndex_[i] != -1 && chemistry_.completeToSimplifiedIndex()[i] == -1)
             {
                 activeAdded++;
                 // we don't need to add a new dimension but we count it to have
@@ -642,12 +596,8 @@ bool Foam::chemPointISAT<CompType, ThermoType>::grow(const scalarField& phiq)
             }
             // finally test if both points have inactive species but
             // with a dphi!=0
-            if
-            (
-                completeToSimplifiedIndex_[i] == -1
-             && chemistry_.completeToSimplifiedIndex()[i] == -1
-             && dphi[i] != 0
-            )
+            if (
+                completeToSimplifiedIndex_[i] == -1 && chemistry_.completeToSimplifiedIndex()[i] == -1 && dphi[i] != 0)
             {
                 activeAdded++;
                 dimToAdd.append(i);
@@ -680,14 +630,14 @@ bool Foam::chemPointISAT<CompType, ThermoType>::grow(const scalarField& phiq)
         if (nActiveSpecies_ > initNActiveSpecies)
         {
             scalarSquareMatrix LTvar = LT_; // take a copy of LT_
-            scalarSquareMatrix Avar = A_; // take a copy of A_
-            LT_ = scalarSquareMatrix(nActiveSpecies_+nAdditionalEqns_, Zero);
-            A_ = scalarSquareMatrix(nActiveSpecies_+nAdditionalEqns_, Zero);
+            scalarSquareMatrix Avar = A_;   // take a copy of A_
+            LT_ = scalarSquareMatrix(nActiveSpecies_ + nAdditionalEqns_, Zero);
+            A_ = scalarSquareMatrix(nActiveSpecies_ + nAdditionalEqns_, Zero);
 
             // write the initial active species
-            for (label i=0; i<initNActiveSpecies; i++)
+            for (label i = 0; i < initNActiveSpecies; i++)
             {
-                for (label j=0; j<initNActiveSpecies; j++)
+                for (label j = 0; j < initNActiveSpecies; j++)
                 {
                     LT_(i, j) = LTvar(i, j);
                     A_(i, j) = Avar(i, j);
@@ -695,39 +645,38 @@ bool Foam::chemPointISAT<CompType, ThermoType>::grow(const scalarField& phiq)
             }
 
             // write the columns for temperature and pressure
-            for (label i=0; i<initNActiveSpecies; i++)
+            for (label i = 0; i < initNActiveSpecies; i++)
             {
-                for (label j=1; j>=0; j--)
+                for (label j = 1; j >= 0; j--)
                 {
-                    LT_(i, nActiveSpecies_+j)=LTvar(i, initNActiveSpecies+j);
-                    A_(i, nActiveSpecies_+j)=Avar(i, initNActiveSpecies+j);
-                    LT_(nActiveSpecies_+j, i)=LTvar(initNActiveSpecies+j, i);
-                    A_(nActiveSpecies_+j, i)=Avar(initNActiveSpecies+j, i);
+                    LT_(i, nActiveSpecies_ + j) = LTvar(i, initNActiveSpecies + j);
+                    A_(i, nActiveSpecies_ + j) = Avar(i, initNActiveSpecies + j);
+                    LT_(nActiveSpecies_ + j, i) = LTvar(initNActiveSpecies + j, i);
+                    A_(nActiveSpecies_ + j, i) = Avar(initNActiveSpecies + j, i);
                 }
             }
             // end with the diagonal elements for temperature and pressure
-            LT_(nActiveSpecies_, nActiveSpecies_)=
+            LT_(nActiveSpecies_, nActiveSpecies_) =
                 LTvar(initNActiveSpecies, initNActiveSpecies);
-            A_(nActiveSpecies_, nActiveSpecies_)=
+            A_(nActiveSpecies_, nActiveSpecies_) =
                 Avar(initNActiveSpecies, initNActiveSpecies);
-            LT_(nActiveSpecies_+1, nActiveSpecies_+1)=
-                LTvar(initNActiveSpecies+1, initNActiveSpecies+1);
-            A_(nActiveSpecies_+1, nActiveSpecies_+1)=
-                Avar(initNActiveSpecies+1, initNActiveSpecies+1);
+            LT_(nActiveSpecies_ + 1, nActiveSpecies_ + 1) =
+                LTvar(initNActiveSpecies + 1, initNActiveSpecies + 1);
+            A_(nActiveSpecies_ + 1, nActiveSpecies_ + 1) =
+                Avar(initNActiveSpecies + 1, initNActiveSpecies + 1);
 
             if (variableTimeStep())
             {
-                LT_(nActiveSpecies_+2, nActiveSpecies_+2)=
-                    LTvar(initNActiveSpecies+2, initNActiveSpecies+2);
-                A_(nActiveSpecies_+2, nActiveSpecies_+2)=
-                    Avar(initNActiveSpecies+2, initNActiveSpecies+2);
+                LT_(nActiveSpecies_ + 2, nActiveSpecies_ + 2) =
+                    LTvar(initNActiveSpecies + 2, initNActiveSpecies + 2);
+                A_(nActiveSpecies_ + 2, nActiveSpecies_ + 2) =
+                    Avar(initNActiveSpecies + 2, initNActiveSpecies + 2);
             }
 
-            for (label i=initNActiveSpecies; i<nActiveSpecies_;i++)
+            for (label i = initNActiveSpecies; i < nActiveSpecies_; i++)
             {
-                LT_(i, i)=
-                    1.0
-                   /(tolerance_*scaleFactor_[simplifiedToCompleteIndex_[i]]);
+                LT_(i, i) =
+                    1.0 / (tolerance_ * scaleFactor_[simplifiedToCompleteIndex_[i]]);
                 A_(i, i) = 1;
             }
         }
@@ -740,78 +689,72 @@ bool Foam::chemPointISAT<CompType, ThermoType>::grow(const scalarField& phiq)
     scalar normPhiTilde = 0;
     // p' = L^T.(p-phi)
 
-    for (label i=0; i<dim; i++)
+    for (label i = 0; i < dim; i++)
     {
-        for (label j=i; j<dim-nAdditionalEqns_; j++)// LT is upper triangular
+        for (label j = i; j < dim - nAdditionalEqns_; j++) // LT is upper triangular
         {
             label sj = j;
             if (isMechRedActive)
             {
                 sj = simplifiedToCompleteIndex_[j];
             }
-            phiTilde[i] += LT_(i, j)*dphi[sj];
+            phiTilde[i] += LT_(i, j) * dphi[sj];
         }
 
-        phiTilde[i] += LT_(i, dim-nAdditionalEqns_)*dphi[idT_];
-        phiTilde[i] += LT_(i, dim-nAdditionalEqns_+1)*dphi[idp_];
+        phiTilde[i] += LT_(i, dim - nAdditionalEqns_) * dphi[idT_];
+        phiTilde[i] += LT_(i, dim - nAdditionalEqns_ + 1) * dphi[idp_];
 
         if (variableTimeStep())
         {
-            phiTilde[i] += LT_(i, dim-nAdditionalEqns_ + 2)*dphi[iddeltaT_];
+            phiTilde[i] += LT_(i, dim - nAdditionalEqns_ + 2) * dphi[iddeltaT_];
         }
         normPhiTilde += sqr(phiTilde[i]);
     }
 
-    scalar invSqrNormPhiTilde = 1.0/normPhiTilde;
+    scalar invSqrNormPhiTilde = 1.0 / normPhiTilde;
     normPhiTilde = sqrt(normPhiTilde);
 
     // gamma = (1/|p'| - 1)/|p'|^2
-    scalar gamma = (1/normPhiTilde - 1)*invSqrNormPhiTilde;
-    scalarField u(gamma*phiTilde);
+    scalar gamma = (1 / normPhiTilde - 1) * invSqrNormPhiTilde;
+    scalarField u(gamma * phiTilde);
     scalarField v(dim, 0);
 
-    for (label i=0; i<dim; i++)
+    for (label i = 0; i < dim; i++)
     {
-        for (label j=0; j<=i;j++)
+        for (label j = 0; j <= i; j++)
         {
-            v[i] += phiTilde[j]*LT_(j, i);
+            v[i] += phiTilde[j] * LT_(j, i);
         }
     }
 
-    qrUpdate(LT_,dim, u, v);
+    qrUpdate(LT_, dim, u, v);
     nGrowth_++;
 
     return true;
 }
 
-
-template<class CompType, class ThermoType>
+template <class CompType, class ThermoType>
 void Foam::chemPointISAT<CompType, ThermoType>::increaseNumRetrieve()
 {
     this->numRetrieve_++;
 }
 
-
-template<class CompType, class ThermoType>
+template <class CompType, class ThermoType>
 void Foam::chemPointISAT<CompType, ThermoType>::resetNumRetrieve()
 {
     this->numRetrieve_ = 0;
 }
 
-
-template<class CompType, class ThermoType>
+template <class CompType, class ThermoType>
 void Foam::chemPointISAT<CompType, ThermoType>::increaseNLifeTime()
 {
     this->nLifeTime_++;
 }
 
-
-template<class CompType, class ThermoType>
+template <class CompType, class ThermoType>
 Foam::label Foam::chemPointISAT<CompType, ThermoType>::
-simplifiedToCompleteIndex
-(
-    const label i
-)
+    simplifiedToCompleteIndex(
+        const label i)
 {
     if (i < nActiveSpecies_)
     {
@@ -819,15 +762,15 @@ simplifiedToCompleteIndex
     }
     else if (i == nActiveSpecies_)
     {
-        return completeSpaceSize_-nAdditionalEqns_;
+        return completeSpaceSize_ - nAdditionalEqns_;
     }
     else if (i == nActiveSpecies_ + 1)
     {
-        return completeSpaceSize_-nAdditionalEqns_ + 1;
+        return completeSpaceSize_ - nAdditionalEqns_ + 1;
     }
     else if (variableTimeStep() && (i == nActiveSpecies_ + 2))
     {
-        return completeSpaceSize_-nAdditionalEqns_ + 2;
+        return completeSpaceSize_ - nAdditionalEqns_ + 2;
     }
     else
     {
@@ -835,5 +778,67 @@ simplifiedToCompleteIndex
     }
 }
 
+template <class CompType, class ThermoType>
+void Foam::chemPointISAT<CompType, ThermoType>::retrieve(const scalarField &phiq, scalarField &Rphiq)
+{
+    label nEqns = this->chemistry_.nEqns(); // Species, T, p
+    bool mechRedActive = this->chemistry_.mechRed()->active();
+    Rphiq = this->Rphi();
+    scalarField dphi(phiq - this->phi());
+    const scalarSquareMatrix &gradientsMatrix = this->A();
+    List<label> &completeToSimplified(this->completeToSimplifiedIndex());
+
+    // Rphiq[i]=Rphi0[i]+A(i, j)dphi[j]
+    // where Aij is dRi/dphi_j
+    for (label i = 0; i < nEqns - nAdditionalEqns_; i++)
+    {
+        if (mechRedActive)
+        {
+            label si = completeToSimplified[i];
+            // The species is active
+            if (si != -1)
+            {
+                for (label j = 0; j < nEqns - 2; j++)
+                {
+                    label sj = completeToSimplified[j];
+                    if (sj != -1)
+                    {
+                        Rphiq[i] += gradientsMatrix(si, sj) * dphi[j];
+                    }
+                }
+                Rphiq[i] +=
+                    gradientsMatrix(si, this->nActiveSpecies()) * dphi[nEqns - 2];
+                Rphiq[i] +=
+                    gradientsMatrix(si, this->nActiveSpecies() + 1) * dphi[nEqns - 1];
+
+                if (this->variableTimeStep())
+                {
+                    Rphiq[i] +=
+                        gradientsMatrix(si, this->nActiveSpecies() + 2) * dphi[nEqns];
+                }
+
+                // As we use an approximation of A, Rphiq should be checked for
+                // negative values
+                Rphiq[i] = max(0, Rphiq[i]);
+            }
+            // The species is not active A(i, j) = I(i, j)
+            else
+            {
+                Rphiq[i] += dphi[i];
+                Rphiq[i] = max(0, Rphiq[i]);
+            }
+        }
+        else // Mechanism reduction is not active
+        {
+            for (label j = 0; j < nEqns; j++)
+            {
+                Rphiq[i] += gradientsMatrix(i, j) * dphi[j];
+            }
+            // As we use a first order gradient matrix, Rphiq should be checked
+            // for negative values
+            Rphiq[i] = max(0, Rphiq[i]);
+        }
+    }
+}
 
 // ************************************************************************* //

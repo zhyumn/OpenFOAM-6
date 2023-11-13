@@ -41,7 +41,7 @@ Description
 #ifndef ISAT_H
 #define ISAT_H
 
-#include "binaryTree.H"
+#include "binaryTreeS.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
