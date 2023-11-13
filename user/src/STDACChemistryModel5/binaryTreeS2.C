@@ -23,13 +23,13 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include "binaryTreeS.H"
+#include "binaryTreeS2.H"
 #include "SortableList.H"
 
 // * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * * //
 
 template <class CompType, class ThermoType>
-void Foam::binaryTree<CompType, ThermoType>::insertNode(
+void Foam::chemistryTabulationMethodSs::binaryTreeS<CompType, ThermoType>::insertNode(
     chP *&phi0,
     bn *&newNode)
 {
@@ -53,7 +53,7 @@ void Foam::binaryTree<CompType, ThermoType>::insertNode(
 }
 
 template <class CompType, class ThermoType>
-bool Foam::binaryTree<CompType, ThermoType>::inSubTree(
+bool Foam::chemistryTabulationMethodSs::binaryTreeS<CompType, ThermoType>::inSubTree(
     const scalarField &phiq,
     bn *y,
     chP *x)
@@ -155,7 +155,7 @@ bool Foam::binaryTree<CompType, ThermoType>::inSubTree(
 }
 
 template <class CompType, class ThermoType>
-void Foam::binaryTree<CompType, ThermoType>::deleteSubTree(bn *subTreeRoot)
+void Foam::chemistryTabulationMethodSs::binaryTreeS<CompType, ThermoType>::deleteSubTree(bn *subTreeRoot)
 {
     if (subTreeRoot != nullptr)
     {
@@ -168,7 +168,7 @@ void Foam::binaryTree<CompType, ThermoType>::deleteSubTree(bn *subTreeRoot)
 }
 
 template <class CompType, class ThermoType>
-void Foam::binaryTree<CompType, ThermoType>::transplant(bn *u, bn *v)
+void Foam::chemistryTabulationMethodSs::binaryTreeS<CompType, ThermoType>::transplant(bn *u, bn *v)
 {
     if (v != nullptr)
     {
@@ -204,8 +204,8 @@ void Foam::binaryTree<CompType, ThermoType>::transplant(bn *u, bn *v)
 }
 
 template <class CompType, class ThermoType>
-Foam::chemPointISAT<CompType, ThermoType> *
-Foam::binaryTree<CompType, ThermoType>::chemPSibling(bn *y)
+Foam::chemPointISATS<CompType, ThermoType> *
+Foam::chemistryTabulationMethodSs::binaryTreeS<CompType, ThermoType>::chemPSibling(bn *y)
 {
     if (y->parent() != nullptr)
     {
@@ -227,13 +227,13 @@ Foam::binaryTree<CompType, ThermoType>::chemPSibling(bn *y)
         }
     }
 
-    // the binaryNode is root_ and has no sibling
+    // the binaryNodeS is root_ and has no sibling
     return nullptr;
 }
 
 template <class CompType, class ThermoType>
-Foam::chemPointISAT<CompType, ThermoType> *
-Foam::binaryTree<CompType, ThermoType>::chemPSibling(chP *x)
+Foam::chemPointISATS<CompType, ThermoType> *
+Foam::chemistryTabulationMethodSs::binaryTreeS<CompType, ThermoType>::chemPSibling(chP *x)
 {
     if (size_ > 1)
     {
@@ -261,8 +261,8 @@ Foam::binaryTree<CompType, ThermoType>::chemPSibling(chP *x)
 }
 
 template <class CompType, class ThermoType>
-Foam::binaryNode<CompType, ThermoType> *
-Foam::binaryTree<CompType, ThermoType>::nodeSibling(bn *y)
+Foam::binaryNodeS<CompType, ThermoType> *
+Foam::chemistryTabulationMethodSs::binaryTreeS<CompType, ThermoType>::nodeSibling(bn *y)
 {
     if (y->parent() != nullptr)
     {
@@ -287,8 +287,8 @@ Foam::binaryTree<CompType, ThermoType>::nodeSibling(bn *y)
 }
 
 template <class CompType, class ThermoType>
-Foam::binaryNode<CompType, ThermoType> *
-Foam::binaryTree<CompType, ThermoType>::nodeSibling(chP *x)
+Foam::binaryNodeS<CompType, ThermoType> *
+Foam::chemistryTabulationMethodSs::binaryTreeS<CompType, ThermoType>::nodeSibling(chP *x)
 {
     if (size_ > 1)
     {
@@ -314,7 +314,7 @@ Foam::binaryTree<CompType, ThermoType>::nodeSibling(chP *x)
 }
 
 template <class CompType, class ThermoType>
-void Foam::binaryTree<CompType, ThermoType>::deleteAllNode(bn *subTreeRoot)
+void Foam::chemistryTabulationMethodSs::binaryTreeS<CompType, ThermoType>::deleteAllNode(bn *subTreeRoot)
 {
     if (subTreeRoot != nullptr)
     {
@@ -327,10 +327,11 @@ void Foam::binaryTree<CompType, ThermoType>::deleteAllNode(bn *subTreeRoot)
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 template <class CompType, class ThermoType>
-Foam::binaryTree<CompType, ThermoType>::binaryTree(
+Foam::chemistryTabulationMethodSs::binaryTreeS<CompType, ThermoType>::binaryTreeS(
     STDACChemistryModel<CompType, ThermoType> &chemistry,
-    dictionary coeffsDict)
+    dictionary coeffsDict, ISAT_manager<CompType, ThermoType> &ISATmanager_in)
     : chemistry_(chemistry),
+      ISATmanager(ISATmanager_in),
       root_(nullptr),
       maxNLeafs_(readLabel(coeffsDict.lookup("maxNLeafs"))),
       size_(0),
@@ -342,12 +343,13 @@ Foam::binaryTree<CompType, ThermoType>::binaryTree(
       coeffsDict_(coeffsDict)
 
 {
+    tolerance_ = ISATmanager.tolerance();
 }
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 
 template <class CompType, class ThermoType>
-Foam::label Foam::binaryTree<CompType, ThermoType>::depth(bn *subTreeRoot)
+Foam::label Foam::chemistryTabulationMethodSs::binaryTreeS<CompType, ThermoType>::depth(bn *subTreeRoot)
 {
     // when we reach the leaf, we return 0
     if (subTreeRoot == nullptr)
@@ -363,7 +365,7 @@ Foam::label Foam::binaryTree<CompType, ThermoType>::depth(bn *subTreeRoot)
 }
 
 template <class CompType, class ThermoType>
-void Foam::binaryTree<CompType, ThermoType>::insertNewLeaf(
+void Foam::chemistryTabulationMethodSs::binaryTreeS<CompType, ThermoType>::insertNewLeaf(
     const scalarField &phiq,
     const scalarField &Rphiq,
     const scalarSquareMatrix &A,
@@ -416,7 +418,7 @@ void Foam::binaryTree<CompType, ThermoType>::insertNewLeaf(
         // insert new node on the parent node in the position of the
         // previously stored leaf (phi0)
         // the new node contains phi0 on the left and phiq on the right
-        // the hyper plane is computed in the binaryNode constructor
+        // the hyper plane is computed in the binaryNodeS constructor
         bn *newNode;
         if (size_ > 1)
         {
@@ -426,7 +428,7 @@ void Foam::binaryTree<CompType, ThermoType>::insertNewLeaf(
         }
         else // size_ == 1 (because not equal to 0)
         {
-            // when size is 1, the binaryNode is without hyperplane
+            // when size is 1, the binaryNodeS is without hyperplane
             deleteDemandDrivenData(root_);
             newNode = new bn(phi0, newChemPoint, nullptr);
             root_ = newNode;
@@ -439,7 +441,7 @@ void Foam::binaryTree<CompType, ThermoType>::insertNewLeaf(
 }
 
 template <class CompType, class ThermoType>
-void Foam::binaryTree<CompType, ThermoType>::binaryTreeSearch(
+void Foam::chemistryTabulationMethodSs::binaryTreeS<CompType, ThermoType>::binaryTreeSearch(
     const scalarField &phiq,
     bn *node,
     chP *&nearest)
@@ -490,7 +492,7 @@ void Foam::binaryTree<CompType, ThermoType>::binaryTreeSearch(
 }
 
 template <class CompType, class ThermoType>
-bool Foam::binaryTree<CompType, ThermoType>::secondaryBTSearch(
+bool Foam::chemistryTabulationMethodSs::binaryTreeS<CompType, ThermoType>::secondaryBTSearch(
     const scalarField &phiq,
     chP *&x)
 {
@@ -545,7 +547,7 @@ bool Foam::binaryTree<CompType, ThermoType>::secondaryBTSearch(
 }
 
 template <class CompType, class ThermoType>
-void Foam::binaryTree<CompType, ThermoType>::deleteLeaf(chP *&phi0)
+void Foam::chemistryTabulationMethodSs::binaryTreeS<CompType, ThermoType>::deleteLeaf(chP *&phi0)
 {
     if (size_ == 1) // only one point is stored
     {
@@ -607,7 +609,7 @@ void Foam::binaryTree<CompType, ThermoType>::deleteLeaf(chP *&phi0)
 }
 
 template <class CompType, class ThermoType>
-void Foam::binaryTree<CompType, ThermoType>::balance()
+void Foam::chemistryTabulationMethodSs::binaryTreeS<CompType, ThermoType>::balance()
 {
     scalarField mean(chemistry_.nEqns(), 0.0);
 
@@ -692,8 +694,8 @@ void Foam::binaryTree<CompType, ThermoType>::balance()
 }
 
 template <class CompType, class ThermoType>
-Foam::chemPointISAT<CompType, ThermoType> *
-Foam::binaryTree<CompType, ThermoType>::treeMin(bn *subTreeRoot)
+Foam::chemPointISATS<CompType, ThermoType> *
+Foam::chemistryTabulationMethodSs::binaryTreeS<CompType, ThermoType>::treeMin(bn *subTreeRoot)
 {
     if (subTreeRoot != nullptr)
     {
@@ -710,8 +712,8 @@ Foam::binaryTree<CompType, ThermoType>::treeMin(bn *subTreeRoot)
 }
 
 template <class CompType, class ThermoType>
-Foam::chemPointISAT<CompType, ThermoType> *
-Foam::binaryTree<CompType, ThermoType>::treeSuccessor(chP *x)
+Foam::chemPointISATS<CompType, ThermoType> *
+Foam::chemistryTabulationMethodSs::binaryTreeS<CompType, ThermoType>::treeSuccessor(chP *x)
 {
     if (size_ > 1)
     {
@@ -762,7 +764,7 @@ Foam::binaryTree<CompType, ThermoType>::treeSuccessor(chP *x)
 }
 
 template <class CompType, class ThermoType>
-void Foam::binaryTree<CompType, ThermoType>::clear()
+void Foam::chemistryTabulationMethodSs::binaryTreeS<CompType, ThermoType>::clear()
 {
     // Recursively delete the element in the subTree
     deleteSubTree();
@@ -775,13 +777,13 @@ void Foam::binaryTree<CompType, ThermoType>::clear()
 }
 
 template <class CompType, class ThermoType>
-bool Foam::binaryTree<CompType, ThermoType>::isFull()
+bool Foam::chemistryTabulationMethodSs::binaryTreeS<CompType, ThermoType>::isFull()
 {
     return size_ >= maxNLeafs_;
 }
 
 template <class CompType, class ThermoType>
-void Foam::binaryTree<CompType, ThermoType>::resetNumRetrieve()
+void Foam::chemistryTabulationMethodSs::binaryTreeS<CompType, ThermoType>::resetNumRetrieve()
 {
     // Has to go along each chP of the tree
     if (size_ > 0)
@@ -801,12 +803,12 @@ void Foam::binaryTree<CompType, ThermoType>::resetNumRetrieve()
 }
 
 template <class CompType, class ThermoType>
-bool Foam::binaryTree<CompType, ThermoType>::retrieve(
+bool Foam::chemistryTabulationMethodSs::binaryTreeS<CompType, ThermoType>::retrieve(
     const scalarField &phiq,
     scalarField &Rphiq)
 {
     bool retrieved(false);
-    chemPointISAT<CompType, ThermoType> *phi0;
+    chemPointISATS<CompType, ThermoType> *phi0;
     // If the tree is not empty
     if (size())
     {
@@ -828,7 +830,7 @@ bool Foam::binaryTree<CompType, ThermoType>::retrieve(
         //else if (MRURetrieve_)
         //{
         //    typename SLList<
-        //        chemPointISAT<CompType, ThermoType> *>::iterator iter = MRUList_.begin();
+        //        chemPointISATS<CompType, ThermoType> *>::iterator iter = MRUList_.begin();
         //    for (; iter != MRUList_.end(); ++iter)
         //    {
         //        phi0 = iter();
@@ -875,5 +877,176 @@ bool Foam::binaryTree<CompType, ThermoType>::retrieve(
     }
 }
 
+template <class CompType, class ThermoType>
+Foam::label Foam::chemistryTabulationMethodSs::binaryTreeS<CompType, ThermoType>::add(
+    const scalarField &phiq,
+    const scalarField &Rphiq,
+    const scalar rho,
+    const scalar deltaT)
+{
+    label growthOrAddFlag = 1;
+    // If lastSearch_ holds a valid pointer to a chemPoint AND the growPoints_
+    // option is on, the code first tries to grow the point hold by lastSearch_
+    //if (lastSearch_ && growPoints_)
+    //{
+    chemPointISATS<CompType, ThermoType> *phi0 = nullptr;
+    binaryTreeSearch(phiq, root_, phi0);
+    if (grow(phi0, phiq, Rphiq))
+    {
+        nGrowth_++;
+        growthOrAddFlag = 0;
+        //addToMRU(lastSearch_);
+        //the structure of the tree is not modified, return false
+        return growthOrAddFlag;
+    }
+    //}
 
+    // If the code reach this point, it is either because lastSearch_ is not
+    // valid, OR because growPoints_ is not on, OR because the grow operation
+    // has failed. In the three cases, a new point is added to the tree.
+    if (isFull())
+    {
+        if (!cleanAndBalance())
+        {
+            clear();
+        }
+    }
+    /* if (chemisTree_.isFull())
+                {
+                    // If cleanAndBalance operation do not result in a reduction of the tree
+                    // size, the last possibility is to delete completely the tree.
+                    // It can be partially rebuild with the MRU list if this is used.
+                    if (!cleanAndBalance())
+                    {
+                        DynamicList<chemPointISATS<CompType, ThermoType> *> tempList;
+                        if (maxMRUSize_ > 0)
+                        {
+                            // Create a copy of each chemPointISATS of the MRUList_ before
+                            // they are deleted
+                            typename SLList<
+                                chemPointISATS<CompType, ThermoType> *>::iterator iter = MRUList_.begin();
+                            for (; iter != MRUList_.end(); ++iter)
+                            {
+                                tempList.append(
+                                    new chemPointISATS<CompType, ThermoType>(*iter()));
+                            }
+                        }
+                        chemisTree_.clear();
+
+                        // Pointers to chemPoint are not valid anymore, clear the list
+                        //MRUList_.clear();
+
+                        // Construct the tree without giving a reference to attach to it
+                        // since the structure has been completely discarded
+                        chemPointISATS<CompType, ThermoType> *nulPhi = 0;
+                        forAll(tempList, i)
+                        {
+                            chemisTree_.insertNewLeaf(
+                                tempList[i]->phi(),
+                                tempList[i]->Rphi(),
+                                tempList[i]->A(),
+                                scaleFactor_,
+                                this->tolerance(),
+                                scaleFactor_.size(),
+                                nulPhi);
+                            deleteDemandDrivenData(tempList[i]);
+                        }
+                    }
+
+                    // The structure has been changed, it will force the binary tree to
+                    // perform a new search and find the most appropriate point still stored
+                    //lastSearch_ = nullptr;
+                } */
+
+    // Compute the A matrix needed to store the chemPoint.
+    label ASize = this->chemistry_.nEqns() + ISATmanager.nAdditionalEqns_ - 2;
+    scalarSquareMatrix A(ASize, Zero);
+    ISATmanager.computeA(A, Rphiq, rho, deltaT);
+    chemPointISATS<CompType, ThermoType> *NP = nullptr;
+    insertNewLeaf(
+        phiq,
+        Rphiq,
+        A,
+        ISATmanager.scaleFactor_,
+        tolerance_,
+        ISATmanager.scaleFactor_.size(),
+        NP // lastSearch_ may be nullptr (handled by binaryTreeS)
+    );
+    /*                 if (lastSearch_ != nullptr)
+                {
+                    addToMRU(lastSearch_);
+                } */
+    nAdd_++;
+
+    return growthOrAddFlag;
+}
 // ************************************************************************* //
+template <class CompType, class ThermoType>
+bool Foam::chemistryTabulationMethodSs::binaryTreeS<CompType, ThermoType>::grow(
+    chemPointISATS<CompType, ThermoType> *phi0,
+    const scalarField &phiq,
+    const scalarField &Rphiq)
+{
+    // If the pointer to the chemPoint is nullptr, the function stops
+    if (!phi0)
+    {
+        return false;
+    }
+
+    // Raise a flag when the chemPoint used has been grown more than the
+    // allowed number of time
+    if (phi0->nGrowth() > maxGrowth_)
+    {
+        cleaningRequired_ = true;
+        phi0->toRemove() = true;
+        return false;
+    }
+
+    // If the solution RphiQ is still within the tolerance we try to grow it
+    // in some cases this might result in a failure and the grow function of
+    // the chemPoint returns false
+    if (phi0->checkSolution(phiq, Rphiq))
+    {
+        return phi0->grow(phiq);
+    }
+    // The actual solution and the approximation given by ISAT are too different
+    else
+    {
+        return false;
+    }
+}
+
+template <class CompType, class ThermoType>
+bool Foam::chemistryTabulationMethodSs::binaryTreeS<CompType, ThermoType>::cleanAndBalance()
+{
+
+    bool treeModified(false);
+
+    {
+        chemPointISATS<CompType, ThermoType> *x = treeMin();
+        while (x != nullptr)
+        {
+            chemPointISATS<CompType, ThermoType> *xtmp =
+                treeSuccessor(x);
+
+            scalar elapsedTimeSteps = this->chemistry_.timeSteps() - x->timeTag();
+
+            if ((elapsedTimeSteps > chPMaxLifeTime_) || (x->nGrowth() > maxGrowth_))
+            {
+                deleteLeaf(x);
+                treeModified = true;
+            }
+            x = xtmp;
+        }
+
+        if (
+            size() > minBalanceThreshold_ && depth() >
+                                                 maxDepthFactor_ * log(scalar(size())) / log(2.0))
+        {
+            balance();
+            treeModified = true;
+        }
+    }
+
+    return treeModified;
+}

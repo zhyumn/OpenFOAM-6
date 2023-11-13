@@ -73,7 +73,7 @@ Foam::chemistryTabulationMethodSs::ISAT_manager<CompType, ThermoType>::ISAT_mana
            readLabel(this->coeffsDict_.lookup("maxNLeafs")),
            SUPstream::Sync),
 #ifdef ISATcache
-      chemisTree_(chemistry, this->coeffsDict_),
+      chemisTree_(chemistry, this->coeffsDict_, *this),
       cleaningRequired_(false),
 #endif
       runTime_(chemistry.time()),
@@ -149,6 +149,9 @@ Foam::chemistryTabulationMethodSs::ISAT_manager<CompType, ThermoType>::ISAT_mana
 
 #ifdef ISATcache
     chemisTree_.chPMaxLifeTime_ = chPMaxLifeTime_;
+    chemisTree_.maxGrowth_ = maxGrowth_;
+    chemisTree_.minBalanceThreshold_ = minBalanceThreshold_;
+    chemisTree_.maxDepthFactor_ = maxDepthFactor_;
 #endif
 
     static_data::mechRedActive = this->chemistry_.mechRed()->active();
@@ -955,10 +958,10 @@ bool Foam::chemistryTabulationMethodSs::ISAT_manager<CompType, ThermoType>::clea
 
 #ifdef ISATcache
     {
-        chemPointISAT<CompType, ThermoType> *x = chemisTree_.treeMin();
+        chemPointISATS<CompType, ThermoType> *x = chemisTree_.treeMin();
         while (x != nullptr)
         {
-            chemPointISAT<CompType, ThermoType> *xtmp =
+            chemPointISATS<CompType, ThermoType> *xtmp =
                 chemisTree_.treeSuccessor(x);
 
             scalar elapsedTimeSteps = this->chemistry_.timeSteps() - x->timeTag();
@@ -1028,7 +1031,7 @@ bool Foam::chemistryTabulationMethodSs::ISAT_manager<CompType, ThermoType>::clea
 
 template <class CompType, class ThermoType>
 bool Foam::chemistryTabulationMethodSs::ISAT_manager<CompType, ThermoType>::grow(
-    chemPointISAT<CompType, ThermoType> *phi0,
+    chemPointISATS<CompType, ThermoType> *phi0,
     const scalarField &phiq,
     const scalarField &Rphiq)
 {

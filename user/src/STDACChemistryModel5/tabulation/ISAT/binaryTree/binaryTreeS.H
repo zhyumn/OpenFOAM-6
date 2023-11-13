@@ -171,6 +171,7 @@ namespace Foam
         bool retrieve(
             const scalarField &phiq,
             scalarField &Rphiq);
+
         // Insert a new leaf starting from the parent node of phi0
         // Parameters: phi0 the leaf to replace by a node
         // phiq the new composition to store
