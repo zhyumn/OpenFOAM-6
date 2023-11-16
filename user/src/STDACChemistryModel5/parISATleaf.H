@@ -186,7 +186,7 @@ namespace Foam
 
         public:
             //void set(const scalarField &x, const scalarField &y, SUPstream::mpi_mutex &mem_mutex, const scalar rhoi, const scalar dt);
-
+            label SleafN;
             void init(const Leaf &x)
             {
                 phi_.init(x.phi_);

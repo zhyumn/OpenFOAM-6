@@ -177,9 +177,9 @@ namespace Foam
                 return nGrowth_;
             }
 
-            bool retrieve(
-                const scalarField &phiq,
-                scalarField &Rphiq);
+            bool retrieve(const scalarField &phiq, scalarField &Rphiq);
+
+            bool retrieve(const scalarField &phiq, scalarField &Rphiq, chemPointISATS<CompType, ThermoType> *phi0);
 
             label add(
                 const scalarField &phiq,
@@ -209,6 +209,10 @@ namespace Foam
                 const scalarField &scaleFactor,
                 const scalar &epsTol,
                 const label nCols,
+                chP *&phi0);
+
+            void insertNewLeaf(
+                const scalarField &phiq,
                 chP *&phi0);
 
             // Search the binaryTreeS until the nearest leaf of a specified

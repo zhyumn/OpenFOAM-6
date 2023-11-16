@@ -40,7 +40,7 @@ SourceFiles
 #include "parISATleaf.H"
 #include "binaryTreeS2.H"
 #include "chemPointISATS.H"
-//#define ISATcache
+#define ISATcache
 //#include "FixedSquareMatrix.H"
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 //#define Datasize 56
@@ -198,14 +198,58 @@ namespace Foam
                     tree.totalGrowth_ = 0;
                 }
             }
-            bool retrieve(
-                const scalarField &phiq,
-                scalarField &Rphiq)
+
+            void addL_in(const scalarField &phiq, const scalarField &Rphiq, SharedPointer<Leaf> &pleaf);
+            bool retrieve(const scalarField &phiq,
+                          scalarField &Rphiq)
             {
-#ifdef ISATcache
+                /* #ifdef ISATcache
                 return chemisTree_.retrieve(phiq, Rphiq);
 #endif
-                return tree.retrieve(phiq, Rphiq);
+                return tree.retrieve(phiq, Rphiq); */
+                chemPointISATS<CompType, ThermoType> *plfL;
+                SharedPointer<Leaf> pleaf;
+                //SharedPointer<parISATleaf> plf;
+                if (chemisTree_.size())
+                {
+                    chemisTree_.binaryTreeSearch(phiq, chemisTree_.root_, plfL);
+                    if (chemisTree_.retrieve(phiq, Rphiq, plfL))
+                    {
+                        return true;
+                    }
+#ifdef ISATcache
+                    else
+                    {
+                        if (tree.size_leaf_ != 0)
+                        {
+
+                            //return tree.retrieve(phiq, Rphiq);
+
+                            pleaf = tree.binaryTreeSearch(phiq);
+                            if (pleaf.isNULL())
+                            {
+                                return false;
+                            }
+                            if (tree.retrieve(phiq, Rphiq, pleaf))
+                            {
+
+                                if (plfL->SleafN == pleaf->SleafN)
+                                {
+                                    copy(plfL, pleaf);
+                                }
+                                else
+                                {
+                                    //ToDo
+                                    addL_in(phiq, Rphiq, pleaf);
+                                    //addL_in(value, out, plf);
+                                }
+                                return true;
+                            }
+                        }
+                    }
+#endif
+                }
+                return false;
             };
 
             void computeA(
@@ -219,14 +263,53 @@ namespace Foam
                 const scalar rho,
                 const scalar deltaT)
             {
+                bool growsuc;
+                SharedPointer<Leaf> pleaf, pleaf_out;
+                chemPointISATS<CompType, ThermoType> *plfL;
+                chemisTree_.binaryTreeSearch(phiq, chemisTree_.root_, plfL);
+                pleaf = tree.binaryTreeSearch(phiq);
 
-#ifdef ISATcache
+                if (UNLIKELY(pleaf.isNULL() || plfL == nullptr))
+                {
+                    tree.add(pleaf_out, growsuc, phiq, Rphiq, rho, deltaT);
+                    if (pleaf_out.notNULL())
+                        addL_in(phiq, Rphiq, pleaf_out);
+                    else
+                    {
+                        chemisTree_.add(phiq, Rphiq, rho, deltaT);
+                    }
+                }
+                else
+                {
+                    tree.add(pleaf_out, growsuc, phiq, Rphiq, rho, deltaT);
+
+                    if (growsuc && plfL->SleafN == pleaf_out->SleafN)
+                    {
+                        copy(plfL, pleaf_out);
+                        return true;
+                    }
+
+                    if (chemisTree_.grow(plfL, phiq, Rphiq))
+
+                    {
+                        if (pleaf_out.notNULL())
+                            addL_in(phiq, Rphiq, pleaf_out);
+                        else
+                        {
+                            chemisTree_.add(phiq, Rphiq, rho, deltaT);
+                        }
+                    }
+                }
+
+                /* #ifdef ISATcache
                 chemisTree_.add(phiq, Rphiq, rho, deltaT);
 
 #endif
 
-                return tree.add(phiq, Rphiq, rho, deltaT);
+                return tree.add(phiq, Rphiq, rho, deltaT); */
             };
+
+            void copy(chemPointISATS<CompType, ThermoType> *plfL, SharedPointer<Leaf> pleaf);
 
             //friend ISAT_chem<CompType, ThermoType>;
         };

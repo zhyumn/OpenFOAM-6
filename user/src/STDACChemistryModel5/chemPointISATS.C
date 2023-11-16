@@ -216,7 +216,8 @@ Foam::chemPointISATS<CompType, ThermoType>::chemPointISATS(
       numRetrieve_(0),
       nLifeTime_(0),
       completeToSimplifiedIndex_(
-          completeSpaceSize - (2 + (variableTimeStep() == 1 ? 1 : 0)))
+          completeSpaceSize - (2 + (variableTimeStep() == 1 ? 1 : 0))),
+      SleafN(-1)
 {
     tolerance_ = tolerance;
 
@@ -302,6 +303,42 @@ Foam::chemPointISATS<CompType, ThermoType>::chemPointISATS(
 
 template <class CompType, class ThermoType>
 Foam::chemPointISATS<CompType, ThermoType>::chemPointISATS(
+    STDACChemistryModel<CompType, ThermoType> &chemistry,
+    const scalarField &phi,
+    const scalarField &Rphi,
+    const label &Asize,
+    const scalarField &scaleFactor,
+    const scalar &tolerance,
+    const label &completeSpaceSize,
+    const label &nActiveSpecies,
+    const dictionary &coeffsDict)
+    : chemistry_(chemistry),
+      phi_(phi),
+      Rphi_(Rphi),
+      A_(Asize),
+      scaleFactor_(scaleFactor),
+      node_(nullptr),
+      completeSpaceSize_(completeSpaceSize),
+      nGrowth_(0),
+      nActiveSpecies_(nActiveSpecies),
+      //nActiveSpecies_(chemistry.mechRed()->NsSimp()),
+      simplifiedToCompleteIndex_(nActiveSpecies_),
+      //timeTag_(chemistry_.timeSteps()),
+      //lastTimeUsed_(chemistry_.timeSteps()),
+      toRemove_(false),
+      maxNumNewDim_(coeffsDict.lookupOrDefault("maxNumNewDim", 0)),
+      printProportion_(coeffsDict.lookupOrDefault("printProportion", false)),
+      numRetrieve_(0),
+      nLifeTime_(0),
+      completeToSimplifiedIndex_(
+          completeSpaceSize - (2 + (variableTimeStep() == 1 ? 1 : 0))),
+      SleafN(-1)
+{
+    tolerance_ = tolerance;
+}
+
+template <class CompType, class ThermoType>
+Foam::chemPointISATS<CompType, ThermoType>::chemPointISATS(
     Foam::chemPointISATS<CompType, ThermoType> &p)
     : chemistry_(p.chemistry()),
       phi_(p.phi()),
@@ -320,7 +357,8 @@ Foam::chemPointISATS<CompType, ThermoType>::chemPointISATS(
       maxNumNewDim_(p.maxNumNewDim()),
       numRetrieve_(0),
       nLifeTime_(0),
-      completeToSimplifiedIndex_(p.completeToSimplifiedIndex())
+      completeToSimplifiedIndex_(p.completeToSimplifiedIndex()),
+      SleafN(-1)
 {
     tolerance_ = p.tolerance();
 
@@ -699,7 +737,7 @@ bool Foam::chemPointISATS<CompType, ThermoType>::grow(const scalarField &phiq)
                 sj = simplifiedToCompleteIndex_[j];
             }
             phiTilde[i] += LT_(i, j) * dphi[sj];
-           // Pout << "dphi[" << sj << "]=" << dphi[sj] << endl;
+            // Pout << "dphi[" << sj << "]=" << dphi[sj] << endl;
         }
 
         phiTilde[i] += LT_(i, dim - nAdditionalEqns_) * dphi[idT_];

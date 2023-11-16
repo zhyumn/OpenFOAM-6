@@ -40,7 +40,9 @@ Foam::chemistryTabulationMethodSs::parallelISAT<T>::parallelISAT(T &ISATmanager_
       pv_(manager_in),
       size_leaf_(pv_().size_leaf), head_leaf(pv_().head_leaf),
       tail_leaf(pv_().tail_leaf), temp_tail_leaf(pv_().temp_tail_leaf),
-      size_node(pv_().size_node), head_node(pv_().heaf_node),
+      leafN(pv_().leafN),
+      size_node(pv_().size_node),
+      head_node(pv_().heaf_node),
       tail_node(pv_().tail_node), temp_tail_node(pv_().temp_tail_node),
       root_(pv_().root_), totalGrowth_(pv_().totalGrowth), //,root_atomic((std::atomic<long unsigned int>*)&pv_().root_.offset)
       write_lock(manager_in, sync_in), mem_lock(manager_in, sync_in),
@@ -53,6 +55,7 @@ Foam::chemistryTabulationMethodSs::parallelISAT<T>::parallelISAT(T &ISATmanager_
     size_leaf_ = 0;
     tail_leaf = 0;
     tail_node = 0;
+    leafN = 0;
 
     pv_().tmp_size_leaf = 0;
     pv_().tmp_size_node = 0;
@@ -236,6 +239,55 @@ bool Foam::chemistryTabulationMethodSs::parallelISAT<T>::grow(const scalarField 
     {
 
         pleaf_new->node_2 = pleaf->node_2;
+        pleaf_new->SleafN = pleaf->SleafN;
+        //success = pleaf_new->grow(x, mem_lock);
+        success = ISATmanager.grow(*pleaf_new, x, mem_lock);
+        if (success)
+        {
+            SharedPointer<Leaf> *leaf;
+            if (pleaf->node_2->leafLeft_ == pleaf)
+            {
+                leaf = &pleaf->node_2->leafLeft_;
+                //pleaf->node_2->leafLeft_ = pleaf_new;
+            }
+            else
+            {
+                leaf = &pleaf->node_2->leafRight_;
+                //pleaf->node_2->leafRight_ = pleaf_new;
+            }
+
+            std::atomic<size_t> *leaf_atomic = reinterpret_cast<std::atomic<long unsigned int> *>(&leaf->offset);
+            //std::atomic<size_t> *leaf_atomic = (std::atomic<long unsigned int> *)(&leaf->offset);
+            leaf_atomic->store(pleaf_new.offset, std::memory_order_release);
+            mem_lock.lock();
+            leaf_manager.Delete(pleaf);
+            mem_lock.unlock();
+        }
+        else
+        {
+            mem_lock.lock();
+            leaf_manager.Delete(pleaf_new);
+            mem_lock.unlock();
+        }
+    }
+    return success;
+}
+
+template <typename T>
+bool Foam::chemistryTabulationMethodSs::parallelISAT<T>::grow(
+    SharedPointer<Leaf> &pleaf_out, const scalarField &x, SharedPointer<Leaf> &pleaf)
+{
+
+    bool success = false;
+    mem_lock.lock();
+    SharedPointer<Leaf> pleaf_new = leaf_manager.New(*pleaf);
+    mem_lock.unlock();
+
+    if (pleaf_new.notNULL())
+    {
+
+        pleaf_new->node_2 = pleaf->node_2;
+        pleaf_out.offset = pleaf_new.offset;
         //success = pleaf_new->grow(x, mem_lock);
         success = ISATmanager.grow(*pleaf_new, x, mem_lock);
         if (success)
@@ -274,6 +326,28 @@ bool Foam::chemistryTabulationMethodSs::parallelISAT<T>::retrieve(const scalarFi
 {
 
     SharedPointer<Leaf> pleaf = binaryTreeSearch(x);
+    if (pleaf.isNULL())
+    {
+        return false;
+    }
+    if (pleaf->inEOA(x))
+    {
+        pleaf->timeTag_ = ISATmanager.timeSteps();
+        pleaf->retrieve(x, y);
+        nRetrieved_++;
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+template <typename T>
+bool Foam::chemistryTabulationMethodSs::parallelISAT<T>::retrieve(const scalarField &x, scalarField &y, SharedPointer<Leaf> &pleaf)
+{
+
+    //SharedPointer<Leaf> pleaf = binaryTreeSearch(x);
     if (pleaf.isNULL())
     {
         return false;
@@ -346,6 +420,8 @@ Foam::label Foam::chemistryTabulationMethodSs::parallelISAT<T>::add(
             pnode->set();
 
             pleaf->node_2 = pnode;
+            leafN++;
+            pleaf->SleafN = leafN;
             //pleaf->set(x, y, mem_lock, args...);
             ISATmanager.setLeaf(*pleaf, x, y, mem_lock, args...);
 
@@ -461,7 +537,286 @@ Foam::label Foam::chemistryTabulationMethodSs::parallelISAT<T>::add(
     //pleaf_new->set(x, y, mem_lock, args...);
     ISATmanager.setLeaf(*pleaf_new, x, y, mem_lock, args...);
     pleaf_new->node_2 = pnode_new;
+    leafN++;
+    pleaf_new->SleafN = leafN;
+    pnode_new->parent_.setNULL();
+    pnode_new->nodeLeft_.setNULL();
+    pnode_new->nodeRight_.setNULL();
+    pnode_new->set(*pleaf_new, *pleaf2, mem_lock); //v = (leafmem[new_leaf_index].v + leafmem[leaf_index].v) / 2;
 
+    if (!(*parentNode).mutex.try_lock())
+    {
+        mem_lock.lock();
+        node_manager.Delete(pnode_new);
+        leaf_manager.Delete(pleaf_new);
+        mem_lock.unlock();
+        growthOrAddFlag = 0;
+        return growthOrAddFlag;
+    }
+    bool tmp_flag = false;
+    if (ret_side == 0)
+    {
+        tmp_flag = (parentNode->leafLeft_ == pleaf2 && pleaf2->node_2 == parentNode);
+    }
+    else
+    {
+        tmp_flag = (parentNode->leafRight_ == pleaf2 && pleaf2->node_2 == parentNode);
+    }
+    if (!tmp_flag)
+    {
+        (*parentNode).mutex.unlock();
+        growthOrAddFlag = 0;
+        return growthOrAddFlag;
+    }
+
+    pleaf2->node_2 = pnode_new;
+
+    if (pnode_new->goLeft(*pleaf_new))
+    {
+        pnode_new->leafLeft_ = pleaf_new;
+        pnode_new->leafRight_ = pleaf2;
+    }
+    else
+    {
+        pnode_new->leafLeft_ = pleaf2;
+        pnode_new->leafRight_ = pleaf_new;
+    }
+
+    if (size_leaf_ > 1)
+    {
+        pnode_new->parent_ = parentNode;
+        SharedPointer<Leaf> *leaf;
+        SharedPointer<Node> *node;
+        if (parentNode->leafLeft_ == pleaf2)
+        {
+            //parentNode->nodeLeft_ = pnode_new;
+            // parentNode->leafLeft_.setNULL();
+            leaf = &parentNode->leafLeft_;
+            node = &parentNode->nodeLeft_;
+        }
+        else
+        {
+            //parentNode->nodeRight_ = pnode_new;
+            //parentNode->leafRight_.setNULL();
+            leaf = &parentNode->leafRight_;
+            node = &parentNode->nodeRight_;
+        }
+        //node->offset = pnode_new.offset;
+        //leaf->offset = sptr_NULL;
+
+        std::atomic<size_t> *node_atomic = reinterpret_cast<std::atomic<long unsigned int> *>(&node->offset);
+        std::atomic<size_t> *leaf_atomic = reinterpret_cast<std::atomic<long unsigned int> *>(&leaf->offset);
+
+        //std::atomic<size_t> *node_atomic = (std::atomic<long unsigned int> *)(&node->offset);
+        //std::atomic<size_t> *leaf_atomic = (std::atomic<long unsigned int> *)(&leaf->offset);
+
+        node_atomic->store(pnode_new.offset, std::memory_order_release);
+        leaf_atomic->store(sptr_NULL, std::memory_order_release);
+
+        //((std::atomic<size_t>)node->offset).store(pnode_new.offset, std::memory_order_release);
+        //((std::atomic<size_t>)leaf->offset).store(sptr_NULL, std::memory_order_release);
+
+        size_leaf_++;
+        size_node++;
+        nAdd_++;
+        (*parentNode).mutex.unlock();
+        //write_lock.unlock();
+        return growthOrAddFlag;
+    }
+    else
+    {
+
+        std::atomic<size_t> *root_atomic = reinterpret_cast<std::atomic<long unsigned int> *>(&root_.offset);
+        //std::atomic<size_t> *root_atomic = (std::atomic<long unsigned int> *)(&root_.offset);
+
+        root_atomic->store(pnode_new.offset, std::memory_order_release);
+        //root_ = pnode_new;
+        //((std::atomic<size_t>)root_.offset).store(pnode_new.offset, std::memory_order_release);
+        mem_lock.lock();
+        node_manager.Delete(parentNode);
+        mem_lock.unlock();
+        size_leaf_++;
+        nAdd_++;
+
+        //write_lock.unlock();
+        //(*parentNode).mutex.unlock();
+        return growthOrAddFlag;
+    }
+}
+
+template <typename T>
+template <typename... Args>
+Foam::label Foam::chemistryTabulationMethodSs::parallelISAT<T>::add(
+    SharedPointer<Leaf> &pleaf_out, bool &growsuc, const scalarField &x, const scalarField &y, Args... args)
+{
+    pleaf_out.offset = sptr_NULL;
+    //write_lock.lock();
+    growsuc = false;
+    std::atomic<size_t> *root_atomic = reinterpret_cast<std::atomic<long unsigned int> *>(&root_.offset);
+    label growthOrAddFlag = 1;
+
+    if (isFull())
+    {
+        //write_lock.unlock();
+        return growthOrAddFlag;
+    }
+
+    if (size_leaf_ == 0)
+    {
+        write_lock.lock();
+        if (size_leaf_ == 0)
+        {
+            mem_lock.lock();
+            SharedPointer<Node> pnode = node_manager.New(x.size());
+            SharedPointer<Leaf> pleaf = leaf_manager.New(x.size());
+            mem_lock.unlock();
+            /*             if (UNLIKELY(pnode.isNULL()))
+            {
+                growthOrAddFlag = 0;
+
+                write_lock.unlock();
+                return growthOrAddFlag;
+            }
+            
+            if (UNLIKELY(pleaf.isNULL()))
+            {
+                growthOrAddFlag = 0;
+                node_manager.Delete(pnode);
+
+                write_lock.unlock();
+                return growthOrAddFlag;
+            } */
+            //Pout << "\n???here!"<< "," << size_leaf_ << "\n"<< endl;
+            pnode->parent_.setNULL();
+            pnode->nodeLeft_.setNULL();
+            pnode->nodeRight_.setNULL();
+            pnode->leafLeft_ = pleaf;
+            pnode->leafRight_.setNULL();
+            pnode->set();
+
+            pleaf->node_2 = pnode;
+            //pleaf->set(x, y, mem_lock, args...);
+            ISATmanager.setLeaf(*pleaf, x, y, mem_lock, args...);
+            pleaf_out.offset = pleaf.offset;
+            leafN++;
+            pleaf->SleafN = leafN;
+            //root_ = pnode;
+            //((std::atomic<size_t>)root_.offset).store(pnode.offset, std::memory_order_release);
+
+            root_atomic->store(pnode.offset, std::memory_order_release);
+            size_leaf_++;
+            size_node++;
+            nAdd_++;
+
+            write_lock.unlock();
+            return growthOrAddFlag;
+        }
+        else
+        {
+            write_lock.unlock();
+        }
+    }
+
+    /*     SharedPointer<Leaf> pleaf = binaryTreeSearch(x);
+
+    if (pleaf->inEOA(x))
+    {
+        growthOrAddFlag = 0;
+        write_lock.unlock();
+
+        return growthOrAddFlag;
+    }
+    if (pleaf->checkSolution(x, y))
+    {
+        if (grow(x, pleaf))
+        {
+            nGrowth_++;
+            totalGrowth_++;
+
+            growthOrAddFlag = 0;
+
+            write_lock.unlock();
+            return growthOrAddFlag;
+        }
+    }    */
+
+    //Todo  leaf_index can be obtain by arg
+    SharedPointer<Node> parentNode;
+    int ret_side; // 0 left, 1 right
+    SharedPointer<Leaf> pleaf2 = binaryTreeSearch(x, SharedPointer<Node>(root_atomic->load(std::memory_order_acquire)), parentNode, ret_side);
+    //Pout << "\n!!!!!!!!!!!" << pleaf2->phi().size_ << "," << size_leaf_ << "\n"<< endl;
+
+    if (pleaf2.isNULL() || pleaf2->inEOA(x))
+    {
+        growthOrAddFlag = 0;
+        //write_lock.unlock();
+        return growthOrAddFlag;
+    }
+    //SharedPointer<Node> parentNode = pleaf2->node_2;
+    if (pleaf2->checkSolution(x, y))
+    {
+        if ((*parentNode).mutex.try_lock())
+        {
+            bool tmp_flag = false;
+            if (ret_side == 0)
+            {
+                tmp_flag = (parentNode->leafLeft_ == pleaf2 && pleaf2->node_2 == parentNode);
+            }
+            else
+            {
+                tmp_flag = (parentNode->leafRight_ == pleaf2 && pleaf2->node_2 == parentNode);
+            }
+            if (tmp_flag)
+            {
+                if (grow(pleaf_out, x, pleaf2))
+                {
+                    //pleaf_out->lastUsed = timeSteps_;
+                    growsuc = true;
+                    nGrowth_++;
+                    totalGrowth_++;
+
+                    growthOrAddFlag = 0;
+                    (*parentNode).mutex.unlock();
+                    //write_lock.unlock();
+                    return growthOrAddFlag;
+                }
+            }
+            (*parentNode).mutex.unlock();
+        }
+    }
+
+    //
+
+    mem_lock.lock();
+    SharedPointer<Node> pnode_new = node_manager.New(x.size());
+    SharedPointer<Leaf> pleaf_new = leaf_manager.New(x.size());
+    mem_lock.unlock();
+
+    //write_lock.lock();
+
+    /*     if (pnode_new.isNULL())
+    {
+        growthOrAddFlag = 0;
+        write_lock.unlock();
+        return growthOrAddFlag;
+    }
+    
+    if (pleaf_new.isNULL())
+    {
+        growthOrAddFlag = 0;
+
+        node_manager.Delete(pnode_new);
+
+        write_lock.unlock();
+        return growthOrAddFlag;
+    } */
+
+    //pleaf_new->set(x, y, mem_lock, args...);
+    ISATmanager.setLeaf(*pleaf_new, x, y, mem_lock, args...);
+    pleaf_new->node_2 = pnode_new;
+    pleaf_out.offset = pleaf_new.offset;
+    leafN++;
+    pleaf_new->SleafN = leafN;
     pnode_new->parent_.setNULL();
     pnode_new->nodeLeft_.setNULL();
     pnode_new->nodeRight_.setNULL();

@@ -441,6 +441,58 @@ void Foam::chemistryTabulationMethodSs::binaryTreeS<CompType, ThermoType>::inser
 }
 
 template <class CompType, class ThermoType>
+void Foam::chemistryTabulationMethodSs::binaryTreeS<CompType, ThermoType>::insertNewLeaf(
+    const scalarField &phiq,
+    chP *&leafnew)
+{
+    if (size_ == 0) // no points are stored
+    {
+        // create an empty binary node and point root_ to it
+        root_ = new bn();
+        // create the new chemPoint which holds the composition point
+        // phiq and the data to initialize the EOA
+        chP *newChemPoint = leafnew;
+        leafnew->node_ = root_;
+        root_->leafLeft() = newChemPoint;
+    }
+    else // at least one point stored
+    {
+        // no reference chemPoint, a BT search is required
+        chP *phi0 = nullptr;
+        binaryTreeSearch(phiq, root_, phi0);
+
+        // access to the parent node of the chemPoint
+        bn *parentNode = phi0->node();
+
+        // create the new chemPoint which holds the composition point
+        // phiq and the data to initialize the EOA
+        chP *newChemPoint = leafnew;
+        // insert new node on the parent node in the position of the
+        // previously stored leaf (phi0)
+        // the new node contains phi0 on the left and phiq on the right
+        // the hyper plane is computed in the binaryNodeS constructor
+        bn *newNode;
+        if (size_ > 1)
+        {
+            newNode = new bn(phi0, newChemPoint, parentNode);
+            // make the parent of phi0 point to the newly created node
+            insertNode(phi0, newNode);
+        }
+        else // size_ == 1 (because not equal to 0)
+        {
+            // when size is 1, the binaryNodeS is without hyperplane
+            deleteDemandDrivenData(root_);
+            newNode = new bn(phi0, newChemPoint, nullptr);
+            root_ = newNode;
+        }
+
+        phi0->node() = newNode;
+        newChemPoint->node() = newNode;
+    }
+    size_++;
+}
+
+template <class CompType, class ThermoType>
 void Foam::chemistryTabulationMethodSs::binaryTreeS<CompType, ThermoType>::binaryTreeSearch(
     const scalarField &phiq,
     bn *node,
@@ -877,6 +929,80 @@ bool Foam::chemistryTabulationMethodSs::binaryTreeS<CompType, ThermoType>::retri
     }
 }
 
+template <class CompType, class ThermoType>
+bool Foam::chemistryTabulationMethodSs::binaryTreeS<CompType, ThermoType>::retrieve(
+    const scalarField &phiq,
+    scalarField &Rphiq,
+    chemPointISATS<CompType, ThermoType> *phi0)
+{
+    bool retrieved(false);
+    //chemPointISATS<CompType, ThermoType> *phi0;
+    // If the tree is not empty
+
+    //binaryTreeSearch(phiq, root_, phi0);
+
+    // lastSearch keeps track of the chemPoint we obtain by the regular
+    // binary tree search
+    //lastSearch_ = phi0;
+    if (phi0->inEOA(phiq))
+    {
+        retrieved = true;
+    }
+    // After a successful secondarySearch, phi0 store a pointer to the
+    // found chemPoint
+    else if (secondaryBTSearch(phiq, phi0))
+    {
+        retrieved = true;
+    }
+    //else if (MRURetrieve_)
+    //{
+    //    typename SLList<
+    //        chemPointISATS<CompType, ThermoType> *>::iterator iter = MRUList_.begin();
+    //    for (; iter != MRUList_.end(); ++iter)
+    //    {
+    //        phi0 = iter();
+    //        if (phi0->inEOA(phiq))
+    //        {
+    //            retrieved = true;
+    //            break;
+    //        }
+    //    }
+    //}
+
+    // The tree is empty, retrieved is still false
+    //else
+    //{
+    // There is no chempoints that we can try to grow
+    //lastSearch_ = nullptr;
+    //}
+
+    if (retrieved)
+    {
+        phi0->increaseNumRetrieve();
+        scalar elapsedTimeSteps =
+            this->chemistry_.timeSteps() - phi0->timeTag();
+
+        // Raise a flag when the chemPoint has been used more than the allowed
+        // number of time steps
+        if (elapsedTimeSteps > chPMaxLifeTime_ && !phi0->toRemove())
+        {
+            cleaningRequired_ = true;
+            phi0->toRemove() = true;
+        }
+        //lastSearch_->lastTimeUsed() = this->chemistry_.timeSteps();
+        //addToMRU(phi0);
+        //calcNewC(phi0, phiq, Rphiq);
+        phi0->retrieve(phiq, Rphiq);
+        nRetrieved_++;
+        return true;
+    }
+    else
+    {
+        // This point is reached when every retrieve trials have failed
+        // or if the tree is empty
+        return false;
+    }
+}
 template <class CompType, class ThermoType>
 Foam::label Foam::chemistryTabulationMethodSs::binaryTreeS<CompType, ThermoType>::add(
     const scalarField &phiq,

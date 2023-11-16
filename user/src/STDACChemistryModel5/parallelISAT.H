@@ -211,6 +211,7 @@ namespace Foam
                 label tmp_size_node;
                 label temp_tail_node;
                 label m_size_node;
+                std::atomic<int> leafN;
 
                 label root;
                 SharedPointer<Node> root_;
@@ -224,6 +225,8 @@ namespace Foam
             label &head_leaf;
             label &tail_leaf;
             label &temp_tail_leaf;
+
+            std::atomic<int> &leafN;
 
             label &size_node;
             label &head_node;
@@ -295,14 +298,19 @@ namespace Foam
 
             bool retrieve(const scalarField &x, scalarField &y);
 
+            bool retrieve(const scalarField &x, scalarField &y, SharedPointer<Leaf> &pleaf);
+
             // Check
 
             // Edit
             bool grow(const scalarField &x, SharedPointer<Leaf> &pleaf);
+            bool grow(SharedPointer<Leaf> &pleaf_out, const scalarField &x, SharedPointer<Leaf> &pleaf);
             //bool grow(const SList<scalar> &value);
 
             template <typename... Args>
             label add(const scalarField &x, const scalarField &y, Args... args);
+            template <typename... Args>
+            label add(SharedPointer<Leaf> &pleaf_out, bool &growsuc, const scalarField &x, const scalarField &y, Args... args);
             label add(const SList<scalar> &x);
             void report()
             {

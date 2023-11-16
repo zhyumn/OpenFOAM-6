@@ -140,7 +140,7 @@ namespace Foam
     class chemPointISATS
     {
         // Private data
-
+    public:
         //- Pointer to the chemistryModel object
         STDACChemistryModel<CompType, ThermoType> &chemistry_;
 
@@ -231,6 +231,7 @@ namespace Foam
             label n);
 
     public:
+        label SleafN;
         // Constructors
 
         //- Construct from components
@@ -250,6 +251,15 @@ namespace Foam
             const chemPointISATS<CompType, ThermoType> &p,
             binaryNodeS<CompType, ThermoType> *node);
 
+        chemPointISATS(STDACChemistryModel<CompType, ThermoType> &chemistry,
+                       const scalarField &phi,
+                       const scalarField &Rphi,
+                       const label &Asize,
+                       const scalarField &scaleFactor,
+                       const scalar &tolerance,
+                       const label &completeSpaceSize,
+                       const label &nActiveSpecies,
+                       const dictionary &coeffsDict);
         //- Construct from another chemPoint
         chemPointISATS(
             chemPointISATS<CompType, ThermoType> &p);

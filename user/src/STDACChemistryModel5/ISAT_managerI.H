@@ -1040,6 +1040,93 @@ bool Foam::chemistryTabulationMethodSs::ISAT_manager<CompType, ThermoType>::grow
         return false;
     }
 }
+
+template <class CompType, class ThermoType>
+void Foam::chemistryTabulationMethodSs::ISAT_manager<CompType, ThermoType>::copy(chemPointISATS<CompType, ThermoType> *plfL, SharedPointer<Leaf> pleaf)
+{
+
+    if (plfL->nActiveSpecies_ < pleaf->nActiveSpecies_)
+    {
+        int nadd = pleaf->nActiveSpecies_ - plfL->nActiveSpecies_;
+        plfL->nActiveSpecies_ = pleaf->nActiveSpecies_;
+
+        //plfL->nActiveSpecies_ += dimToAdd.size();
+        plfL->simplifiedToCompleteIndex_.setSize(plfL->nActiveSpecies_);
+        for (int i = 0; i < plfL->nActiveSpecies_; i++)
+        {
+            //label si = plfL->nActiveSpecies_ - nadd + i;
+            // add the new active species
+            plfL->simplifiedToCompleteIndex_[i] = pleaf->simplifiedToCompleteIndex_[i];
+            plfL->completeToSimplifiedIndex_[pleaf->simplifiedToCompleteIndex_[i]] = i;
+        }
+
+        plfL->LT_ = scalarSquareMatrix(plfL->nActiveSpecies_ + nAdditionalEqns_, Zero);
+        plfL->A_ = scalarSquareMatrix(plfL->nActiveSpecies_ + nAdditionalEqns_, Zero);
+    }
+    for (int i = 0; i < plfL->nActiveSpecies_ + nAdditionalEqns_; i++)
+        for (int j = 0; j < plfL->nActiveSpecies_ + nAdditionalEqns_; j++)
+        {
+            plfL->LT_(i, j) = pleaf->LT_(i, j);
+            plfL->A_(i, j) = pleaf->A_(i, j);
+        }
+}
+
+template <class CompType, class ThermoType>
+void Foam::chemistryTabulationMethodSs::ISAT_manager<CompType, ThermoType>::addL_in(const scalarField &phiq, const scalarField &Rphiq, SharedPointer<Leaf> &pleaf)
+{
+    chemPointISATS<CompType, ThermoType> *plfL = new chemPointISATS<CompType, ThermoType>(
+        chemisTree_.chemistry_,
+        phiq,
+        Rphiq,
+        pleaf->A_.size_,
+        chemisTree_.ISATmanager.scaleFactor_,
+        chemisTree_.tolerance_,
+        chemisTree_.ISATmanager.scaleFactor_.size(),
+        pleaf->nActiveSpecies_,
+        chemisTree_.coeffsDict_);
+
+    plfL->nActiveSpecies_ = pleaf->nActiveSpecies_;
+    plfL->timeTag_ = pleaf->timeTag_;
+    plfL->lastTimeUsed_ = plfL->timeTag_;
+    plfL->nAdditionalEqns_ = static_data::nAdditionalEqns_;
+    plfL->iddeltaT_ = static_data::iddeltaT_;
+
+    //Pout << "scaleFactor_.size=" << plfL->scaleFactor_.size() << "phi_.size=" << plfL->phi_.size() << endl;
+    if (static_data::variableTimeStep)
+    {
+        plfL->scaleFactor_[iddeltaT_] *= plfL->phi_[iddeltaT_] / plfL->tolerance_;
+    }
+
+    plfL->idT_ = static_data::idT_;
+    plfL->idp_ = static_data::idp_;
+
+    bool isMechRedActive = static_data::mechRedActive;
+
+    if (isMechRedActive)
+    {
+        for (label i = 0; i < static_data::completeSpaceSize_ - static_data::nAdditionalEqns_; i++)
+        {
+            plfL->completeToSimplifiedIndex_[i] =
+                pleaf->completeToSimplifiedIndex_[i];
+        }
+        plfL->simplifiedToCompleteIndex_.setSize(plfL->nActiveSpecies_);
+        for (label i = 0; i < plfL->nActiveSpecies_; i++)
+        {
+            plfL->simplifiedToCompleteIndex_[i] =
+                pleaf->simplifiedToCompleteIndex_[i];
+        }
+    }
+    plfL->LT_ = scalarSquareMatrix(plfL->nActiveSpecies_ + nAdditionalEqns_, Zero);
+    //plfL->A_ = scalarSquareMatrix(plfL->nActiveSpecies_ + nAdditionalEqns_, Zero);
+    for (int i = 0; i < plfL->nActiveSpecies_ + nAdditionalEqns_; i++)
+        for (int j = 0; j < plfL->nActiveSpecies_ + nAdditionalEqns_; j++)
+        {
+            plfL->LT_(i, j) = pleaf->LT_(i, j);
+            plfL->A_(i, j) = pleaf->A_(i, j);
+        }
+    plfL->SleafN = pleaf->SleafN;
+    chemisTree_.insertNewLeaf(phiq, plfL);
+}
 // * * * * * * * * * * * * * * Member Operators  * * * * * * * * * * * * * * //
 
 // * * * * * * * * * * * * * * Friend Functions  * * * * * * * * * * * * * * //
