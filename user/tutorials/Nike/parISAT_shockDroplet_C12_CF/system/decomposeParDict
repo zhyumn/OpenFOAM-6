@@ -15,13 +15,13 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-numberOfSubdomains 4;   //number of processes or blocks
+numberOfSubdomains 2;   //number of processes or blocks
 
 method          simple;    //block method
 
 simpleCoeffs
 {
-    n               (2 2 1);    //set for blocks: multiply n = numberOfSubdomains
+    n               (2 1 1);    //set for blocks: multiply n = numberOfSubdomains
     delta           0.001;      //cell skew factor
 }
 

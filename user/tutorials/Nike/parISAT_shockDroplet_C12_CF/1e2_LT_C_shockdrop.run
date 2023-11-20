@@ -2,7 +2,7 @@
 # HEADER for Parallel job using 80 processors:
 #SBATCH --nodes=1           # number of nodes
 #SBATCH --exclusive
-#SBATCH --ntasks-per-node=1    # number of processors per node
+#SBATCH --ntasks-per-node=2    # number of processors per node
 #SBATCH --cpus-per-task=1       # number of cpus per task
 #SBATCH -t 148:00:00      # run for 3 hr max
 #SBATCH --partition=ROME
@@ -31,7 +31,7 @@
 #rm -r 1e-05
 #sed -i 's/endTime         1e-05;/endTime         0.005;/' system/controlDict 
 #decomposePar -latestTime -force
-rhoCentralRealgasFoam
+mpirun -n 2 parRhoCentralRealgasFoam -parallel
 #reconstructParMesh -newTimes
 #reconstructPar -newTimes
 #reconstructPar -latestTime
