@@ -1,3 +1,3 @@
 parReactingFoam.C
 
-EXE = $(FOAM_APPBIN)/parReactingFoam
+EXE = $(FOAM_USER_APPBIN)/parReactingFoam

@@ -1,3 +1,0 @@
-parReactingFoam.C
-
-EXE = $(FOAM_APPBIN)/parReactingFoamDEV
