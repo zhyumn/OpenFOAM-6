@@ -273,10 +273,14 @@ namespace Foam
                 {
                     tree.add(pleaf_out, growsuc, phiq, Rphiq, rho, deltaT);
                     if (pleaf_out.notNULL())
+                    {
                         addL_in(phiq, Rphiq, pleaf_out);
+                        return true;
+                    }
                     else
                     {
                         chemisTree_.add(phiq, Rphiq, rho, deltaT);
+                        return true;
                     }
                 }
                 else
@@ -293,14 +297,18 @@ namespace Foam
 
                     {
                         if (pleaf_out.notNULL())
+                        {
                             addL_in(phiq, Rphiq, pleaf_out);
+                            return true;
+                        }
                         else
                         {
                             chemisTree_.add(phiq, Rphiq, rho, deltaT);
+                            return true;
                         }
                     }
                 }
-
+                return false;
                 /* #ifdef ISATcache
                 chemisTree_.add(phiq, Rphiq, rho, deltaT);
 
