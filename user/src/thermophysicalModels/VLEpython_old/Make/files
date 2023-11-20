@@ -1,4 +1,0 @@
-VLEinterface_wrap.C
-VLEinterface.C
-
-LIB = $(FOAM_USER_PY)/_VLE

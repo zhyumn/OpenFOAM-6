@@ -1,4 +1,0 @@
-parallelISAT_1D.C
-functionTabulation.C
-
-LIB = $(FOAM_USER_LIBBIN)/libParallelISATfuncSlab

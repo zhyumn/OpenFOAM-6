@@ -1,4 +1,0 @@
-
-VLEheRhoThermos.C
-
-LIB = $(FOAM_USER_LIBBIN)/libVLEheRhoThermoDEV

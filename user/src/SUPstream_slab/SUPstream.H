@@ -128,6 +128,13 @@ namespace Foam
                 sync();
             }
         };
+
+        template <typename T>
+        struct padded
+        {
+            label var;
+            char m_pad[CacheLineSize - sizeof(T)];
+        };
         struct padded_atomic_flag
         {
             std::atomic_flag var;
@@ -177,50 +184,6 @@ namespace Foam
             void unlock() { flag.clear(std::memory_order_release); }
         };
 
-        class my_room
-        {
-            std::atomic_flag &flag;
-            std::atomic<int> &p_in_room;
-
-        public:
-            my_room(std::atomic_flag *ptr, std::atomic<int> *ptr2, mpi_sync &sync_in)
-                : flag(*ptr), p_in_room(*ptr2)
-            {
-                if (sync_in.manager.rank == 0)
-                {
-                    flag.clear();
-                    p_in_room = 0;
-                }
-                sync_in.sync();
-            }
-            void lock()
-            {
-                while (flag.test_and_set(std::memory_order_acquire))
-                    ;
-            }
-            void unlock() { flag.clear(std::memory_order_release); }
-            void enter()
-            {
-                while (flag.test_and_set(std::memory_order_acquire))
-                    ;
-                p_in_room++;
-                flag.clear(std::memory_order_release);
-            }
-            void exit() { p_in_room--; }
-            void give_back()
-            {
-                flag.clear(std::memory_order_release);
-                p_in_room--;
-            }
-            void require_empty_room()
-            {
-                while (flag.test_and_set(std::memory_order_acquire))
-                    ;
-                while (p_in_room != 0)
-                    ;
-                p_in_room++;
-            }
-        };
         template <typename Datatype>
         class shared_data
         {
@@ -295,7 +258,52 @@ namespace Foam
             bool try_lock() { return mutex_.try_lock(); }
         };
 
-        class mpi_room
+        /*class my_room
+        {
+            std::atomic_flag &flag;
+            std::atomic<int> &p_in_room;
+
+        public:
+            my_room(std::atomic_flag *ptr, std::atomic<int> *ptr2, mpi_sync &sync_in)
+                : flag(*ptr), p_in_room(*ptr2)
+            {
+                if (sync_in.manager.rank == 0)
+                {
+                    flag.clear();
+                    p_in_room = 0;
+                }
+                sync_in.sync();
+            }
+            void lock()
+            {
+                while (flag.test_and_set(std::memory_order_acquire))
+                    ;
+            }
+            void unlock() { flag.clear(std::memory_order_release); }
+            void enter()
+            {
+                while (flag.test_and_set(std::memory_order_acquire))
+                    ;
+                p_in_room++;
+                flag.clear(std::memory_order_release);
+            }
+            void exit() { p_in_room--; }
+            void give_back()
+            {
+                flag.clear(std::memory_order_release);
+                p_in_room--;
+            }
+            void require_empty_room()
+            {
+                while (flag.test_and_set(std::memory_order_acquire))
+                    ;
+                while (p_in_room != 0)
+                    ;
+                p_in_room++;
+            }
+        };*/
+
+        /*class mpi_room
         {
             shared_data<std::atomic_flag> flag_shared;
             shared_data<std::atomic<int>> a_int_shared;
@@ -310,7 +318,7 @@ namespace Foam
             void exit() { room_.exit(); }
             void give_back() { room_.give_back(); }
             void require_empty_room() { room_.require_empty_room(); }
-        };
+        };*/
 
     public:
         // Static data members

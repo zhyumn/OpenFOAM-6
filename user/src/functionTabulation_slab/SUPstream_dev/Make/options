@@ -1,6 +1,0 @@
-EXE_INC = \
-    -Wno-old-style-cast \
-    -I$(LIB_SRC)/finiteVolume/lnInclude
-
-EXE_LIBS = \
-    -lfiniteVolume

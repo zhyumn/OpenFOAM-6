@@ -1,4 +1,0 @@
-swig3.0 -python -c++ -o VLEinterface_wrap.C VLEinterface.i
-wmake
-mv VLE.py $FOAM_USER_PY/VLE.py
-rm VLEinterface_wrap.C

@@ -1,7 +1,0 @@
-
-parISATleaf.C
-parISATbinaryTree.C
-parISATNode.C
-ISATVLERhoThermos.C
-
-LIB = $(FOAM_USER_LIBBIN)/libparISATVLERhoThermo_NoRxn
