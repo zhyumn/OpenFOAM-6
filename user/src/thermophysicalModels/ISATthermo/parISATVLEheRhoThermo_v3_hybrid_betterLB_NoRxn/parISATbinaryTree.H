@@ -46,12 +46,10 @@ Description
 #define parISATbinaryTree_H
 
 #include "dictionary.H"
-//#include "ISATleaf.H"
 #include "parISATNode.H"
 #include "List2D.H"
 #include "SUPstream.H"
-//#include "binaryNode.H"
-//#include "chemPointISAT.H"
+
 
 namespace Foam
 {
@@ -60,7 +58,6 @@ namespace Foam
 
     class parISATNode;
 
-    //template<class CompType, class ThermoType>
 
     class parISATbinaryTree
     {
@@ -83,21 +80,12 @@ namespace Foam
         label preAllocateLeaf;
         label preAllocateNode;
 
-        //labelList 2dlist_s;
-
-        //SUPstream::shared_data<label> emptylist_leaf;
-        //SUPstream::shared_data<label> emptylist_node;
-
-        //SUPstream::shared_data<label> reuselist_leaf;
-        //SUPstream::shared_data<label> reuselist_node;
-
-        SUPstream::shared_data<label> pemptylist_node;
         SUPstream::shared_data<label> pemptylist_leaf;
+        SUPstream::shared_data<label> pemptylist_node;
 
         template <class Type>
         class Mem_manager
         {
-            // SUPstream::shared_data<label> &emptylist_;
 
             label pemptylist_;
             labelList reuselist_;
@@ -145,24 +133,9 @@ namespace Foam
                 (*SharedPointer<Type>(ret)).init(n_in_, n_out_);
                 return SharedPointer<Type>(ret);
             }
-            /*             inline SharedPointer<Type> New(const Type &x)
-            {
-                size_++;
-                auto ret = pslab->alloc(sizeof(Type));
-                if (ret == sptr_NULL)
-                {
-                    FatalErrorInFunction << "Run out of memory\n"
-                                         << exit(FatalError);
-                }
-                (*SharedPointer<Type>(ret)).init(n_in_, n_out_);
-                return SharedPointer<Type>(ret);
-            } */
             inline void Delete(SharedPointer<Type> &in)
             {
                 size_--;
-                //tmp_size_++;
-                //emptylist_[tail_++] = in.offset;
-                //tail_++;
                 in->setNext(pemptylist_);
                 pemptylist_ = in.offset;
             }
@@ -173,16 +146,13 @@ namespace Foam
 
                 SharedPointer<Type> ptr, tmp;
                 ptr.offset = pemptylist_;
-                while (ptr.offset != -1)
+                while (ptr.notNULL())
                 {
                     tmp = ptr;
                     ptr.offset = ptr->next();
                     tmp->Delete();
                     pslab->free(sizeof(Type), tmp.offset);
                 }
-
-                //Pout << "tail_ =  " << tail_<<endl;
-
                 tail_ = 0;
                 pemptylist_ = -1;
             }
@@ -191,11 +161,10 @@ namespace Foam
             {
                 if (reuse_tail_ < 0)
                     reuse_tail_ = 0;
-                //tmp_size_ = 0;
                 while (reuse_tail_ < reuse_N && tail_ > 0)
                 {
                     tail_--;
-                    reuselist_[reuse_tail_] = pemptylist_; //emptylist_[tail_];
+                    reuselist_[reuse_tail_] = pemptylist_;
                     pemptylist_ = SharedPointer<Type>(pemptylist_)->next();
                     SharedPointer<Type>(reuselist_[reuse_tail_])->reuse();
                     reuse_tail_++;
@@ -211,42 +180,32 @@ namespace Foam
             {
                 std::cout << "Mem_manager" << std::endl;
                 std::cout << " Used:" << size_ * sizeof(Type) << std::endl;
-                //std::cout << "Total:" << (tmp_size_ + size_) * sizeof(Type) << " Used:" << size_ * sizeof(Type) << " Temp:" << (tail_) * sizeof(Type) << std::endl;
             }
         };
 
         struct Private_variable
         {
             std::atomic<label> size_leaf;
-            label head_leaf;
-            label tail_leaf;
-            label tmp_size_leaf;
-            //label temp_tail_leaf;
-            label m_size_leaf;
+           // label head_leaf;
+            //label tail_leaf;
+            //label tmp_size_leaf;
+            //label m_size_leaf;
 
             std::atomic<label> size_node;
-            label heaf_node;
+            //label heaf_node;
             label tail_node;
-            label tmp_size_node;
+            //label tmp_size_node;
             //label temp_tail_node;
-            label m_size_node;
+            //label m_size_node;
 
-            std::atomic<label> NRetrieved;
-            std::atomic<label> NGrowth;
-            std::atomic<label> NAdd;
-            std::atomic<label> NCall;
+           // std::atomic<label> NRetrieved;
+            //std::atomic<label> NGrowth;
+            //std::atomic<label> NAdd;
+            //std::atomic<label> NCall;
 
             std::atomic<label> SN;
-            /*             std::atomic<label> NF1;
-            std::atomic<label> NF2;
-            std::atomic<label> NF3;
-            std::atomic<label> NF4;
-            std::atomic<label> NF5;
-            std::atomic<label> NF6;
-            std::atomic<label> NF7; */
-            //label root;
+
             SharedPointer<parISATNode> root_;
-            //std::atomic<size_t> root_;
 
             label totalGrowth;
         };
@@ -260,7 +219,7 @@ namespace Foam
 
         SUPstream::shared_data<Private_variable> pv_;
         std::atomic<label> &size_leaf_;
-        label &head_leaf;
+        //label &head_leaf;
         //label &tail_leaf;
 
         SUPstream::shared_data<padded_atomic<int>> stail_leaf;
@@ -268,17 +227,17 @@ namespace Foam
         SUPstream::shared_data<padded_atomic<int>> stmp_size_leaf;
 
         std::atomic<label> &size_node;
-        label &head_node;
+        //label &head_node;
         // label &tail_node;
 
         SUPstream::shared_data<padded_atomic<int>> stail_node;
         SUPstream::shared_data<padded_atomic<int>> ssize_node;
         SUPstream::shared_data<padded_atomic<int>> stmp_size_node;
 
-        std::atomic<label> &NRetrieved;
-        std::atomic<label> &NGrowth;
-        std::atomic<label> &NAdd;
-        std::atomic<label> &NCall;
+        //std::atomic<label> &NRetrieved;
+        //std::atomic<label> &NGrowth;
+        //std::atomic<label> &NAdd;
+        //std::atomic<label> &NCall;
 
         label NRetrievedL;
         label NGrowthL;
@@ -286,13 +245,6 @@ namespace Foam
         label NCallL;
 
         std::atomic<label> &SN;
-        /*         std::atomic<label> &NF1;
-        std::atomic<label> &NF2;
-        std::atomic<label> &NF3;
-        std::atomic<label> &NF4;
-        std::atomic<label> &NF5;
-        std::atomic<label> &NF6;
-        std::atomic<label> &NF7; */
 
         SUPstream::mpi_mutex write_lock;
         SUPstream::mpi_mutex mem_lock;
@@ -302,8 +254,6 @@ namespace Foam
 
         label n_in_;
         label n_out_;
-        //- Reference to the chemistryModel
-        // TDACChemistryModel<CompType, ThermoType>& chemistry_;
 
         //- Root node of the binary tree
         SharedPointer<parISATNode> &root_;
@@ -317,10 +267,6 @@ namespace Foam
         label maxNLeafs_;
         SUPstream::shared_data<label> smaxNLeafs_;
 
-        //- Size of the BST (= number of chemPoint stored)
-        //label size_;
-
-        //List2D<ISATleaf> timeTagList_;
 
         void insertNode(
             SharedPointer<parISATleaf> &phi0,
@@ -342,32 +288,26 @@ namespace Foam
             : manager_(SUPstream::node_manager), sync_(SUPstream::Sync),
               preAllocateLeaf(readLabel(ISATDict.lookup("preAllocateLeaf"))),
               preAllocateNode(readLabel(ISATDict.lookup("preAllocateNode"))),
-              //emptylist_leaf(manager_, 100000), emptylist_node(manager_, 100000),
               pemptylist_leaf(manager_), pemptylist_node(manager_),
-              //reuselist_leaf(manager_, manager_.size * preAllocateLeaf), reuselist_node(manager_, manager_.size * preAllocateNode), // 20 100
               pv_(manager_),
-              size_leaf_(pv_().size_leaf), head_leaf(pv_().head_leaf),
-              //tail_leaf(pv_().tail_leaf),
+              size_leaf_(pv_().size_leaf), //head_leaf(pv_().head_leaf),
               stail_leaf(SUPstream::node_manager),
               ssize_leaf(SUPstream::node_manager),
               stmp_size_leaf(SUPstream::node_manager),
-              size_node(pv_().size_node), head_node(pv_().heaf_node),
-              //tail_node(pv_().tail_node),
+              size_node(pv_().size_node), //head_node(pv_().heaf_node),
               stail_node(SUPstream::node_manager),
               ssize_node(SUPstream::node_manager),
               stmp_size_node(SUPstream::node_manager),
-              NRetrieved(pv_().NRetrieved), NGrowth(pv_().NGrowth), NAdd(pv_().NAdd), NCall(pv_().NCall),
+              //NRetrieved(pv_().NRetrieved), 
+              //NGrowth(pv_().NGrowth), NAdd(pv_().NAdd), NCall(pv_().NCall),
               NRetrievedL(0), NGrowthL(0), NAddL(0), NCallL(0),
               SN(pv_().SN),
-              smaxNLeafs_(manager_),
-              /*               NF1(pv_().NF1), NF2(pv_().NF2), NF3(pv_().NF3),
-              NF4(pv_().NF4), NF5(pv_().NF5), NF6(pv_().NF6),
-              NF7(pv_().NF7), */
               write_lock(manager_, sync_), mem_lock(manager_, sync_),
               leaf_manager(pemptylist_leaf, preAllocateLeaf, in_n, out_n, stail_leaf().var, ssize_leaf().var),
               node_manager(pemptylist_node, preAllocateNode, in_n, out_n, stail_node().var, ssize_node().var),
               n_in_(in_n), n_out_(out_n), root_(pv_().root_), NtimeTag_(readLabel(ISATDict.lookup("NtimeTag"))),
-              start_s(NtimeTag_), N_s(NtimeTag_) //, size_(0) //, timeTagList_(readLabel(ISATDict.lookup("NtimeTag")))
+              start_s(NtimeTag_), N_s(NtimeTag_),
+              smaxNLeafs_(manager_)
         {
 
             label timeTagList = readLabel(ISATDict.lookup("NtimeTag"));
@@ -411,20 +351,13 @@ namespace Foam
             if (manager_.rank == 0)
             {
                 root_.setNULL();
-                NRetrieved = 0;
-                NGrowth = 0;
-                NAdd = 0;
-                NCall = 0;
+                //NRetrieved = 0;
+                //NGrowth = 0;
+                //NAdd = 0;
+                //NCall = 0;
 
-                SN = 0;
+                SN = 1;
                 smaxNLeafs_() = maxNLeafs_;
-                /*                 NF1 = 0;
-                NF2 = 0;
-                NF3 = 0;
-                NF4 = 0;
-                NF5 = 0;
-                NF6 = 0;
-                NF7 = 0; */
             }
             sync_.sync();
 

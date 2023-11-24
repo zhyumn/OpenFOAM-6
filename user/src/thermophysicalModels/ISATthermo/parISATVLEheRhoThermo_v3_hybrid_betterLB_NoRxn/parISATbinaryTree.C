@@ -161,65 +161,6 @@ Foam::label Foam::parISATbinaryTree::depth(SharedPointer<parISATNode> &subTreeRo
     }
 }
 
-/* Foam::SharedPointer<Foam::parISATleaf>  Foam::parISATbinaryTree::insertNewLeaf(
-    const scalarList &value,
-    const scalarList &data)
-{
-    SharedPointer<parISATleaf> newleaf;
-    if (size() == 0) // no points are stored
-    {
-        // create an empty binary node and point root_ to it
-        //root_ = new ISATNode();
-        root_ = node_manager.New(); //new ISATNode();
-        // create the new chemPoint which holds the composition point
-        // phiq and the data to initialize the EOA
-        newleaf = leaf_manager.New(); //new ISATleaf(n_in_, n_out_, value, root_, data);
-        newleaf.init(n_in_, n_out_, value, root_, data);
-        root_->leafLeft_ = newleaf;
-    }
-    else // at least one point stored
-    {
-        // no reference chemPoint, a BT search is required
-
-        SharedPointer<parISATleaf> pleaf;
-        binaryTreeSearch(value, root_, pleaf);
-
-        // access to the parent node of the chemPoint
-        SharedPointer<parISATNode> parentNode = pleaf->node_;
-
-        // create the new chemPoint which holds the composition point
-        // phiq and the data to initialize the EOA
-        newleaf = leaf_manager.New(); //new ISATleaf(n_in_, n_out_, value, nullptr, data);
-        newleaf.init(n_in_, n_out_, value, root_, data);
-        // insert new node on the parent node in the position of the
-        // previously stored leaf (phi0)
-        // the new node contains phi0 on the left and phiq on the right
-        // the hyper plane is computed in the binaryNode constructor
-        SharedPointer<parISATNode> newNode;
-        if (size() > 1)
-        {
-            newNode = node_manager.New(); // new ISATNode(pleaf, newleaf, parentNode);
-            newNode.init(pleaf, newleaf, parentNode);
-            // make the parent of phi0 point to the newly created node
-            insertNode(pleaf, newNode);
-        }
-        else // size() == 1 (because not equal to 0)
-        {
-            // when size is 1, the binaryNode is without hyperplane
-            deleteDemandDrivenData(root_);
-            newNode = node_manager.New(); //new ISATNode(pleaf, newleaf, nullptr);
-            newNode.init(pleaf, newleaf, nullptr);
-            root_ = newNode;
-        }
-
-        pleaf->node_ = newNode;
-        newleaf->node_ = newNode;
-    }
-    size_leaf_++;
-    //newleaf->pTimeTagList_ = timeTagList_.insert(newleaf);
-    //heap_.insert(newleaf);
-    return newleaf;
-} */
 
 void Foam::parISATbinaryTree::binaryTreeSearch(
     const scalarList &value,
@@ -362,10 +303,6 @@ void Foam::parISATbinaryTree::deleteSubTree(SharedPointer<parISATNode> subTreeRo
         deleteSubTree(subTreeRoot->nodeRight_);
         node_manager.Delete(subTreeRoot);
 
-        //deleteDemandDrivenData(subTreeRoot->leafLeft_);
-        //deleteDemandDrivenData(subTreeRoot->leafRight_);
-
-        //deleteDemandDrivenData(subTreeRoot);
     }
 }
 
@@ -376,7 +313,6 @@ void Foam::parISATbinaryTree::deleteSubTree_Node(SharedPointer<parISATNode> subT
         deleteSubTree_Node(subTreeRoot->nodeLeft_);
         deleteSubTree_Node(subTreeRoot->nodeRight_);
         node_manager.Delete(subTreeRoot);
-        //deleteDemandDrivenData(subTreeRoot);
     }
 }
 
@@ -404,8 +340,7 @@ void Foam::parISATbinaryTree::deleteLeaf(SharedPointer<parISATleaf> pleaf)
     {
         leaf_manager.Delete(pleaf);
         node_manager.Delete(root_);
-        //deleteDemandDrivenData(pleaf);
-        //deleteDemandDrivenData(root_);
+
     }
     else if (size() > 1)
     {
@@ -455,10 +390,8 @@ void Foam::parISATbinaryTree::deleteLeaf(SharedPointer<parISATleaf> pleaf)
                     << exit(FatalError);
             }
         }
-        //deleteDemandDrivenData(pleaf);
         leaf_manager.Delete(pleaf);
         node_manager.Delete(z);
-        //deleteDemandDrivenData(z);
     }
     size_leaf_--;
 }
@@ -646,7 +579,7 @@ void Foam::parISATbinaryTree::clean(scalar timestep)
             << "lastUsed is wrong"
             << exit(FatalError);
     }
-    int timeN = timestep - 1;
+    //int timeN = timestep - 1;
 
     start_s[0] = 0;
 

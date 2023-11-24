@@ -4,7 +4,7 @@ SBasicChemistryModels.C
 makeChemistrySolversS.C
 
 staticData.C
-parISATleaf.C
+parISATleafNode.C
 reduction/makeChemistryReductionMethodSs.C
 tabulation/makeChemistryTabulationMethodSs.C
 

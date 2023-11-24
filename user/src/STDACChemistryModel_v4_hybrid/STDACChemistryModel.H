@@ -302,7 +302,7 @@ namespace Foam
 
         SUPstream::shared_data2<scalar []> ja_RY;
         //jobArray *ja;
-        label ja_size;
+        //label ja_size;
         jobArray2 ja_loc;
         scalar *ja_loc_RY;
         template <typename T>

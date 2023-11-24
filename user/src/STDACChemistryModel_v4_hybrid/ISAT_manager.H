@@ -37,7 +37,7 @@ SourceFiles
 #include <iostream>
 #include "parData.H"
 #include "slab.H"
-#include "parISATleaf.H"
+#include "parISATleafNode.H"
 #include "binaryTreeS2.H"
 #include "chemPointISATS.H"
 #define ISATcache
@@ -68,10 +68,9 @@ namespace Foam
         {
         public:
             parallelISAT<ISAT_manager<CompType, ThermoType>> tree;
-#ifdef ISATcache
+
             binaryTreeS<CompType, ThermoType> chemisTree_;
 
-#endif
             bool cleaningRequired_;
 
             //- Number of equations in addition to the species eqs.
@@ -192,10 +191,10 @@ namespace Foam
                     sizeFile_()
                         << runTime_.timeOutputValue() << "    " << size() << endl;
 
-                    totalGrowthFile_()
-                        << runTime_.timeOutputValue() << "    " << tree.totalGrowth_ << endl;
+                    //totalGrowthFile_()
+                    //    << runTime_.timeOutputValue() << "    " << tree.totalGrowth_ << endl;
                     tree.sync_.sync();
-                    tree.totalGrowth_ = 0;
+                    //tree.totalGrowth_ = 0;
                 }
             }
 
@@ -217,7 +216,6 @@ namespace Foam
                     {
                         return true;
                     }
-#ifdef ISATcache
                     else
                     {
                         if (tree.size_leaf_ != 0)
@@ -247,7 +245,6 @@ namespace Foam
                             }
                         }
                     }
-#endif
                 }
                 return false;
             };

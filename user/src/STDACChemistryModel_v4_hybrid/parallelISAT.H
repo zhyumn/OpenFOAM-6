@@ -41,7 +41,7 @@ SourceFiles
 #include "IOstreams.H"
 #include "slab.H"
 #include "parData.H"
-#include "parISATleaf.H"
+#include "parISATleafNode.H"
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 namespace Foam
@@ -75,8 +75,8 @@ namespace Foam
             SUPstream::mpi_manager &manager_;
             SUPstream::mpi_sync &sync_;
             label maxNLeafs_;
-            label nmem_leaf_;
-            label nmem_node_;
+            //label nmem_leaf_;
+            //label nmem_node_;
 
             scalar tolerance_;
 
@@ -87,46 +87,6 @@ namespace Foam
 
             //- Disallow default bitwise assignment
             void operator=(const parallelISAT &);
-            /* struct Node;
-            struct Leaf : public leafData
-            {
-                SharedPointer<Node> node_2;
-                void init(const Leaf &x)
-                {
-                    leafData::init(x);
-                    node_2 = x.node_2;
-                }
-                void init(int x)
-                {
-                    leafData::init(x);
-                }
-            };
-            struct Node : public nodeData
-            {
-
-                SharedPointer<Leaf> leafLeft_;
-
-                //- Element on the right
-                SharedPointer<Leaf> leafRight_;
-
-                //- Node which follows on the left
-
-                //first check node
-                SharedPointer<Node> nodeLeft_;
-
-                //- Node which follows on the right
-                SharedPointer<Node> nodeRight_;
-
-                //- Parent node  Only for write
-                SharedPointer<Node> parent_;
-
-                SUPstream::ref_mutex mutex;
-
-                //- Number of equations in addition to the species eqs.
-            }; */
-
-            //SUPstream::shared_data<label> emptylist_leaf;
-            //SUPstream::shared_data<label> emptylist_node;
 
             template <class Type>
             class Mem_manager
@@ -135,10 +95,10 @@ namespace Foam
                 //SUPstream::shared_data<label> &emptylist_;
                 label &tail_;
                 label &size_;
-                label &tmp_size_;
+                //label &tmp_size_;
 
             public:
-                Mem_manager(label &tail_in, label &size_in, label &tmp_size_in) : pemptylist_(-1), tail_(tail_in), size_(size_in), tmp_size_(tmp_size_in) { tail_ = 0; }
+                Mem_manager(label &tail_in, label &size_in /*, label &tmp_size_in*/) : pemptylist_(-1), tail_(tail_in), size_(size_in) /*, tmp_size_(tmp_size_in)*/ { tail_ = 0; }
                 inline SharedPointer<Type> New(int size_in)
                 {
                     size_++;
@@ -190,52 +150,52 @@ namespace Foam
                     //tail_ = 0;
                     pemptylist_ = -1;
                 }
-                inline void report()
+                /*                 inline void report()
                 {
                     std::cout << "Mem_manager" << std::endl;
                     std::cout << "Total:" << (tmp_size_ + size_) * sizeof(Type) << " Used:" << size_ * sizeof(Type) << " Temp:" << (tmp_size_) * sizeof(Type) << std::endl;
-                }
+                } */
             };
             struct Private_variable
             {
                 label size_leaf;
-                label head_leaf;
+                //label head_leaf;
                 label tail_leaf;
                 label tmp_size_leaf;
-                label temp_tail_leaf;
+                //label temp_tail_leaf;
                 label m_size_leaf;
 
                 label size_node;
-                label heaf_node;
+                //label heaf_node;
                 label tail_node;
                 label tmp_size_node;
-                label temp_tail_node;
+                //label temp_tail_node;
                 label m_size_node;
                 std::atomic<int> leafN;
 
-                label root;
+                //label root;
                 SharedPointer<Node> root_;
                 //std::atomic<size_t> root_;
 
-                label totalGrowth;
+                //label totalGrowth;
             };
 
             SUPstream::shared_data<Private_variable> pv_;
             label &size_leaf_;
-            label &head_leaf;
+            //label &head_leaf;
             label &tail_leaf;
-            label &temp_tail_leaf;
+            //label &temp_tail_leaf;
 
             std::atomic<int> &leafN;
 
             label &size_node;
-            label &head_node;
+            //label &head_node;
             label &tail_node;
-            label &temp_tail_node;
+            //label &temp_tail_node;
 
             SharedPointer<Node> &root_;
             //std::atomic<size_t> *root_atomic;
-            label &totalGrowth_;
+            //label &totalGrowth_;
 
             SUPstream::mpi_mutex write_lock;
             SUPstream::mpi_mutex mem_lock;
@@ -260,7 +220,7 @@ namespace Foam
 
             //- Construct from components
             template <typename... Args>
-            parallelISAT(T &ISATmanager_in, SUPstream::mpi_manager &manager_in, label nmem, label maxNleafs, SUPstream::mpi_sync &sync_in, Args... args);
+            parallelISAT(T &ISATmanager_in, SUPstream::mpi_manager &manager_in, /*label nmem,*/ label maxNleafs, SUPstream::mpi_sync &sync_in, Args... args);
 
             //- Construct from Istream
             //ISAT(Istream&);
@@ -285,8 +245,8 @@ namespace Foam
             SharedPointer<Leaf> binaryTreeSearch(const scalarField &value);
             SharedPointer<Leaf> binaryTreeSearch(const scalarField &value, SharedPointer<Node> node_index);
             SharedPointer<Leaf> binaryTreeSearch(const scalarField &value, SharedPointer<Node> node_index, SharedPointer<Node> &node_ret, int &side);
-            void writeDot(string name);
-            void writeDot(label nodeindex, std::ofstream &fout);
+            //void writeDot(string name);
+            //void writeDot(label nodeindex, std::ofstream &fout);
             /*             scalar leafvalue(SharedPointer<Leaf> index)
             {
                 if (index.isNULL())
@@ -311,15 +271,15 @@ namespace Foam
             label add(const scalarField &x, const scalarField &y, Args... args);
             template <typename... Args>
             label add(SharedPointer<Leaf> &pleaf_out, bool &growsuc, const scalarField &x, const scalarField &y, Args... args);
-            label add(const SList<scalar> &x);
-            void report()
+            //label add(const SList<scalar> &x);
+/*             void report()
             {
                 std::cout << "----------------------- report " << size_leaf_ << std::endl;
                 pslab->report();
                 leaf_manager.report();
                 node_manager.report();
                 std::cout << "-----------------------  " << std::endl;
-            }
+            } */
             bool update()
             {
                 //report();
@@ -415,7 +375,7 @@ namespace Foam
                     ret = ret && (root_->nodeRight_.isNULL());
                     ret = ret && (root_->leafRight_.isNULL());
                     ret = ret && (root_->parent_.isNULL());
-                    ret = ret && (root_->leafLeft_->node_2 == root_);
+                    ret = ret && (root_->leafLeft_->node_ == root_);
                     if (ret == false)
                     {
                         FatalErrorInFunction

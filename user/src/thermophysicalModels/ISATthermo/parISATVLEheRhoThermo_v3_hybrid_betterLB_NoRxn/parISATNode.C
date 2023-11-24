@@ -80,8 +80,8 @@ Foam::parISATNode::parISATNode(
       leafRight_(elementRight),
       nodeLeft_(nullptr),
       nodeRight_(nullptr),
-      parent_(parent)//,
-      //v_(0)
+      parent_(parent) //,
+                      //v_(0)
 {
     mutex.unlock();
     calcV(elementLeft, elementRight, v_);
@@ -106,26 +106,6 @@ Foam::parISATNode::parISATNode(
         leafRight_ = elementLeft;
     }
 }
-
-/* Foam::parISATNode::parISATNode(
-    SharedPointer<parISATleaf> &elementLeft,
-    SharedPointer<parISATleaf> &elementRight,
-    SharedPointer<parISATNode> &parent,
-    int dir)
-    : leafLeft_(nullptr),
-      leafRight_(nullptr),
-      nodeLeft_(nullptr),
-      nodeRight_(nullptr),
-      parent_(parent)//,
-      //v_(0)
-{
-    v_.resize(elementRight->value().size());
-
-    for (int i = 0; i < v_.size(); i++)
-        v_[i] = 0;
-    v_[dir] = 1.0;
-    a_ = calcA(elementLeft, elementRight);
-} */
 
 // * * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * //
 

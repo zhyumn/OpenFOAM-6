@@ -138,12 +138,7 @@ void Foam::ISATmanager<FuncType>::addL_in(const scalarList &value, scalarList &o
         }
     pleaf->SleafN = pleaf_in->SleafN;
     nRAdd3_++;
-    //pfunc->derive(value, out, pleaf->A(), arg...);
-
-    //pleaf->EOA() = scaleIn_ * (initToleranceIn2_ + (pleaf->A()) * toleranceOut2_ * (pleaf->A().T())) * scaleIn_;
     modified_ = true;
-
-    //nRAdd_++;
 }
 
 template <class FuncType>
@@ -159,15 +154,12 @@ void Foam::ISATmanager<FuncType>::add(const scalarList &value, scalarList &out, 
     static scalarRectangularMatrix EOA_tmp(Ninput, Ninput);
 
     SharedPointer<parISATleaf> pleaf;
-    /*     while (T.size() >= T.maxNLeafs())
-    {
-        T.deleteLeaf(T.timeTagList().pop());
-    } */
+
     if (T.size() >= T.maxNLeafs())
     {
         return;
     }
-    //pleaf = T.insertNewLeaf(value, out);
+
     if (T.size() == 0)
     {
         T.write_lock.lock();
@@ -197,12 +189,13 @@ void Foam::ISATmanager<FuncType>::add(const scalarList &value, scalarList &out, 
             pnode->nodeRight_.setNULL();
             pnode->leafLeft_ = pleaf;
             pnode->leafRight_.setNULL();
-            //pnode->set();
 
             pleaf->node_ = pnode;
             pleaf->set(value, pnode, out);
             pleaf->lastUsed = timeSteps_;
             pleaf_out.offset = pleaf.offset;
+            pleaf->SleafN = T.SN;
+            T.SN++;
             pfunc->derive(value, out, pleaf->A_, arg...);
 
             for (int i = 0; i < Ninput; i++)
@@ -211,8 +204,6 @@ void Foam::ISATmanager<FuncType>::add(const scalarList &value, scalarList &out, 
                     A_tmp[i][j] = pleaf->A_(i, j);
                 }
             EOA_tmp = scaleIn_ * (initToleranceIn2_ + (A_tmp)*toleranceOut2_ * (A_tmp.T())) * scaleIn_;
-            //Pout << "!!!!!!~~~" << A_tmp << "," << Ninput << "," << Noutput << endl;
-            //auto xx = A_tmp * toleranceOut2_;
             for (int i = 0; i < Ninput; i++)
                 for (int j = 0; j < Ninput; j++)
                 {
@@ -223,14 +214,12 @@ void Foam::ISATmanager<FuncType>::add(const scalarList &value, scalarList &out, 
             T.size_node++;
             modified_ = true;
             nRAdd_++;
-            //T.NAdd++;
 
             T.write_lock.unlock();
             return;
         }
         else
         {
-            //T.NF1++;
             T.write_lock.unlock();
         }
     }
@@ -238,18 +227,14 @@ void Foam::ISATmanager<FuncType>::add(const scalarList &value, scalarList &out, 
     int ret_side; // 0 left, 1 right
     SharedPointer<parISATleaf> pleaf2;
 
-    //Pout << "!!!!!!herexxxzzz0" << endl;
     T.binaryTreeSearch(value, SharedPointer<parISATNode>(root_atomic->load(std::memory_order_acquire)), pleaf2, parentNode, ret_side);
 
     if (pleaf2.isNULL() || pleaf2->inEOA(value, scaleIn_)) //pleaf2.isNULL() is necessary
     {
-        //T.NF2++;
         return;
     }
-    //Pout << "!!!!!!herexxxzzz1" << endl;
     if (growflag == true && (*parentNode).mutex.try_lock())
     {
-        //Pout << "!!!!!!herexxxzzz1==" << T.size() << endl;
         bool tmp_flag = false;
         if (ret_side == 0)
         {
@@ -259,23 +244,7 @@ void Foam::ISATmanager<FuncType>::add(const scalarList &value, scalarList &out, 
         {
             tmp_flag = (parentNode->leafRight_ == pleaf2 && pleaf2->node_ == parentNode);
         }
-        /*         FatalErrorInFunction
-            << " test!!!!!1\n"
-            << ret_side << "\n"
-            << (parentNode->leafLeft_ == pleaf2 && pleaf2->node_ == parentNode) << "\n"
-            << (parentNode->leafLeft_ == pleaf2) << "\n"
-            << (pleaf2->node_ == parentNode) << "\n"
 
-            << T.root_.offset << "\n"
-            << parentNode.offset << "\n"
-            << parentNode->leafLeft_.offset << "\n"
-            << pleaf2.offset << "\n"
-            << pleaf2->node_.offset << "\n"
-
-            << (parentNode->leafRight_ == pleaf2 && pleaf2->node_ == parentNode) << "\n"
-            << "size=" << T.size()
-            << exit(FatalError); */
-        //Pout << "!!!!!!herexxxzzz2" << endl;
         if (tmp_flag)
         {
 
@@ -284,35 +253,18 @@ void Foam::ISATmanager<FuncType>::add(const scalarList &value, scalarList &out, 
             {
                 dvalue[i] = value[i] - pleaf2->value_[i];
             }
-            //Pout << "!!!!!!herexxxzzz3" << endl;
-            //FatalErrorInFunction<<" test!!!!!xz\n"<< exit(FatalError);
+
             if (grow2(pleaf2, dvalue, out, pleaf_out))
             {
-                //pleaf_out.offset = pleaf2.offset;
                 pleaf_out->lastUsed = timeSteps_;
                 growsuc = true;
-                /*                 FatalErrorInFunction << " test!!!!!xzz\n"
-                                     << exit(FatalError); */
-                //Pout << "!!!!!!herexxxzzz4" << endl;
                 (*parentNode).mutex.unlock();
                 return;
             }
-            else
-            {
-                //T.NF5++;
-            }
-        }
-        else
-        {
-            //T.NF4++;
         }
         (*parentNode).mutex.unlock();
     }
-    else
-    {
-        //T.NF3++;
-    }
-    //Pout << "!!!!!!herexxxzzz1" << endl;
+
 #ifdef REUSELIST
     SharedPointer<parISATNode> pnode_new = T.node_manager.New_reuse();
     SharedPointer<parISATleaf> pleaf_new = T.leaf_manager.New_reuse();
@@ -336,6 +288,8 @@ void Foam::ISATmanager<FuncType>::add(const scalarList &value, scalarList &out, 
     pleaf_new->set(value, pnode_new, out);
     pleaf_new->lastUsed = timeSteps_;
     pleaf_out.offset = pleaf_new.offset;
+    pleaf_new->SleafN = T.SN;
+    T.SN++;
     //pleaf_new->node_2 = pnode_new;
     pfunc->derive(value, out, pleaf_new->A_, arg...);
     for (int i = 0; i < Ninput; i++)
@@ -358,36 +312,11 @@ void Foam::ISATmanager<FuncType>::add(const scalarList &value, scalarList &out, 
 
     if (!(*parentNode).mutex.try_lock())
     {
-        //T.NF6++;
-        // T.mem_lock.lock();
         T.node_manager.Delete(pnode_new);
         T.leaf_manager.Delete(pleaf_new);
-        //T.mem_lock.unlock();
         return;
     }
-    /*     if (T.size() >= 4)
-    {
-          FatalErrorInFunction << " test!!!!!xzzAAAAAAAA\n"
-                             << exit(FatalError); 
 
-        FatalErrorInFunction
-            << " test!!!!!1\n"
-            << "ret_side=" << ret_side << "\n"
-            << (parentNode->leafLeft_ == pleaf2 && pleaf2->node_ == parentNode) << "\n"
-            << (parentNode->leafLeft_ == pleaf2) << "\n"
-            << (pleaf2->node_ == parentNode) << "\n"
-
-            << T.root_.offset << "\n"
-            << parentNode.offset << "\n"
-            << parentNode->leafLeft_.offset << "\n"
-            << pleaf2.offset << "\n"
-            << pleaf2->node_.offset << "\n"
-
-            << (parentNode->leafRight_ == pleaf2 && pleaf2->node_ == parentNode) << " !!\n"
-            << parentNode->leafRight_.offset << "\n"
-            << "size=" << T.size()
-            << exit(FatalError);
-    } */
     bool tmp_flag = false;
     if (ret_side == 0)
     {
@@ -399,19 +328,11 @@ void Foam::ISATmanager<FuncType>::add(const scalarList &value, scalarList &out, 
     }
     if (!tmp_flag)
     {
-        //T.NF7++;
-        //T.mem_lock.lock();
         T.node_manager.Delete(pnode_new);
         T.leaf_manager.Delete(pleaf_new);
-        //T.mem_lock.unlock();
         (*parentNode).mutex.unlock();
         return;
     }
-
-    /*     FatalErrorInFunction
-        << " test!!!!!2"
-        << exit(FatalError); */
-    //Pout << "!!!!!!herexxxzzz3" << endl;
     pleaf2->node_ = pnode_new;
 
     if (pnode_new->goLeft(value))
@@ -428,8 +349,7 @@ void Foam::ISATmanager<FuncType>::add(const scalarList &value, scalarList &out, 
     if (T.size_leaf_ > 1)
     {
         pnode_new->parent_ = parentNode;
-        //SharedPointer<parISATNode> pnode_new = node_manager.New();
-        //SharedPointer<parISATleaf> pleaf_new = leaf_manager.New();
+
         SharedPointer<parISATleaf> *leaf;
         SharedPointer<parISATNode> *node;
         if (parentNode->leafLeft_ == pleaf2)
@@ -443,9 +363,6 @@ void Foam::ISATmanager<FuncType>::add(const scalarList &value, scalarList &out, 
             node = &(parentNode->nodeRight_);
         }
 
-        //std::atomic<size_t> *node_atomic = (std::atomic<long unsigned int> *)(&node->offset);
-        //std::atomic<size_t> *leaf_atomic = (std::atomic<long unsigned int> *)(&leaf->offset);
-
         std::atomic<size_t> *node_atomic = reinterpret_cast<std::atomic<long unsigned int> *>(&node->offset);
         std::atomic<size_t> *leaf_atomic = reinterpret_cast<std::atomic<long unsigned int> *>(&leaf->offset);
 
@@ -455,24 +372,17 @@ void Foam::ISATmanager<FuncType>::add(const scalarList &value, scalarList &out, 
         T.size_leaf_++;
         T.size_node++;
         nRAdd_++;
-        //T.NAdd++;
         (*parentNode).mutex.unlock();
         return;
     }
     else
     {
-        //std::atomic<size_t> *root_atomic = (std::atomic<long unsigned int> *)(&T.root_.offset);
         std::atomic<size_t> *root_atomic = reinterpret_cast<std::atomic<long unsigned int> *>(&T.root_.offset);
 
         root_atomic->store(pnode_new.offset, std::memory_order_release);
-
-        //T.mem_lock.lock();
         T.node_manager.Delete(parentNode);
-        //T.mem_lock.unlock();
         T.size_leaf_++;
         nRAdd_++;
-        //T.NAdd++;
-
         return;
     }
 }
@@ -582,30 +492,9 @@ bool Foam::ISATmanager<FuncType>::call(
                 }
             }
 #endif
-
-            /*             
-                static scalarList dvalue2(value.size(), Zero);
-                for (int i = 0; i < tableTree_.n_in_; i++)
-                {
-                    dvalue2[i] = value[i] - pleafL->value_[i];
-                }
-                if (!flag || !growL(pleafL, dvalue2, out))
-                    if (pleaf_out.notNULL())
-                        addL_in(value, out, pleaf_out);
-            
-  */
-
-            //if (!flag || !grow2(pleaf, dvalue, out))
-            //    add(value, out, arg...);
-            //if (!flag)
         }
     }
-    else
-    {
-        //tableTree_.NRetrieved++;
-        //nRRetrieved_++;
-    }
-    //tableTree_.NCall++;
+
     nRCall_++;
     return true;
 }

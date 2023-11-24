@@ -49,41 +49,7 @@ using namespace Foam::constant::thermodynamic;
 
 namespace Foam
 {
-    //TODO finish this!!!!
-    /*
-    struct ISATfunction
-    {
-        ISATmanager* p;
-        typedef double (ISATmanager::* VLEfunc)(double, double);
-        VLEfunc pfunc;
-        ISATfunction(ISATmanager p_in, VLEfunc pfunc_in) :p(p_in), pfunc(pfunc_in) {}
-        void  value(const scalarList& in, scalarList& out)
-        {
-            out.resize(1);
-            out[0] = (*p).*pfunc(in);//+2000*::Foam::sin(in[1]/10);
-        }
-        void  derive(const scalarList& in, scalarRectangularMatrix& out)
-        {
-            scalarList temp = in;
-            scalarList tempv;
-            value(in, tempv);
-            scalarList tempv2;
-            scalarList dd;
-            scalar dx = 1e-5;
-            for (int i = 0;i < in.size();i++)
-            {
-                temp[i] += dx;
-                value(temp, tempv2);
-                dd = (tempv2 - tempv) / dx;
-                for (int j = 0;j < tempv2.size();j++)
-                {
-                    out[j][i] = dd[j];
-                }
-                temp[i] -= dx;
-            }
-        }
-    };
-    */
+    
 
     namespace species
     {

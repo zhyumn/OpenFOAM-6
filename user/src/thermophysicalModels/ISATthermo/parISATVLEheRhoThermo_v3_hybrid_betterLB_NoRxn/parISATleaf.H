@@ -217,51 +217,10 @@ namespace Foam
             return node_.offset;
         }
 
-        /*         inline scalarList &value()
-        {
-            return value_;
-        }
-        inline const scalarList &value() const
-        {
-            return value_;
-        }
-        inline scalarList &data()
-        {
-            return data_;
-        }
-        inline const scalarList &data() const
-        {
-            return data_;
-        }
-
-        inline scalarRectangularMatrix &A()
-        {
-            return A_;
-        }
-
-        inline const scalarRectangularMatrix &A() const
-        {
-            return A_;
-        }
-        inline scalarRectangularMatrix &EOA()
-        {
-            return EOA_;
-        }; */
-
-        /*         inline typename List2D<ISATleaf>::Node *&pTimeTagList()
-        {
-            return pTimeTagList_;
-        }; */
-
         bool inEOA(const scalarList &point, const scalarRectangularMatrix &scaleIn);
 
         void eval(const scalarList &value, scalarList &ret);
         void grow(const scalarList &point, const scalarRectangularMatrix &scaleIn);
-
-        /*         inline ISATNode *&node()
-        {
-            return node_;
-        } */
 
         //- Increases the number of retrieves the chempoint has generated
         void increaseNumRetrieve();

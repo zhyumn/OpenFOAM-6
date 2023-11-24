@@ -34,20 +34,20 @@ License
 
 template <typename T>
 template <typename... Args>
-Foam::chemistryTabulationMethodSs::parallelISAT<T>::parallelISAT(T &ISATmanager_in, SUPstream::mpi_manager &manager_in, label nmem, label maxNleafs, SUPstream::mpi_sync &sync_in, Args... args)
-    : ISATmanager(ISATmanager_in), manager_(manager_in), sync_(sync_in), maxNLeafs_(maxNleafs), nmem_leaf_(nmem), nmem_node_(nmem),
+Foam::chemistryTabulationMethodSs::parallelISAT<T>::parallelISAT(T &ISATmanager_in, SUPstream::mpi_manager &manager_in, /*label nmem,*/ label maxNleafs, SUPstream::mpi_sync &sync_in, Args... args)
+    : ISATmanager(ISATmanager_in), manager_(manager_in), sync_(sync_in), maxNLeafs_(maxNleafs), //nmem_leaf_(nmem), nmem_node_(nmem),
       //emptylist_leaf(manager_in, 100000), emptylist_node(manager_in, 100000),
       pv_(manager_in),
-      size_leaf_(pv_().size_leaf), head_leaf(pv_().head_leaf),
-      tail_leaf(pv_().tail_leaf), temp_tail_leaf(pv_().temp_tail_leaf),
+      size_leaf_(pv_().size_leaf), //head_leaf(pv_().head_leaf),
+      tail_leaf(pv_().tail_leaf), //temp_tail_leaf(pv_().temp_tail_leaf),
       leafN(pv_().leafN),
       size_node(pv_().size_node),
-      head_node(pv_().heaf_node),
-      tail_node(pv_().tail_node), temp_tail_node(pv_().temp_tail_node),
-      root_(pv_().root_), totalGrowth_(pv_().totalGrowth), //,root_atomic((std::atomic<long unsigned int>*)&pv_().root_.offset)
+      //head_node(pv_().heaf_node),
+      tail_node(pv_().tail_node), //temp_tail_node(pv_().temp_tail_node),
+      root_(pv_().root_), //totalGrowth_(pv_().totalGrowth), //,root_atomic((std::atomic<long unsigned int>*)&pv_().root_.offset)
       write_lock(manager_in, sync_in), mem_lock(manager_in, sync_in),
-      leaf_manager(tail_leaf, pv_().m_size_leaf, pv_().tmp_size_leaf),
-      node_manager(tail_node, pv_().m_size_node, pv_().tmp_size_node),
+      leaf_manager(tail_leaf, pv_().m_size_leaf/*, pv_().tmp_size_leaf*/),
+      node_manager(tail_node, pv_().m_size_node/*, pv_().tmp_size_node*/),
       nRetrieved_(0),
       nGrowth_(0),
       nAdd_(0)
@@ -64,7 +64,7 @@ Foam::chemistryTabulationMethodSs::parallelISAT<T>::parallelISAT(T &ISATmanager_
     size_node = 0;
 
     root_.setNULL();
-    totalGrowth_ = 0;
+    //totalGrowth_ = 0;
 }
 
 // * * * * * * * * * * * * * * * * Selectors * * * * * * * * * * * * * * * * //
@@ -238,22 +238,22 @@ bool Foam::chemistryTabulationMethodSs::parallelISAT<T>::grow(const scalarField 
     if (pleaf_new.notNULL())
     {
 
-        pleaf_new->node_2 = pleaf->node_2;
+        pleaf_new->node_ = pleaf->node_;
         pleaf_new->SleafN = pleaf->SleafN;
         //success = pleaf_new->grow(x, mem_lock);
         success = ISATmanager.grow(*pleaf_new, x, mem_lock);
         if (success)
         {
             SharedPointer<Leaf> *leaf;
-            if (pleaf->node_2->leafLeft_ == pleaf)
+            if (pleaf->node_->leafLeft_ == pleaf)
             {
-                leaf = &pleaf->node_2->leafLeft_;
-                //pleaf->node_2->leafLeft_ = pleaf_new;
+                leaf = &pleaf->node_->leafLeft_;
+                //pleaf->node_->leafLeft_ = pleaf_new;
             }
             else
             {
-                leaf = &pleaf->node_2->leafRight_;
-                //pleaf->node_2->leafRight_ = pleaf_new;
+                leaf = &pleaf->node_->leafRight_;
+                //pleaf->node_->leafRight_ = pleaf_new;
             }
 
             std::atomic<size_t> *leaf_atomic = reinterpret_cast<std::atomic<long unsigned int> *>(&leaf->offset);
@@ -286,22 +286,22 @@ bool Foam::chemistryTabulationMethodSs::parallelISAT<T>::grow(
     if (pleaf_new.notNULL())
     {
 
-        pleaf_new->node_2 = pleaf->node_2;
+        pleaf_new->node_ = pleaf->node_;
         pleaf_out.offset = pleaf_new.offset;
         //success = pleaf_new->grow(x, mem_lock);
         success = ISATmanager.grow(*pleaf_new, x, mem_lock);
         if (success)
         {
             SharedPointer<Leaf> *leaf;
-            if (pleaf->node_2->leafLeft_ == pleaf)
+            if (pleaf->node_->leafLeft_ == pleaf)
             {
-                leaf = &pleaf->node_2->leafLeft_;
-                //pleaf->node_2->leafLeft_ = pleaf_new;
+                leaf = &pleaf->node_->leafLeft_;
+                //pleaf->node_->leafLeft_ = pleaf_new;
             }
             else
             {
-                leaf = &pleaf->node_2->leafRight_;
-                //pleaf->node_2->leafRight_ = pleaf_new;
+                leaf = &pleaf->node_->leafRight_;
+                //pleaf->node_->leafRight_ = pleaf_new;
             }
 
             std::atomic<size_t> *leaf_atomic = reinterpret_cast<std::atomic<long unsigned int> *>(&leaf->offset);
@@ -419,7 +419,7 @@ Foam::label Foam::chemistryTabulationMethodSs::parallelISAT<T>::add(
             pnode->leafRight_.setNULL();
             pnode->set();
 
-            pleaf->node_2 = pnode;
+            pleaf->node_ = pnode;
             leafN++;
             pleaf->SleafN = leafN;
             //pleaf->set(x, y, mem_lock, args...);
@@ -477,7 +477,7 @@ Foam::label Foam::chemistryTabulationMethodSs::parallelISAT<T>::add(
         //write_lock.unlock();
         return growthOrAddFlag;
     }
-    //SharedPointer<Node> parentNode = pleaf2->node_2;
+    //SharedPointer<Node> parentNode = pleaf2->node_;
     if (pleaf2->checkSolution(x, y))
     {
         if ((*parentNode).mutex.try_lock())
@@ -485,18 +485,18 @@ Foam::label Foam::chemistryTabulationMethodSs::parallelISAT<T>::add(
             bool tmp_flag = false;
             if (ret_side == 0)
             {
-                tmp_flag = (parentNode->leafLeft_ == pleaf2 && pleaf2->node_2 == parentNode);
+                tmp_flag = (parentNode->leafLeft_ == pleaf2 && pleaf2->node_ == parentNode);
             }
             else
             {
-                tmp_flag = (parentNode->leafRight_ == pleaf2 && pleaf2->node_2 == parentNode);
+                tmp_flag = (parentNode->leafRight_ == pleaf2 && pleaf2->node_ == parentNode);
             }
             if (tmp_flag)
             {
                 if (grow(x, pleaf2))
                 {
                     nGrowth_++;
-                    totalGrowth_++;
+                    //totalGrowth_++;
 
                     growthOrAddFlag = 0;
                     (*parentNode).mutex.unlock();
@@ -536,7 +536,7 @@ Foam::label Foam::chemistryTabulationMethodSs::parallelISAT<T>::add(
 
     //pleaf_new->set(x, y, mem_lock, args...);
     ISATmanager.setLeaf(*pleaf_new, x, y, mem_lock, args...);
-    pleaf_new->node_2 = pnode_new;
+    pleaf_new->node_ = pnode_new;
     leafN++;
     pleaf_new->SleafN = leafN;
     pnode_new->parent_.setNULL();
@@ -556,11 +556,11 @@ Foam::label Foam::chemistryTabulationMethodSs::parallelISAT<T>::add(
     bool tmp_flag = false;
     if (ret_side == 0)
     {
-        tmp_flag = (parentNode->leafLeft_ == pleaf2 && pleaf2->node_2 == parentNode);
+        tmp_flag = (parentNode->leafLeft_ == pleaf2 && pleaf2->node_ == parentNode);
     }
     else
     {
-        tmp_flag = (parentNode->leafRight_ == pleaf2 && pleaf2->node_2 == parentNode);
+        tmp_flag = (parentNode->leafRight_ == pleaf2 && pleaf2->node_ == parentNode);
     }
     if (!tmp_flag)
     {
@@ -569,7 +569,7 @@ Foam::label Foam::chemistryTabulationMethodSs::parallelISAT<T>::add(
         return growthOrAddFlag;
     }
 
-    pleaf2->node_2 = pnode_new;
+    pleaf2->node_ = pnode_new;
 
     if (pnode_new->goLeft(*pleaf_new))
     {
@@ -694,7 +694,7 @@ Foam::label Foam::chemistryTabulationMethodSs::parallelISAT<T>::add(
             pnode->leafRight_.setNULL();
             pnode->set();
 
-            pleaf->node_2 = pnode;
+            pleaf->node_ = pnode;
             //pleaf->set(x, y, mem_lock, args...);
             ISATmanager.setLeaf(*pleaf, x, y, mem_lock, args...);
             pleaf_out.offset = pleaf.offset;
@@ -752,7 +752,7 @@ Foam::label Foam::chemistryTabulationMethodSs::parallelISAT<T>::add(
         //write_lock.unlock();
         return growthOrAddFlag;
     }
-    //SharedPointer<Node> parentNode = pleaf2->node_2;
+    //SharedPointer<Node> parentNode = pleaf2->node_;
     if (pleaf2->checkSolution(x, y))
     {
         if ((*parentNode).mutex.try_lock())
@@ -760,11 +760,11 @@ Foam::label Foam::chemistryTabulationMethodSs::parallelISAT<T>::add(
             bool tmp_flag = false;
             if (ret_side == 0)
             {
-                tmp_flag = (parentNode->leafLeft_ == pleaf2 && pleaf2->node_2 == parentNode);
+                tmp_flag = (parentNode->leafLeft_ == pleaf2 && pleaf2->node_ == parentNode);
             }
             else
             {
-                tmp_flag = (parentNode->leafRight_ == pleaf2 && pleaf2->node_2 == parentNode);
+                tmp_flag = (parentNode->leafRight_ == pleaf2 && pleaf2->node_ == parentNode);
             }
             if (tmp_flag)
             {
@@ -773,7 +773,7 @@ Foam::label Foam::chemistryTabulationMethodSs::parallelISAT<T>::add(
                     //pleaf_out->lastUsed = timeSteps_;
                     growsuc = true;
                     nGrowth_++;
-                    totalGrowth_++;
+                    //totalGrowth_++;
 
                     growthOrAddFlag = 0;
                     (*parentNode).mutex.unlock();
@@ -813,7 +813,7 @@ Foam::label Foam::chemistryTabulationMethodSs::parallelISAT<T>::add(
 
     //pleaf_new->set(x, y, mem_lock, args...);
     ISATmanager.setLeaf(*pleaf_new, x, y, mem_lock, args...);
-    pleaf_new->node_2 = pnode_new;
+    pleaf_new->node_ = pnode_new;
     pleaf_out.offset = pleaf_new.offset;
     leafN++;
     pleaf_new->SleafN = leafN;
@@ -834,11 +834,11 @@ Foam::label Foam::chemistryTabulationMethodSs::parallelISAT<T>::add(
     bool tmp_flag = false;
     if (ret_side == 0)
     {
-        tmp_flag = (parentNode->leafLeft_ == pleaf2 && pleaf2->node_2 == parentNode);
+        tmp_flag = (parentNode->leafLeft_ == pleaf2 && pleaf2->node_ == parentNode);
     }
     else
     {
-        tmp_flag = (parentNode->leafRight_ == pleaf2 && pleaf2->node_2 == parentNode);
+        tmp_flag = (parentNode->leafRight_ == pleaf2 && pleaf2->node_ == parentNode);
     }
     if (!tmp_flag)
     {
@@ -847,7 +847,7 @@ Foam::label Foam::chemistryTabulationMethodSs::parallelISAT<T>::add(
         return growthOrAddFlag;
     }
 
-    pleaf2->node_2 = pnode_new;
+    pleaf2->node_ = pnode_new;
 
     if (pnode_new->goLeft(*pleaf_new))
     {
@@ -952,21 +952,21 @@ Foam::SharedPointer<typename Foam::chemistryTabulationMethodSs::Leaf> Foam::chem
     if (size_leaf_ > 1)
     {
 
-        if (x == x->node_2->leafLeft_)
+        if (x == x->node_->leafLeft_)
         {
-            if (x->node_2->nodeRight_.isNULL())
+            if (x->node_->nodeRight_.isNULL())
             {
-                return x->node_2->leafRight_;
+                return x->node_->leafRight_;
             }
             else
             {
-                return treeMin(x->node_2->nodeRight_);
+                return treeMin(x->node_->nodeRight_);
             }
         }
-        else if (x == x->node_2->leafRight_)
+        else if (x == x->node_->leafRight_)
         {
             SharedPointer<Node> y;
-            y = x->node_2;
+            y = x->node_;
             while (y->parent_.notNULL())
             {
                 if (y == y->parent_->nodeLeft_)
@@ -1004,16 +1004,16 @@ Foam::chemistryTabulationMethodSs::parallelISAT<T>::leafPSibling(SharedPointer<L
 {
     if (size_leaf_ > 1)
     {
-        if (x == x->node_2->leafLeft_)
+        if (x == x->node_->leafLeft_)
         {
             // x is on the left, return right side
             // might return nullptr if the right side is a node
-            return x->node_2->leafRight_;
+            return x->node_->leafRight_;
         }
-        else if (x == x->node_2->leafRight_)
+        else if (x == x->node_->leafRight_)
         {
             // x is on the right, return left side
-            return x->node_2->leafLeft_;
+            return x->node_->leafLeft_;
         }
         else
         {
@@ -1066,15 +1066,15 @@ Foam::SharedPointer<typename Foam::chemistryTabulationMethodSs::Node> Foam::chem
 {
     if (size_leaf_ > 1)
     {
-        if (x == x->node_2->leafLeft_)
+        if (x == x->node_->leafLeft_)
         {
             // x is on the left, return right side
-            return x->node_2->nodeRight_;
+            return x->node_->nodeRight_;
         }
-        else if (x == x->node_2->leafRight_)
+        else if (x == x->node_->leafRight_)
         {
             // x is on the right, return left side
-            return x->node_2->nodeLeft_;
+            return x->node_->nodeLeft_;
         }
         else
         {
@@ -1142,7 +1142,7 @@ void Foam::chemistryTabulationMethodSs::parallelISAT<T>::deleteLeaf(SharedPointe
     }
     else if (size_leaf_ > 1)
     {
-        SharedPointer<Node> z = index_phi0->node_2;
+        SharedPointer<Node> z = index_phi0->node_;
         //label x;
         SharedPointer<Leaf> siblingPhi0 = leafPSibling(index_phi0);
 
@@ -1166,19 +1166,19 @@ void Foam::chemistryTabulationMethodSs::parallelISAT<T>::deleteLeaf(SharedPointe
                 root_->nodeLeft_.setNULL();
                 root_->leafLeft_ = siblingPhi0;
                 root_->parent_.setNULL();
-                siblingPhi0->node_2 = root_;
+                siblingPhi0->node_ = root_;
             }
             else if (z == z->parent_->nodeLeft_)
             {
                 z->parent_->leafLeft_ = siblingPhi0;
                 z->parent_->nodeLeft_.setNULL();
-                siblingPhi0->node_2 = z->parent_;
+                siblingPhi0->node_ = z->parent_;
             }
             else if (z == z->parent_->nodeRight_)
             {
                 z->parent_->leafRight_ = siblingPhi0;
                 z->parent_->nodeRight_.setNULL();
-                siblingPhi0->node_2 = z->parent_;
+                siblingPhi0->node_ = z->parent_;
             }
             else
             {
@@ -1297,7 +1297,7 @@ bool Foam::chemistryTabulationMethodSs::parallelISAT<T>::treeCheck(SharedPointer
     }
     else
     {
-        if (index->leafLeft_->node_2 != index)
+        if (index->leafLeft_->node_ != index)
 
         {
             FatalErrorInFunction
@@ -1318,7 +1318,7 @@ bool Foam::chemistryTabulationMethodSs::parallelISAT<T>::treeCheck(SharedPointer
     }
     else
     {
-        if (index->leafRight_->node_2 != index)
+        if (index->leafRight_->node_ != index)
         {
             FatalErrorInFunction
                 << "p9 ";
@@ -1354,17 +1354,17 @@ void Foam::chemistryTabulationMethodSs::parallelISAT<T>::insertNode(
     SharedPointer<Leaf> phi0,
     SharedPointer<Node> newNode)
 {
-    if (phi0 == phi0->node_2->leafRight_) // phi0 is on the right
+    if (phi0 == phi0->node_->leafRight_) // phi0 is on the right
     {
-        phi0->node_2->leafRight_.setNULL();
-        phi0->node_2->nodeRight_ = newNode;
+        phi0->node_->leafRight_.setNULL();
+        phi0->node_->nodeRight_ = newNode;
 
         return;
     }
-    else if (phi0 == phi0->node_2->leafLeft_) // phi0 is on the left
+    else if (phi0 == phi0->node_->leafLeft_) // phi0 is on the left
     {
-        phi0->node_2->leafLeft_.setNULL();
-        phi0->node_2->nodeLeft_ = newNode;
+        phi0->node_->leafLeft_.setNULL();
+        phi0->node_->nodeLeft_ = newNode;
 
         return;
     }

@@ -135,22 +135,6 @@ namespace Foam
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
     namespace chemistryTabulationMethodSs
     {
-        /*         struct static_data
-        {
-            static bool mechRedActive;
-            static label nAdditionalEqns_;
-            static bool variableTimeStep;
-            static label nEqns;
-            static label completeSpaceSize_;
-            static scalar tolerance_;
-            static label idT_;
-            static label idp_;
-            static label iddeltaT_;
-        }; */
-        // class parISATNode;
-
-        //template<class CompType, class ThermoType>
-        //class TDACChemistryModel;
 
         /*---------------------------------------------------------------------------*\
                        Class ISATleaf Declaration
@@ -173,16 +157,7 @@ namespace Foam
             scalar timeTag_;
             scalar EOA;
 
-            SharedPointer<Node> node_2;
-            /*             void init(const Leaf &x)
-            {
-                Leaf::init(x);
-                node_2 = x.node_2;
-            } */
-            /*             void init(int x)
-            {
-                Leaf::init(x);
-            } */
+            SharedPointer<Node> node_;
 
         public:
             //void set(const scalarField &x, const scalarField &y, SUPstream::mpi_mutex &mem_mutex, const scalar rhoi, const scalar dt);
@@ -203,7 +178,7 @@ namespace Foam
                 timeTag_ = x.timeTag_;
                 EOA = x.EOA;
 
-                node_2 = x.node_2;
+                node_ = x.node_;
             }
 
             static void computeA(
@@ -271,11 +246,11 @@ namespace Foam
             friend std::ostream &operator<<(std::ostream &out, Leaf &A);
             void setNext(label offset)
             {
-                node_2.offset = offset;
+                node_.offset = offset;
             }
             label next()
             {
-                return node_2.offset;
+                return node_.offset;
             }
         };
 

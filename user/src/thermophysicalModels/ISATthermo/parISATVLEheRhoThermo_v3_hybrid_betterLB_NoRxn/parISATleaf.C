@@ -99,20 +99,7 @@ Foam::parISATleaf::parISATleaf(int n_in, int n_out,
 bool Foam::parISATleaf::inEOA(const scalarList &point, const scalarRectangularMatrix &scaleIn)
 {
     static scalarList dx(value_.size());
-/*     if (value_.size() > 4)
-    {
-        FatalErrorInFunction << " value_.size()=" << value_.size()
-                             //<< ",offset=" << xx
-                             << exit(FatalError);
-    }
-    forAll(value_, i)
-    {
-        dx[i] = (point[i]);
-    }
-    forAll(value_, i)
-    {
-        dx[i] = 1 / scaleIn[i][i];
-    } */
+
     forAll(value_, i)
     {
         dx[i] = (point[i] - value_[i]) / scaleIn[i][i];
@@ -138,7 +125,7 @@ void Foam::parISATleaf::eval(const scalarList &value, scalarList &ret)
         ret[i] = data_[i];
     for (int i = 0; i < value_.size(); i++)
         dx[i] = value[i] - value_[i];
-    //retm = dx * A_;
+
     for (int i = 0; i < data_.size(); i++)
     {
         for (int j = 0; j < value_.size(); j++)

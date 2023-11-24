@@ -69,13 +69,10 @@ Foam::chemistryTabulationMethodSs::ISAT_manager<CompType, ThermoType>::ISAT_mana
 
       tree(*this,
            SUPstream::node_manager,
-           label(readLabel(this->coeffsDict_.lookup("maxNLeafs")) * 1.2),
+           //label(readLabel(this->coeffsDict_.lookup("maxNLeafs")) * 1.2),
            readLabel(this->coeffsDict_.lookup("maxNLeafs")),
            SUPstream::Sync),
-#ifdef ISATcache
       chemisTree_(chemistry, this->coeffsDict_, *this),
-
-#endif
       cleaningRequired_(false),
       runTime_(chemistry.time()),
       completeSpaceSize_(chemistry.nEqns() + ((this->variableTimeStep()) ? 1 : 0)),
@@ -148,12 +145,11 @@ Foam::chemistryTabulationMethodSs::ISAT_manager<CompType, ThermoType>::ISAT_mana
         totalGrowthFile_ = chemistry.logFile("total_growth_isat.out");
     }
 
-#ifdef ISATcache
+
     chemisTree_.chPMaxLifeTime_ = chPMaxLifeTime_;
     chemisTree_.maxGrowth_ = maxGrowth_;
     chemisTree_.minBalanceThreshold_ = minBalanceThreshold_;
     chemisTree_.maxDepthFactor_ = maxDepthFactor_;
-#endif
 
     static_data::mechRedActive = this->chemistry_.mechRed()->active();
     static_data::nAdditionalEqns_ = nAdditionalEqns_;
@@ -919,8 +915,8 @@ void Foam::chemistryTabulationMethodSs::ISAT_manager<CompType, ThermoType>::bala
     );*/
     tree.root_ = newNode;
 
-    chemPoints[phiMaxDir.indices()[0]]->node_2 = newNode;
-    chemPoints[phiMaxDir.indices()[phiMaxDir.size() - 1]]->node_2 = newNode;
+    chemPoints[phiMaxDir.indices()[0]]->node_ = newNode;
+    chemPoints[phiMaxDir.indices()[phiMaxDir.size() - 1]]->node_ = newNode;
 
     for (label cpi = 1; cpi < chemPoints.size() - 1; cpi++)
     {
@@ -938,7 +934,7 @@ void Foam::chemistryTabulationMethodSs::ISAT_manager<CompType, ThermoType>::bala
                 << exit(FatalError);
         }
         nodeToAdd->set(*phi0, *chemPoints[phiMaxDir.indices()[cpi]]);
-        nodeToAdd->parent_ = phi0->node_2;
+        nodeToAdd->parent_ = phi0->node_;
         nodeToAdd->leafLeft_ = phi0;
         nodeToAdd->leafRight_ = chemPoints[phiMaxDir.indices()[cpi]];
         nodeToAdd->nodeLeft_.setNULL();
@@ -946,8 +942,8 @@ void Foam::chemistryTabulationMethodSs::ISAT_manager<CompType, ThermoType>::bala
         //new bn(phi0, chemPoints[phiMaxDir.indices()[cpi]], phi0->node());
         // make the parent of phi0 point to the newly created node
         tree.insertNode(phi0, nodeToAdd);
-        phi0->node_2 = nodeToAdd;
-        chemPoints[phiMaxDir.indices()[cpi]]->node_2 = nodeToAdd;
+        phi0->node_ = nodeToAdd;
+        chemPoints[phiMaxDir.indices()[cpi]]->node_ = nodeToAdd;
     }
 }
 
@@ -957,10 +953,8 @@ bool Foam::chemistryTabulationMethodSs::ISAT_manager<CompType, ThermoType>::clea
 
     bool treeModified(false);
 
-#ifdef ISATcache
     treeModified = chemisTree_.cleanAndBalance();
 
-#endif
 
     if (tree.size_leaf_ < 1)
     {

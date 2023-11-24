@@ -23,7 +23,7 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-#include "parISATleaf.H"
+#include "parISATleafNode.H"
 #include "SVD.H"
 #include "IOstream.H"
 
